@@ -1,0 +1,48 @@
+namespace MarketCore.Models;
+
+// Direção da agressão no trade
+public enum TradeAggressor { Buy, Sell, Unknown }
+
+// Lado do book
+public enum BookSide { Bid, Ask }
+
+// Um negócio executado (vem do TNewTradeCallback)
+public record TradeEvent(
+    string      Ticker,
+    decimal     Price,
+    int         Volume,
+    string      Broker,
+    TradeAggressor Aggressor,
+    DateTime    Time
+);
+
+// Um nível do book (vem do TNewBookCallback)
+public record BookLevel(
+    string      Ticker,
+    BookSide    Side,
+    decimal     Price,
+    int         Volume,
+    string      Broker,
+    DateTime    Time
+);
+
+// Cotação (vem do TChangeCotationCallback)
+public record QuoteEvent(
+    string      Ticker,
+    decimal     Last,
+    decimal     Bid,
+    decimal     Ask,
+    decimal     Open,
+    decimal     High,
+    decimal     Low,
+    long        Volume,
+    DateTime    Time
+);
+
+// Status da conexão com o provedor
+public enum ConnectionStatus { Disconnected, Connecting, Connected, Error }
+
+public record ConnectionChangedEvent(
+    ConnectionStatus Status,
+    string           Message
+);

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>  <!-- obrigatório — ProfitDLL64 é 64 bits -->
+    <AssemblyName>MarketCore</AssemblyName>
+    <RootNamespace>MarketCore</RootNamespace>
+  </PropertyGroup>
+
+  <!-- A DLL da Nelogica precisa estar na pasta de saída -->
+  <ItemGroup>
+    <None Update="ProfitDLL64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

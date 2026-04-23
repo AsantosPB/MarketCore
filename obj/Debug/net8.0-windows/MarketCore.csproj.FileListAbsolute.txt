@@ -1,0 +1,14 @@
+C:\Users\Anderson\Downloads\MarketCore\bin\Debug\net8.0-windows\MarketCore.exe
+C:\Users\Anderson\Downloads\MarketCore\bin\Debug\net8.0-windows\MarketCore.deps.json
+C:\Users\Anderson\Downloads\MarketCore\bin\Debug\net8.0-windows\MarketCore.runtimeconfig.json
+C:\Users\Anderson\Downloads\MarketCore\bin\Debug\net8.0-windows\MarketCore.dll
+C:\Users\Anderson\Downloads\MarketCore\bin\Debug\net8.0-windows\MarketCore.pdb
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.AssemblyInfoInputs.cache
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.AssemblyInfo.cs
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.csproj.CoreCompileInputs.cache
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.dll
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\refint\MarketCore.dll
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.pdb
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\MarketCore.genruntimeconfig.cache
+C:\Users\Anderson\Downloads\MarketCore\obj\Debug\net8.0-windows\ref\MarketCore.dll
