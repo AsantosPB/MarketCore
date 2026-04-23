@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using MarketCore.Contracts;
 using MarketCore.Engine.Detectors;
+using MarketCore.Engine.Recording;
 using MarketCore.Models;
 
 namespace MarketCore.Engine;
@@ -19,9 +20,13 @@ public sealed class MarketEngine : IDisposable
     private readonly ConcurrentQueue<BookSnapshot> _uiQueue = new();
     private Thread? _uiDispatchThread;
 
-    public readonly SpoofDetector     Spoof     = new();
-    public readonly IcebergDetector   Iceberg   = new();
-    public readonly RenewableDetector Renewable = new();
+    public readonly SpoofDetector      Spoof      = new();
+    public readonly IcebergDetector    Iceberg    = new();
+    public readonly RenewableDetector  Renewable  = new();
+    public readonly ExhaustionDetector Exhaustion = new();
+
+    private IMarketRecorder? _recorder;
+    private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
 
@@ -37,13 +42,72 @@ public sealed class MarketEngine : IDisposable
         _provider.OnConnectionChanged += HandleConnectionChanged;
     }
 
-    public Task ConnectAsync(ProviderCredentials credentials)
+    /// <summary>
+    /// Ativa gravação automática de trades e book de ofertas.
+    /// </summary>
+    public void HabilitarGravacao(string diretorioBase)
     {
-        StartUiDispatch();
-        return _provider.ConnectAsync(credentials);
+        _recorder = new MarketRecorder(diretorioBase);
+
+        _recorder.ErroGravacao += (s, e) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[RECORDER ERRO] {e.Mensagem}");
+            Console.ResetColor();
+        };
+
+        _recorder.AvisoGravacao += (s, e) =>
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[RECORDER] {e.Mensagem}");
+            Console.ResetColor();
+        };
+
+        _recordingEnabled = true;
+        Console.WriteLine($"[RECORDER] Gravação de TRADES + BOOK habilitada em: {diretorioBase}");
     }
 
-    public Task DisconnectAsync() => _provider.DisconnectAsync();
+    /// <summary>
+    /// Desativa gravação automática.
+    /// </summary>
+    public void DesabilitarGravacao()
+    {
+        _recordingEnabled = false;
+        _recorder?.Dispose();
+        _recorder = null;
+        Console.WriteLine("[RECORDER] Gravação desabilitada");
+    }
+
+    public async Task ConnectAsync(ProviderCredentials credentials)
+    {
+        StartUiDispatch();
+
+        if (_recordingEnabled && _recorder != null)
+        {
+            var hoje = DateOnly.FromDateTime(DateTime.Now);
+            var iniciou = await _recorder.IniciarPregaoAsync(hoje);
+            if (!iniciou)
+            {
+                Console.WriteLine("[RECORDER] Falha ao iniciar pregão - gravação desabilitada");
+                _recordingEnabled = false;
+            }
+        }
+
+        await _provider.ConnectAsync(credentials);
+    }
+
+    public async Task DisconnectAsync()
+    {
+        if (_recordingEnabled && _recorder != null)
+        {
+            var status = _recorder.Status;
+            Console.WriteLine($"\n[RECORDER] Pregão {status.PregaoAtivo} finalizado. " +
+                              $"Trades: {status.TotaisTrades}, Books: {status.TotaisBooks}");
+            await _recorder.FinalizarPregaoAsync();
+        }
+
+        await _provider.DisconnectAsync();
+    }
 
     public void Subscribe(string ticker)
     {
@@ -60,7 +124,18 @@ public sealed class MarketEngine : IDisposable
     public BookSnapshot? GetBook(string ticker)
         => _books.TryGetValue(ticker, out var state) ? state.CurrentSnapshot : null;
 
-    private void HandleTrade(TradeEvent trade) => OnTrade?.Invoke(trade);
+    private void HandleTrade(TradeEvent trade)
+    {
+        Exhaustion.ProcessarTrade(trade);
+
+        // ✅ GRAVAR TRADE (com broker e agressor — essencial para replay)
+        if (_recordingEnabled && _recorder != null)
+        {
+            _ = _recorder.GravarTradeAsync(ExtrairAtivo(trade.Ticker), trade);
+        }
+
+        OnTrade?.Invoke(trade);
+    }
 
     private void HandleBook(BookLevel level)
     {
@@ -74,6 +149,13 @@ public sealed class MarketEngine : IDisposable
         {
             var snap = state.CurrentSnapshot;
             Iceberg.ProcessSnapshot(snap);
+
+            // ✅ GRAVAR BOOK (essencial — Nelogica não tem histórico de book)
+            if (_recordingEnabled && _recorder != null)
+            {
+                _ = _recorder.GravarBookAsync(ExtrairAtivo(snap.Ticker), snap);
+            }
+
             _uiQueue.Enqueue(snap);
             state.NeedsUiUpdate = false;
         }
@@ -86,7 +168,26 @@ public sealed class MarketEngine : IDisposable
     }
 
     private void HandleConnectionChanged(ConnectionChangedEvent evt)
-        => OnConnectionChanged?.Invoke(evt);
+    {
+        if (_recordingEnabled && _recorder != null)
+        {
+            _ = _recorder.GravarEventoAsync($"CONNECTION: {evt.Status} - {evt.Message}", DateTime.UtcNow);
+        }
+
+        OnConnectionChanged?.Invoke(evt);
+    }
+
+    /// <summary>
+    /// Extrai o ativo base do ticker.
+    /// Ex: WINFUT → WIN, WINM26 → WIN
+    /// </summary>
+    private string ExtrairAtivo(string ticker)
+    {
+        if (ticker.StartsWith("WIN")) return "WIN";
+        if (ticker.StartsWith("WDO")) return "WDO";
+        if (ticker.StartsWith("WSP")) return "WSP";
+        return ticker;
+    }
 
     private void StartUiDispatch()
     {
@@ -126,6 +227,7 @@ public sealed class MarketEngine : IDisposable
         _provider.OnConnectionChanged -= HandleConnectionChanged;
         _provider.Dispose();
         _cts.Dispose();
+        _recorder?.Dispose();
     }
 }
 
@@ -154,23 +256,11 @@ internal sealed class BookState
             dict[level.Price] = level;
 
         _snapshot = new BookSnapshot(
-            Ticker:    _ticker,
-            Bids:      _bids.Values.OrderByDescending(b => b.Price).ToArray(),
-            Asks:      _asks.Values.OrderBy(a => a.Price).ToArray(),
-            Timestamp: level.Time
+            Ticker: _ticker,
+            Bids:   _bids.Values.OrderByDescending(b => b.Price).ToArray(),
+            Asks:   _asks.Values.OrderBy(a => a.Price).ToArray(),
+            Time:   level.Time
         );
         NeedsUiUpdate = true;
     }
-}
-
-public sealed record BookSnapshot(
-    string                   Ticker,
-    IReadOnlyList<BookLevel> Bids,
-    IReadOnlyList<BookLevel> Asks,
-    DateTime                 Timestamp
-)
-{
-    public decimal? BestBid => Bids.Count > 0 ? Bids[0].Price : null;
-    public decimal? BestAsk => Asks.Count > 0 ? Asks[0].Price : null;
-    public decimal? Spread  => BestBid.HasValue && BestAsk.HasValue ? BestAsk - BestBid : null;
 }

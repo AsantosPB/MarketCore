@@ -46,3 +46,11 @@ public record ConnectionChangedEvent(
     ConnectionStatus Status,
     string           Message
 );
+
+// Snapshot completo do book em um momento específico (usado pelo Recorder)
+public record BookSnapshot(
+    string Ticker,
+    IReadOnlyList<BookLevel> Bids,
+    IReadOnlyList<BookLevel> Asks,
+    DateTime Time
+);
