@@ -701,16 +701,18 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="60"/>
-                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="12"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="50"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Vol mín:" FontSize="10" Foreground="#CCCCCC" VerticalAlignment="Center"/>
                                 <TextBox Grid.Column="2" x:Name="TxTapeVolMin" Style="{StaticResource DarkInput}" Text="0" Height="20" FontSize="9"/>
-                                <CheckBox Grid.Column="4" x:Name="ChkShowOnlyBig" Content="lotes grandes"
-                                          FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="Mov. pts:" FontSize="10" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="6" x:Name="TxTapeMoveMin" Style="{StaticResource DarkInput}" Text="0" Height="20" FontSize="9"/>
                             </Grid>
                         </Border>
 

@@ -16,7 +16,22 @@ using MarketCore.Contracts;
 
 namespace MarketCore.WPF
 {
-    public partial class MainWindow : Window
+    
+    public class TapeRecord
+    {
+        public string? Time { get; set; }
+        public string? Broker { get; set; }
+        public string? Price { get; set; }
+        public string? Volume { get; set; }
+        public string? Side { get; set; }
+        public Brush PriceColor { get; set; } = new SolidColorBrush(Color.FromRgb(238, 238, 238));
+        public Brush VolColor { get; set; } = new SolidColorBrush(Color.FromRgb(204, 204, 204));
+        public Brush SideColor { get; set; } = new SolidColorBrush(Color.FromRgb(0, 200, 83));
+        public Brush RowBg { get; set; } = new SolidColorBrush(Color.FromRgb(10, 10, 10));
+        public string VolWeight { get; set; } = "Normal";
+    }
+
+public partial class MainWindow : Window
     {
         // ── Engine ────────────────────────────────────────────────────────────
         private MarketEngine _engine = null!;
@@ -37,7 +52,11 @@ namespace MarketCore.WPF
         private int _levels = 30;
         private int _groupingPts = 0;          // 0 = sem agrupamento
         private int _highlightThreshold = 300;
-        private int _tapeVolMin = 0;
+        private ObservableCollection<TapeRecord> _tapeRecords = new();
+        private decimal _tapeVolMin = 0;
+        private decimal _tapeMoveMin = 0;
+        private decimal _lastBidPrice;
+        private decimal _lastAskPrice;
         private readonly List<BrokerFilter> _activeFilters = new();
 
         // ── Detectores ativos por nível de preço ──────────────────────────────
@@ -64,7 +83,7 @@ namespace MarketCore.WPF
         private long _windowBuy2;
         private long _windowSell2;
 
-        // ── Timer UI ──────────────────────────────────────────────────────────
+                // ── Timer UI ──────────────────────────────────────────────────────────
         private readonly DispatcherTimer _uiTimer;
         private readonly DispatcherTimer _clockTimer;
         private long _tradesLastSec;
@@ -121,6 +140,8 @@ namespace MarketCore.WPF
             CbLevels.SelectionChanged      += CbLevels_SelectionChanged;
             CbGrouping.SelectionChanged    += CbGrouping_SelectionChanged;
             TxHighlightThreshold.LostFocus += TxHighlightThreshold_LostFocus;
+            TxTapeVolMin.TextChanged += TxTapeVolMin_TextChanged;
+            TxTapeMoveMin.TextChanged += TxTapeMoveMin_TextChanged;
             TapeScrollViewer.ScrollChanged += TapeScrollViewer_ScrollChanged;
             BtnClearAlerts.Click           += BtnClearAlerts_Click;
         }
@@ -164,7 +185,36 @@ namespace MarketCore.WPF
             _tradeCount++;
             _tradesThisSec++;
 
-            if (trade.Aggressor == TradeAggressor.Buy)
+            // ──── ADICIONAR À TAPE ────
+            if (_tapeVolMin == 0 || trade.Volume >= _tapeVolMin)
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    _tapeRecords.Insert(0, new TapeRecord
+                    {
+                        Time = trade.Time.ToString("HH:mm:ss"),
+                        Broker = trade.Broker,
+                        Price = trade.Price.ToString("N3"),
+                        Volume = trade.Volume.ToString(),
+                        Side = trade.Aggressor == TradeAggressor.Buy ? "Compra" : "Venda",
+                        PriceColor = new SolidColorBrush(Color.FromRgb(238, 238, 238)),
+                        VolColor = trade.Volume > 500 
+                            ? new SolidColorBrush(Color.FromRgb(0, 200, 83)) 
+                            : new SolidColorBrush(Color.FromRgb(204, 204, 204)),
+                        SideColor = trade.Aggressor == TradeAggressor.Buy 
+                            ? new SolidColorBrush(Color.FromRgb(0, 200, 83)) 
+                            : new SolidColorBrush(Color.FromRgb(255, 23, 68)),
+                        RowBg = new SolidColorBrush(Color.FromRgb(10, 10, 10)),
+                        VolWeight = trade.Volume > 500 ? "Bold" : "Normal"
+                    });
+                    
+                    // Limitar a 500 trades
+                    while (_tapeRecords.Count > 500)
+                        _tapeRecords.RemoveAt(_tapeRecords.Count - 1);
+                });
+            }
+
+if (trade.Aggressor == TradeAggressor.Buy)
             {
                 _buyAggression  += trade.Volume;
                 _delta          += trade.Volume;
@@ -679,6 +729,18 @@ namespace MarketCore.WPF
                     _windowSell = 0;
                 }
             }
+        }
+
+        private void TxTapeVolMin_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (decimal.TryParse(TxTapeVolMin.Text, out var val))
+                _tapeVolMin = val;
+        }
+
+        private void TxTapeMoveMin_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (decimal.TryParse(TxTapeMoveMin.Text, out var val))
+                _tapeMoveMin = val;
         }
 
         private void TapeScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
