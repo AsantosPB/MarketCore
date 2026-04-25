@@ -42,9 +42,6 @@ public sealed class MarketEngine : IDisposable
         _provider.OnConnectionChanged += HandleConnectionChanged;
     }
 
-    /// <summary>
-    /// Ativa gravação automática de trades e book de ofertas.
-    /// </summary>
     public void HabilitarGravacao(string diretorioBase)
     {
         _recorder = new MarketRecorder(diretorioBase);
@@ -67,9 +64,6 @@ public sealed class MarketEngine : IDisposable
         Console.WriteLine($"[RECORDER] Gravação de TRADES + BOOK habilitada em: {diretorioBase}");
     }
 
-    /// <summary>
-    /// Desativa gravação automática.
-    /// </summary>
     public void DesabilitarGravacao()
     {
         _recordingEnabled = false;
@@ -128,11 +122,8 @@ public sealed class MarketEngine : IDisposable
     {
         Exhaustion.ProcessarTrade(trade);
 
-        // ✅ GRAVAR TRADE (com broker e agressor — essencial para replay)
         if (_recordingEnabled && _recorder != null)
-        {
             _ = _recorder.GravarTradeAsync(ExtrairAtivo(trade.Ticker), trade);
-        }
 
         OnTrade?.Invoke(trade);
     }
@@ -150,11 +141,8 @@ public sealed class MarketEngine : IDisposable
             var snap = state.CurrentSnapshot;
             Iceberg.ProcessSnapshot(snap);
 
-            // ✅ GRAVAR BOOK (essencial — Nelogica não tem histórico de book)
             if (_recordingEnabled && _recorder != null)
-            {
                 _ = _recorder.GravarBookAsync(ExtrairAtivo(snap.Ticker), snap);
-            }
 
             _uiQueue.Enqueue(snap);
             state.NeedsUiUpdate = false;
@@ -170,17 +158,11 @@ public sealed class MarketEngine : IDisposable
     private void HandleConnectionChanged(ConnectionChangedEvent evt)
     {
         if (_recordingEnabled && _recorder != null)
-        {
             _ = _recorder.GravarEventoAsync($"CONNECTION: {evt.Status} - {evt.Message}", DateTime.UtcNow);
-        }
 
         OnConnectionChanged?.Invoke(evt);
     }
 
-    /// <summary>
-    /// Extrai o ativo base do ticker.
-    /// Ex: WINFUT → WIN, WINM26 → WIN
-    /// </summary>
     private string ExtrairAtivo(string ticker)
     {
         if (ticker.StartsWith("WIN")) return "WIN";
@@ -250,17 +232,37 @@ internal sealed class BookState
     public void Update(BookLevel level)
     {
         var dict = level.Side == BookSide.Bid ? _bids : _asks;
+
         if (level.Volume <= 0)
             dict.Remove(level.Price);
         else
             dict[level.Price] = level;
 
+        var bids = _bids.Values.OrderByDescending(b => b.Price).ToArray();
+        var asks = _asks.Values.OrderBy(a => a.Price).ToArray();
+
+        // Se preços cruzados (bid >= ask), limpar tudo — dados obsoletos
+        if (bids.Length > 0 && asks.Length > 0 && bids[0].Price >= asks[0].Price)
+        {
+            _bids.Clear();
+            _asks.Clear();
+
+            // Reinserir apenas o nível atual
+            var dict2 = level.Side == BookSide.Bid ? _bids : _asks;
+            if (level.Volume > 0)
+                dict2[level.Price] = level;
+
+            bids = _bids.Values.OrderByDescending(b => b.Price).ToArray();
+            asks = _asks.Values.OrderBy(a => a.Price).ToArray();
+        }
+
         _snapshot = new BookSnapshot(
             Ticker: _ticker,
-            Bids:   _bids.Values.OrderByDescending(b => b.Price).ToArray(),
-            Asks:   _asks.Values.OrderBy(a => a.Price).ToArray(),
+            Bids:   bids,
+            Asks:   asks,
             Time:   level.Time
         );
+
         NeedsUiUpdate = true;
     }
 }
