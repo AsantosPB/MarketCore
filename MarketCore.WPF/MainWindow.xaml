@@ -3,32 +3,30 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MarketCore.WPF"
+        xmlns:fs="clr-namespace:MarketCore.FlowSense"
         mc:Ignorable="d"
         Title="MarketCore FlowSense"
         Height="900" Width="1500"
         MinHeight="700" MinWidth="1300"
         Background="#0D0D0D"
         FontFamily="Consolas">
-
     <Window.Resources>
-        <SolidColorBrush x:Key="BgPrimary"    Color="#0D0D0D"/>
-        <SolidColorBrush x:Key="BgSecondary"  Color="#141414"/>
-        <SolidColorBrush x:Key="BgTertiary"   Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="AccentGreen"  Color="#00C853"/>
-        <SolidColorBrush x:Key="AccentRed"    Color="#FF1744"/>
-
+        <SolidColorBrush x:Key="BgPrimary" Color="#0D0D0D"/>
+        <SolidColorBrush x:Key="BgSecondary" Color="#141414"/>
+        <SolidColorBrush x:Key="BgTertiary" Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="AccentGreen" Color="#00C853"/>
+        <SolidColorBrush x:Key="AccentRed" Color="#FF1744"/>
         <Style x:Key="MonoText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="#E8E8E8"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="#CCCCCC"/>
         </Style>
-
         <Style x:Key="DarkCombo" TargetType="ComboBox">
             <Setter Property="Background" Value="#1A1A1A"/>
             <Setter Property="Foreground" Value="#E8E8E8"/>
@@ -39,7 +37,6 @@
             <Setter Property="Height" Value="24"/>
             <Setter Property="Padding" Value="6,2"/>
         </Style>
-
         <Style TargetType="ComboBoxItem">
             <Setter Property="Background" Value="#F0F0F0"/>
             <Setter Property="Foreground" Value="#111111"/>
@@ -57,7 +54,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
         <Style x:Key="DarkInput" TargetType="TextBox">
             <Setter Property="Background" Value="#1A1A1A"/>
             <Setter Property="Foreground" Value="#E8E8E8"/>
@@ -69,7 +65,6 @@
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="CaretBrush" Value="#E8E8E8"/>
         </Style>
-
         <Style x:Key="DarkButton" TargetType="Button">
             <Setter Property="Background" Value="#1E2A1E"/>
             <Setter Property="Foreground" Value="#00C853"/>
@@ -87,7 +82,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
         <Style x:Key="DangerButton" TargetType="Button">
             <Setter Property="Background" Value="#2A1010"/>
             <Setter Property="Foreground" Value="#FF4444"/>
@@ -99,31 +93,26 @@
             <Setter Property="Width" Value="20"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
-
         <Style x:Key="HSep" TargetType="Separator">
             <Setter Property="Background" Value="#2A2A2A"/>
             <Setter Property="Height" Value="1"/>
             <Setter Property="Margin" Value="0,4"/>
         </Style>
-
         <Style x:Key="HiddenScroll" TargetType="ScrollViewer">
             <Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
             <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
-
         <Style x:Key="BookColHeader" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="Foreground" Value="#888888"/>
             <Setter Property="HorizontalAlignment" Value="Center"/>
         </Style>
-
         <Style x:Key="BidPrice" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="Foreground" Value="#00C853"/>
             <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
-
         <Style x:Key="AskPrice" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="Foreground" Value="#FF1744"/>
             <Setter Property="FontSize" Value="10"/>
@@ -131,15 +120,12 @@
             <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
     </Window.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="38"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
-
-        <!-- ═══ TOOLBAR ═══ -->
         <Border Grid.Row="0" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,0,0,1">
             <Grid Margin="12,0">
                 <Grid.ColumnDefinitions>
@@ -152,28 +138,20 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-
-                <TextBlock Grid.Column="0" Text="WINFUT" FontSize="14" FontWeight="Bold"
-                           Foreground="#E8E8E8" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440"
-                           FontSize="14" FontWeight="Bold" Foreground="#00C853"
-                           VerticalAlignment="Center" Margin="0,0,16,0"/>
-                <Border Grid.Column="2" Background="#1A1A1A" BorderBrush="#2A2A2A"
-                        BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
+                <TextBlock Grid.Column="0" Text="WINFUT" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440" FontSize="14" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <Border Grid.Column="2" Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="spread: " FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                         <TextBlock x:Name="TbSpread" Text="-- pts" FontSize="11" Foreground="#EEEEEE" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
-                <Border Grid.Column="3" Background="#1A1A1A" BorderBrush="#2A2A2A"
-                        BorderThickness="1" CornerRadius="3" Padding="8,3" HorizontalAlignment="Left">
+                <Border Grid.Column="3" Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" Padding="8,3" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="prof: " FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                         <TextBlock x:Name="TbDepth" Text="-- níveis" FontSize="11" Foreground="#EEEEEE" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
-
-                <!-- Contadores S I R E -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                     <Border Background="#1A2A1A" BorderBrush="#2A4A2A" BorderThickness="1" CornerRadius="3" Padding="6,2" Margin="0,0,4,0">
                         <StackPanel Orientation="Horizontal">
@@ -200,26 +178,19 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
-
-                <Border Grid.Column="5" Background="#0A1A0A" BorderBrush="#1A3A1A"
-                        BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
+                <Border Grid.Column="5" Background="#0A1A0A" BorderBrush="#1A3A1A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Δ " FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                         <TextBlock x:Name="TbDelta" Text="+0" FontSize="13" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
-
                 <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                     <Ellipse x:Name="EllipseConnection" Width="8" Height="8" Fill="#FF1744" Margin="0,0,5,0"/>
                     <TextBlock x:Name="TbConnectionStatus" Text="DESCONECTADO" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                 </StackPanel>
-
-                <TextBlock Grid.Column="7" x:Name="TbClock" Text="--:--:--"
-                           FontSize="11" Foreground="#CCCCCC" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="7" x:Name="TbClock" Text="--:--:--" FontSize="11" Foreground="#CCCCCC" VerticalAlignment="Center"/>
             </Grid>
         </Border>
-
-        <!-- ═══ CONTEÚDO PRINCIPAL ═══ -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="210" MinWidth="180" MaxWidth="260"/>
@@ -229,14 +200,10 @@
                 <ColumnDefinition Width="4"/>
                 <ColumnDefinition Width="260" MinWidth="220" MaxWidth="320"/>
             </Grid.ColumnDefinitions>
-
-            <!-- ─── PAINEL ESQUERDO ─── -->
             <Border Grid.Column="0" Background="#0F0F0F" BorderBrush="#2A2A2A" BorderThickness="0,0,1,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="10,10,10,10">
-                        <TextBlock Text="Filtros de lote por corretora"
-                                   FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,8"/>
-
+                        <TextBlock Text="Filtros de lote por corretora" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,8"/>
                         <TextBlock Text="Corretora" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
                         <ComboBox x:Name="CbFilterBroker" Style="{StaticResource DarkCombo}" Margin="0,0,0,6">
                             <ComboBoxItem Content="(todas)" IsSelected="True"/>
@@ -249,7 +216,6 @@
                             <ComboBoxItem Content="Itaú"/>
                             <ComboBoxItem Content="RLP"/>
                         </ComboBox>
-
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -265,7 +231,6 @@
                                 <TextBox x:Name="TxFilterVolMax" Style="{StaticResource DarkInput}" Text="9999"/>
                             </StackPanel>
                         </Grid>
-
                         <Grid Margin="0,0,0,4">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -275,9 +240,7 @@
                             <Button Grid.Column="0" Content="+ Adicionar" Style="{StaticResource DarkButton}" x:Name="BtnAddFilter"/>
                             <Button Grid.Column="2" Content="✕ Limpar" Style="{StaticResource DangerButton}" x:Name="BtnClearFilters" Width="60"/>
                         </Grid>
-
-                        <Border Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="1"
-                                CornerRadius="3" MinHeight="28" Padding="6,4" Margin="0,0,0,8">
+                        <Border Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" MinHeight="28" Padding="6,4" Margin="0,0,0,8">
                             <ItemsControl x:Name="IcActiveFilters">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -286,10 +249,8 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding DisplayText}"
-                                                       FontSize="10" Foreground="#00C853" FontFamily="Consolas" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="1" Content="✕" Style="{StaticResource DangerButton}"
-                                                    Width="16" Height="16" FontSize="9" Tag="{Binding}"/>
+                                            <TextBlock Grid.Column="0" Text="{Binding DisplayText}" FontSize="10" Foreground="#00C853" FontFamily="Consolas" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Content="✕" Style="{StaticResource DangerButton}" Width="16" Height="16" FontSize="9" Tag="{Binding}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -298,11 +259,8 @@
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
                         </Border>
-                        <TextBlock x:Name="TbFilterStatus" Text="Nenhum filtro ativo — todas as ordens exibidas"
-                                   FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,10"/>
-
+                        <TextBlock x:Name="TbFilterStatus" Text="Nenhum filtro ativo — todas as ordens exibidas" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <Separator Style="{StaticResource HSep}"/>
-
                         <TextBlock Text="Níveis:" Style="{StaticResource SectionLabel}" Margin="0,4,0,3"/>
                         <ComboBox x:Name="CbLevels" Style="{StaticResource DarkCombo}" Margin="0,0,0,8">
                             <ComboBoxItem Content="10"/>
@@ -310,7 +268,6 @@
                             <ComboBoxItem Content="20"/>
                             <ComboBoxItem Content="30" IsSelected="True"/>
                         </ComboBox>
-
                         <TextBlock Text="Agrupa (pts):" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
                         <ComboBox x:Name="CbGrouping" Style="{StaticResource DarkCombo}" Margin="0,0,0,8">
                             <ComboBoxItem Content="Sem agrupamento" IsSelected="True"/>
@@ -318,28 +275,20 @@
                             <ComboBoxItem Content="10"/>
                             <ComboBoxItem Content="25"/>
                         </ComboBox>
-
                         <TextBlock Text="Destaque lote ≥" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
                         <TextBox x:Name="TxHighlightThreshold" Style="{StaticResource DarkInput}" Text="300" Margin="0,0,0,10"/>
-
                         <Separator Style="{StaticResource HSep}"/>
-
                         <TextBlock Text="Modo de Legibilidade" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,6,0,6"/>
-                        <Border x:Name="BorderLegibilidade" CornerRadius="4" Padding="10,8" Margin="0,0,0,8"
-                                Background="#0A2A0A" BorderBrush="#00C853" BorderThickness="1">
+                        <Border x:Name="BorderLegibilidade" CornerRadius="4" Padding="10,8" Margin="0,0,0,8" Background="#0A2A0A" BorderBrush="#00C853" BorderThickness="1">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                     <TextBlock x:Name="TbLegibilidadeIcon" Text="🟢" FontSize="14" Margin="0,0,6,0"/>
-                                    <TextBlock x:Name="TbLegibilidadeStatus" Text="LEGÍVEL"
-                                               FontSize="12" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TbLegibilidadeStatus" Text="LEGÍVEL" FontSize="12" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <TextBlock x:Name="TbLegibilidadeDesc" Text="Fluxo direcional validado"
-                                           FontSize="9" Foreground="#555555" FontFamily="Consolas" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="TbLegibilidadeDesc" Text="Fluxo direcional validado" FontSize="9" Foreground="#555555" FontFamily="Consolas" TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
-
                         <Separator Style="{StaticResource HSep}"/>
-
                         <TextBlock Text="Engine" FontSize="12" FontWeight="Bold" Foreground="#CCCCCC" Margin="0,6,0,6"/>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -364,10 +313,7 @@
                     </StackPanel>
                 </ScrollViewer>
             </Border>
-
             <GridSplitter Grid.Column="1" Width="4" Background="#1A1A1A" HorizontalAlignment="Stretch"/>
-
-            <!-- ─── BOOK BILATERAL ─── -->
             <Border Grid.Column="2" Background="#0D0D0D" BorderBrush="#444444" BorderThickness="1">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -375,8 +321,6 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="72"/>
                     </Grid.RowDefinitions>
-
-                    <!-- Header do book -->
                     <Grid Grid.Row="0" Background="#0A0A0A">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="18"/>
@@ -384,6 +328,7 @@
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="18"/>
+                            <ColumnDefinition Width="16"/>
                             <ColumnDefinition Width="52"/>
                             <ColumnDefinition Width="38"/>
                             <ColumnDefinition Width="90"/>
@@ -394,119 +339,59 @@
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="38"/>
                             <ColumnDefinition Width="52"/>
+                            <ColumnDefinition Width="16"/>
                             <ColumnDefinition Width="18"/>
                         </Grid.ColumnDefinitions>
-
-                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="6"
-                                Background="#081208" BorderBrush="#1A3A1A" BorderThickness="0,0,1,1">
-                            <TextBlock Text="COMPRA" FontSize="12" FontWeight="Bold"
-                                       Foreground="#00E676" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="7" Background="#081208" BorderBrush="#1A3A1A" BorderThickness="0,0,1,1">
+                            <TextBlock Text="COMPRA" FontSize="12" FontWeight="Bold" Foreground="#00E676" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Border Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="6"
-                                Background="#120808" BorderBrush="#3A1A1A" BorderThickness="0,0,0,1">
-                            <TextBlock Text="VENDA" FontSize="12" FontWeight="Bold"
-                                       Foreground="#FF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Border Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="7" Background="#120808" BorderBrush="#3A1A1A" BorderThickness="0,0,0,1">
+                            <TextBlock Text="VENDA" FontSize="12" FontWeight="Bold" Foreground="#FF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="Corretora"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Vol"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="5" Text="Preço"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="6" Text="Preço"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="9" Text="Vol"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="10" Text="Corretora"
-                                   FontSize="10" Foreground="#888888"
-                                   HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Corretora" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="3" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="6" Text="Preço" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="7" Text="Preço" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="10" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="11" Text="Corretora" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
                     </Grid>
-
-                    <!-- Linhas do book -->
                     <ScrollViewer Grid.Row="1" Style="{StaticResource HiddenScroll}" x:Name="BookScrollViewer">
                         <ItemsControl x:Name="IcBookRows" ItemsSource="{Binding BookRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid x:Name="BookRowGrid" Height="18" Background="{Binding RowBackground}">
+                                    <Grid x:Name="BookRowGrid" Height="22" Background="{Binding RowBackground}">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="18"/>
-                                            <ColumnDefinition Width="52"/>
-                                            <ColumnDefinition Width="38"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="56"/>
+                                            <ColumnDefinition Width="42"/>
                                             <ColumnDefinition Width="90"/>
                                             <ColumnDefinition Width="2"/>
                                             <ColumnDefinition Width="65"/>
                                             <ColumnDefinition Width="65"/>
                                             <ColumnDefinition Width="2"/>
                                             <ColumnDefinition Width="90"/>
-                                            <ColumnDefinition Width="38"/>
-                                            <ColumnDefinition Width="52"/>
-                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition Width="42"/>
+                                            <ColumnDefinition Width="56"/>
+                                            <ColumnDefinition Width="16"/>
                                         </Grid.ColumnDefinitions>
-
-                                        <!-- det BID -->
-                                        <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            <Border Width="8" Height="8" CornerRadius="1" Margin="0,0,1,0"
-                                                    Background="{Binding BidSpoofColor}"/>
-                                            <Border Width="8" Height="8" CornerRadius="1"
-                                                    Background="{Binding BidIcebergColor}"/>
-                                        </StackPanel>
-                                        <!-- Corretora BID -->
-                                        <TextBlock Grid.Column="1" Text="{Binding BidBroker}"
-                                                   FontSize="10" Foreground="#CCCCCC"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <!-- Vol BID -->
-                                        <TextBlock Grid.Column="2" Text="{Binding BidVolume}"
-                                                   FontSize="10" FontWeight="{Binding BidVolWeight}"
-                                                   Foreground="{Binding BidVolColor}"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <!-- Barra BID -->
+                                        <TextBlock Grid.Column="0" x:Name="TbBidDetector" Text="{Binding BidDetector}" Foreground="{Binding BidDetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding BidBroker}" FontSize="12" Foreground="#E8E8E8" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding BidVolume}" FontSize="12" FontWeight="{Binding BidVolWeight}" Foreground="{Binding BidVolColor}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
                                         <Grid Grid.Column="3" Margin="1,3,1,3">
                                             <Border Background="#0A0A0A" CornerRadius="1"/>
-                                            <Border HorizontalAlignment="Right" CornerRadius="1"
-                                                    Background="{Binding BidBarColor}"
-                                                    Width="{Binding BidBarWidth}"
-                                                    Opacity="{Binding BidBarOpacity}"/>
+                                            <Border HorizontalAlignment="Right" CornerRadius="1" Background="{Binding BidBarColor}" Width="{Binding BidBarWidth}" Opacity="{Binding BidBarOpacity}"/>
                                         </Grid>
-                                        <!-- Preço BID -->
-                                        <TextBlock Grid.Column="5" Text="{Binding BidPrice}"
-                                                   FontSize="10" FontWeight="SemiBold" Foreground="#00C853"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <!-- Preço ASK -->
-                                        <TextBlock Grid.Column="6" Text="{Binding AskPrice}"
-                                                   FontSize="10" FontWeight="SemiBold" Foreground="#FF1744"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <!-- Barra ASK -->
+                                        <Border Grid.Column="4" Background="#2A2A2A"/>
+                                        <TextBlock Grid.Column="5" Text="{Binding BidPrice}" FontSize="12" FontWeight="SemiBold" Foreground="#00C853" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                        <TextBlock Grid.Column="6" Text="{Binding AskPrice}" FontSize="12" FontWeight="SemiBold" Foreground="#FF1744" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                        <Border Grid.Column="7" Background="#2A2A2A"/>
                                         <Grid Grid.Column="8" Margin="1,3,1,3">
                                             <Border Background="#0A0A0A" CornerRadius="1"/>
-                                            <Border HorizontalAlignment="Left" CornerRadius="1"
-                                                    Background="{Binding AskBarColor}"
-                                                    Width="{Binding AskBarWidth}"
-                                                    Opacity="{Binding AskBarOpacity}"/>
+                                            <Border HorizontalAlignment="Left" CornerRadius="1" Background="{Binding AskBarColor}" Width="{Binding AskBarWidth}" Opacity="{Binding AskBarOpacity}"/>
                                         </Grid>
-                                        <!-- Vol ASK -->
-                                        <TextBlock Grid.Column="9" Text="{Binding AskVolume}"
-                                                   FontSize="10" FontWeight="{Binding AskVolWeight}"
-                                                   Foreground="{Binding AskVolColor}"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <!-- Corretora ASK -->
-                                        <TextBlock Grid.Column="10" Text="{Binding AskBroker}"
-                                                   FontSize="10" Foreground="#CCCCCC"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <!-- det ASK -->
-                                        <StackPanel Grid.Column="11" Orientation="Horizontal"
-                                                    HorizontalAlignment="Left" VerticalAlignment="Center">
-                                            <Border Width="8" Height="8" CornerRadius="1" Margin="0,0,1,0"
-                                                    Background="{Binding AskSpoofColor}"/>
-                                            <Border Width="8" Height="8" CornerRadius="1"
-                                                    Background="{Binding AskIcebergColor}"/>
-                                        </StackPanel>
+                                        <TextBlock Grid.Column="9" Text="{Binding AskVolume}" FontSize="12" FontWeight="{Binding AskVolWeight}" Foreground="{Binding AskVolColor}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                        <TextBlock Grid.Column="10" Text="{Binding AskBroker}" FontSize="12" Foreground="#E8E8E8" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                        <TextBlock Grid.Column="11" x:Name="TbAskDetector" Text="{Binding AskDetector}" Foreground="{Binding AskDetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -517,8 +402,6 @@
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
                     </ScrollViewer>
-
-                    <!-- Footer: 3 barras + Delta/Bid/Ask -->
                     <Border Grid.Row="2" Background="#080808" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0">
                         <Grid Margin="0,2,0,2">
                             <Grid.RowDefinitions>
@@ -530,8 +413,6 @@
                                 <RowDefinition Height="3"/>
                                 <RowDefinition Height="18"/>
                             </Grid.RowDefinitions>
-
-                            <!-- Barra 1: Janela móvel 2 -->
                             <Grid Grid.Row="0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="68"/>
@@ -540,34 +421,28 @@
                                     <ColumnDefinition Width="70"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" x:Name="TbBuyPctWindow2" Text="Comp --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#00E676"
-                                           HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#00E676" HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                 <Grid Grid.Column="1" Margin="3,1">
                                     <Border Background="#111111" CornerRadius="3"/>
-                                    <Border x:Name="BidWindow2Bar" HorizontalAlignment="Left"
-                                            CornerRadius="3,0,0,3" Background="#00AA44" Opacity="0.9" Width="0"/>
-                                    <Border x:Name="AskWindow2Bar" HorizontalAlignment="Right"
-                                            CornerRadius="0,3,3,0" Background="#CC1133" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="BidWindow2Bar" HorizontalAlignment="Left" CornerRadius="3,0,0,3" Background="#00AA44" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="AskWindow2Bar" HorizontalAlignment="Right" CornerRadius="0,3,3,0" Background="#CC1133" Opacity="0.9" Width="0"/>
                                 </Grid>
                                 <TextBlock Grid.Column="2" x:Name="TbSellPctWindow2" Text="Vend --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444"
-                                           HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444" HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="3" x:Name="CbWindowPeriod2"
                                           Height="16" FontSize="10" FontFamily="Consolas" FontWeight="Bold"
                                           Margin="3,0" Background="#FFFFFF" Foreground="#000000"
                                           BorderBrush="#888888" VerticalAlignment="Center">
                                     <ComboBoxItem Content="1 min"/>
-                                        <ComboBoxItem Content="2 min"/>
-                                        <ComboBoxItem Content="3 min" IsSelected="True"/>
-                                        <ComboBoxItem Content="5 min"/>
-                                        <ComboBoxItem Content="10 min"/>
-                                        <ComboBoxItem Content="15 min"/>
-                                        <ComboBoxItem Content="30 min"/>
-                                        <ComboBoxItem Content="60 min"/>
+                                    <ComboBoxItem Content="2 min"/>
+                                    <ComboBoxItem Content="3 min" IsSelected="True"/>
+                                    <ComboBoxItem Content="5 min"/>
+                                    <ComboBoxItem Content="10 min"/>
+                                    <ComboBoxItem Content="15 min"/>
+                                    <ComboBoxItem Content="30 min"/>
+                                    <ComboBoxItem Content="60 min"/>
                                 </ComboBox>
                             </Grid>
-
-                            <!-- Barra 2: Janela móvel 1 -->
                             <Grid Grid.Row="2">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="68"/>
@@ -576,34 +451,28 @@
                                     <ColumnDefinition Width="70"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" x:Name="TbBuyPctWindow" Text="Comp --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#00E676"
-                                           HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#00E676" HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                 <Grid Grid.Column="1" Margin="3,1">
                                     <Border Background="#111111" CornerRadius="3"/>
-                                    <Border x:Name="BidWindowBar" HorizontalAlignment="Left"
-                                            CornerRadius="3,0,0,3" Background="#00AA44" Opacity="0.9" Width="0"/>
-                                    <Border x:Name="AskWindowBar" HorizontalAlignment="Right"
-                                            CornerRadius="0,3,3,0" Background="#CC1133" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="BidWindowBar" HorizontalAlignment="Left" CornerRadius="3,0,0,3" Background="#00AA44" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="AskWindowBar" HorizontalAlignment="Right" CornerRadius="0,3,3,0" Background="#CC1133" Opacity="0.9" Width="0"/>
                                 </Grid>
                                 <TextBlock Grid.Column="2" x:Name="TbSellPctWindow" Text="Vend --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444"
-                                           HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444" HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
                                 <ComboBox Grid.Column="3" x:Name="CbWindowPeriod"
                                           Height="16" FontSize="10" FontFamily="Consolas" FontWeight="Bold"
                                           Margin="3,0" Background="#FFFFFF" Foreground="#000000"
                                           BorderBrush="#888888" VerticalAlignment="Center">
                                     <ComboBoxItem Content="1 min" IsSelected="True"/>
-                                        <ComboBoxItem Content="2 min"/>
-                                        <ComboBoxItem Content="3 min"/>
-                                        <ComboBoxItem Content="5 min"/>
-                                        <ComboBoxItem Content="10 min"/>
-                                        <ComboBoxItem Content="15 min"/>
-                                        <ComboBoxItem Content="30 min"/>
-                                        <ComboBoxItem Content="60 min"/>
+                                    <ComboBoxItem Content="2 min"/>
+                                    <ComboBoxItem Content="3 min"/>
+                                    <ComboBoxItem Content="5 min"/>
+                                    <ComboBoxItem Content="10 min"/>
+                                    <ComboBoxItem Content="15 min"/>
+                                    <ComboBoxItem Content="30 min"/>
+                                    <ComboBoxItem Content="60 min"/>
                                 </ComboBox>
                             </Grid>
-
-                            <!-- Barra 3: Sessão total -->
                             <Grid Grid.Row="4">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="68"/>
@@ -612,24 +481,16 @@
                                     <ColumnDefinition Width="70"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" x:Name="TbBuyPct" Text="Comp --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#00E676"
-                                           HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#00E676" HorizontalAlignment="Left" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                 <Grid Grid.Column="1" Margin="3,1">
                                     <Border Background="#111111" CornerRadius="3"/>
-                                    <Border x:Name="BidPressureBar" HorizontalAlignment="Left"
-                                            CornerRadius="3,0,0,3" Background="#00C853" Opacity="0.9" Width="0"/>
-                                    <Border x:Name="AskPressureBar" HorizontalAlignment="Right"
-                                            CornerRadius="0,3,3,0" Background="#FF1744" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="BidPressureBar" HorizontalAlignment="Left" CornerRadius="3,0,0,3" Background="#00C853" Opacity="0.9" Width="0"/>
+                                    <Border x:Name="AskPressureBar" HorizontalAlignment="Right" CornerRadius="0,3,3,0" Background="#FF1744" Opacity="0.9" Width="0"/>
                                 </Grid>
                                 <TextBlock Grid.Column="2" x:Name="TbSellPct" Text="Vend --%"
-                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444"
-                                           HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                <!-- Espaço equivalente ao ComboBox das barras acima -->
-                                <TextBlock Grid.Column="3" Text="Sessão" FontSize="9" Foreground="#333333"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" FontStyle="Italic"/>
+                                           FontSize="10" FontWeight="Bold" Foreground="#FF4444" HorizontalAlignment="Right" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="Sessão" FontSize="9" Foreground="#333333" HorizontalAlignment="Center" VerticalAlignment="Center" FontStyle="Italic"/>
                             </Grid>
-
-                            <!-- Delta + Bid + Ask -->
                             <Grid Grid.Row="6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -638,36 +499,32 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center">
                                     <TextBlock Text="Delta: " FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="TbFooterDelta" Text="+0" FontSize="12" FontWeight="Bold"
-                                               Foreground="#00C853" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TbFooterDelta" Text="+0" FontSize="12" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
                                     <TextBlock Text="Bid: " FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="TbFooterBid" Text="--" FontSize="12" FontWeight="Bold"
-                                               Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TbFooterBid" Text="--" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center">
                                     <TextBlock Text="Ask: " FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="TbFooterAsk" Text="--" FontSize="12" FontWeight="Bold"
-                                               Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TbFooterAsk" Text="--" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
                         </Grid>
                     </Border>
                 </Grid>
             </Border>
-
-            <!-- ─── ÁREA LIVRE ─── -->
-            <Border Grid.Column="3" Background="#0A0A0A" BorderBrush="#444444" BorderThickness="0,1,1,1">
-                <Grid>
-                    <TextBlock Text="ÁREA RESERVADA" FontSize="11" Foreground="#333333"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Grid>
-            </Border>
-
+            <Grid Grid.Column="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="500"/>
+                </Grid.RowDefinitions>
+                <local:FlowCandleChart x:Name="flowCandleChart" Grid.Row="0"/>
+                <Border Grid.Row="1" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" x:Name="PainelInferiorGrafico">
+                    <fs:FlowScorePanel x:Name="FlowScorePanelControl"/>
+                </Border>
+            </Grid>
             <GridSplitter Grid.Column="4" Width="4" Background="#1A1A1A" HorizontalAlignment="Stretch"/>
-
-            <!-- ─── TAPE + ALERTAS ─── -->
             <Border Grid.Column="5" Background="#0F0F0F" BorderBrush="#2A2A2A" BorderThickness="1,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -675,28 +532,21 @@
                         <RowDefinition Height="4"/>
                         <RowDefinition Height="200" MinHeight="120"/>
                     </Grid.RowDefinitions>
-
-                    <!-- TAPE -->
                     <Grid Grid.Row="0">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="28"/>
                             <RowDefinition Height="28"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
                         <Border Grid.Row="0" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,0,0,1">
                             <Grid Margin="8,0">
-                                <TextBlock Text="TAPE" FontSize="12" FontWeight="Bold"
-                                           Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                <TextBlock Text="TAPE" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <TextBlock x:Name="TbTapeTotal" Text="0 trades"
-                                               FontSize="10" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <CheckBox x:Name="ChkAutoscroll" IsChecked="True"
-                                              FontSize="10" Foreground="#888888" Content="auto" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TbTapeTotal" Text="0 trades" FontSize="10" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <CheckBox x:Name="ChkAutoscroll" IsChecked="True" FontSize="10" Foreground="#888888" Content="auto" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
-
                         <Border Grid.Row="1" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,0,0,1" Padding="8,4">
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -715,13 +565,11 @@
                                 <TextBox Grid.Column="6" x:Name="TxTapeMoveMin" Style="{StaticResource DarkInput}" Text="0" Height="20" FontSize="9"/>
                             </Grid>
                         </Border>
-
                         <Grid Grid.Row="2">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="16"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
-
                             <Grid Grid.Row="0" Background="#080808">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="52"/>
@@ -736,26 +584,23 @@
                                 <TextBlock Grid.Column="3" Text="Vol" FontSize="10" Foreground="#BBBBBB" HorizontalAlignment="Left" Margin="4,0,0,0" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="4" Text="Lado" FontSize="10" Foreground="#BBBBBB" HorizontalAlignment="Left" Margin="4,0,0,0" VerticalAlignment="Center"/>
                             </Grid>
-
-                            <ScrollViewer Grid.Row="1" x:Name="TapeScrollViewer"
-                                          VerticalScrollBarVisibility="Hidden"
-                                          HorizontalScrollBarVisibility="Disabled">
+                            <ScrollViewer Grid.Row="1" x:Name="TapeScrollViewer" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                                 <ItemsControl x:Name="IcTape">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <Grid Height="16" Background="{Binding RowBg}">
+                                            <Grid Height="19" Background="{Binding RowBg}">
                                                 <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="62"/>
                                                     <ColumnDefinition Width="52"/>
-                                                    <ColumnDefinition Width="48"/>
                                                     <ColumnDefinition Width="62"/>
                                                     <ColumnDefinition Width="35"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Time}" FontSize="9" Foreground="#555555" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Broker}" FontSize="9" Foreground="#888888" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Price}" FontSize="9" Foreground="{Binding PriceColor}" VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
-                                                <TextBlock Grid.Column="3" Text="{Binding Volume}" FontSize="9" Foreground="{Binding VolColor}" VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
-                                                <TextBlock Grid.Column="4" Text="{Binding Side}" FontSize="9" Foreground="{Binding SideColor}" VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
+                                                <TextBlock Grid.Column="0" Text="{Binding Time}"   FontSize="11" Foreground="#FFFFFF" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Broker}" FontSize="11" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Price}"  FontSize="11" Foreground="{Binding PriceColor}" VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding Volume}" FontSize="11" Foreground="{Binding VolColor}"   VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
+                                                <TextBlock Grid.Column="4" Text="{Binding Side}"   FontSize="11" Foreground="{Binding SideColor}"  VerticalAlignment="Center" FontWeight="{Binding VolWeight}"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -768,70 +613,48 @@
                             </ScrollViewer>
                         </Grid>
                     </Grid>
-
                     <GridSplitter Grid.Row="1" Height="4" Background="#1A1A1A" HorizontalAlignment="Stretch"/>
-
-                    <!-- ALERTAS -->
                     <Grid Grid.Row="2">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="28"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-
                         <Border Grid.Row="0" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,1,0,1">
                             <Grid Margin="8,0">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="ALERTAS" FontSize="12" FontWeight="Bold"
-                                               Foreground="#FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ToggleButton x:Name="TglFilterSpoof" Content="S" IsChecked="True"
-                                                  Width="20" Height="18" FontSize="9"
-                                                  Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
-                                    <ToggleButton x:Name="TglFilterIceberg" Content="I" IsChecked="True"
-                                                  Width="20" Height="18" FontSize="9"
-                                                  Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
-                                    <ToggleButton x:Name="TglFilterRenewable" Content="R" IsChecked="True"
-                                                  Width="20" Height="18" FontSize="9"
-                                                  Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
-                                    <ToggleButton x:Name="TglFilterExhaustion" Content="E" IsChecked="True"
-                                                  Width="20" Height="18" FontSize="9"
-                                                  Background="#1A2A1A" Foreground="#FFD600" BorderBrush="#4A4A1A"/>
+                                    <TextBlock Text="ALERTAS" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ToggleButton x:Name="TglFilterSpoof" Content="S" IsChecked="True" Width="20" Height="18" FontSize="9" Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
+                                    <ToggleButton x:Name="TglFilterIceberg" Content="I" IsChecked="True" Width="20" Height="18" FontSize="9" Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
+                                    <ToggleButton x:Name="TglFilterRenewable" Content="R" IsChecked="True" Width="20" Height="18" FontSize="9" Background="#1A2A1A" Foreground="#00C853" BorderBrush="#2A4A2A" Margin="0,0,3,0"/>
+                                    <ToggleButton x:Name="TglFilterExhaustion" Content="E" IsChecked="True" Width="20" Height="18" FontSize="9" Background="#1A2A1A" Foreground="#FFD600" BorderBrush="#4A4A1A"/>
                                 </StackPanel>
-                                <Button x:Name="BtnClearAlerts" Content="limpar"
-                                        HorizontalAlignment="Right" VerticalAlignment="Center"
-                                        Style="{StaticResource DangerButton}"
-                                        Width="46" Height="18" FontSize="9"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="BtnConfigAlerts" Content="⚙" Width="20" Height="18" FontSize="11" Background="#1A1A2A" Foreground="#CCCCCC" BorderBrush="#2A2A4A" BorderThickness="1" Margin="0,0,4,0" Cursor="Hand"/>
+                                    <Button x:Name="BtnClearAlerts" Content="limpar" Style="{StaticResource DangerButton}" Width="46" Height="18" FontSize="9"/>
+                                </StackPanel>
                             </Grid>
                         </Border>
-
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Hidden" x:Name="AlertsScrollViewer">
-                            <ItemsControl x:Name="IcAlerts">
+                            <ItemsControl x:Name="IcAlerts" ItemsSource="{Binding AlertItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{Binding BgColor}"
-                                                BorderBrush="{Binding BorderColor}"
-                                                BorderThickness="0,0,0,1" Padding="8,5">
+                                        <Border Background="{Binding BgColor}" BorderBrush="{Binding BorderColor}" BorderThickness="0,0,0,1" Padding="8,5">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="16"/>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <Border Grid.Column="0" Background="{Binding TagColor}"
-                                                        Width="14" Height="14" CornerRadius="2">
-                                                    <TextBlock Text="{Binding Tag}" FontSize="8" FontWeight="Bold"
-                                                               Foreground="#0D0D0D" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="0" Background="{Binding TagColor}" Width="14" Height="14" CornerRadius="2">
+                                                    <TextBlock Text="{Binding Tag}" FontSize="8" FontWeight="Bold" Foreground="#0D0D0D" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                                 <StackPanel Grid.Column="1" Margin="6,0,0,0">
-                                                    <TextBlock Text="{Binding Title}" FontSize="10" FontWeight="Bold"
-                                                               Foreground="{Binding TitleColor}"/>
-                                                    <TextBlock Text="{Binding Description}" FontSize="9"
-                                                               Foreground="#666666" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Title}" FontSize="10" FontWeight="Bold" Foreground="{Binding TitleColor}"/>
+                                                    <TextBlock Text="{Binding Description}" FontSize="9" Foreground="#666666" TextWrapping="Wrap"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" VerticalAlignment="Top">
                                                     <TextBlock Text="{Binding Time}" FontSize="9" Foreground="#444444" HorizontalAlignment="Right"/>
-                                                    <Border Background="{Binding TagColor}" CornerRadius="8"
-                                                            Padding="4,1" HorizontalAlignment="Right"
-                                                            Visibility="{Binding CountVisibility}">
+                                                    <Border Background="{Binding TagColor}" CornerRadius="8" Padding="4,1" HorizontalAlignment="Right" Visibility="{Binding CountVisibility}">
                                                         <TextBlock Text="{Binding Count}" FontSize="8" Foreground="#0D0D0D"/>
                                                     </Border>
                                                 </StackPanel>
@@ -848,8 +671,6 @@
                 </Grid>
             </Border>
         </Grid>
-
-        <!-- ═══ STATUS BAR ═══ -->
         <Border Grid.Row="2" Background="#080808" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0">
             <Grid Margin="12,0">
                 <Grid.ColumnDefinitions>
@@ -882,11 +703,72 @@
                     <TextBlock Text="Replay:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TbReplayStatus" Foreground="#EEEEEE" FontSize="10" Text="--" VerticalAlignment="Center" Margin="3,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="8" x:Name="TbDiskAlert" Text="" FontSize="9"
-                           Foreground="#FF1744" VerticalAlignment="Center" Visibility="Collapsed"/>
-                <TextBlock Grid.Column="10" Text="MarketCore FlowSense v3.1" FontSize="10"
-                           Foreground="#888888" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="8" x:Name="TbDiskAlert" Text="" FontSize="9" Foreground="#FF1744" VerticalAlignment="Center" Visibility="Collapsed"/>
+                <TextBlock Grid.Column="10" Text="MarketCore FlowSense v3.1" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
             </Grid>
         </Border>
+        
+        <!-- Popup de Configuração de Alertas -->
+        <Popup x:Name="PopupConfigAlerts" PlacementTarget="{Binding ElementName=BtnConfigAlerts}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Background="#1A1A1A" BorderBrush="#00C853" BorderThickness="2" CornerRadius="4" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Direction="270" ShadowDepth="4" Opacity="0.6" BlurRadius="10"/>
+                </Border.Effect>
+                <StackPanel Width="280">
+                    <TextBlock Text="Configuração de Alertas" FontSize="13" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,12"/>
+                    
+                    <TextBlock Text="Filtro por Volume Mínimo:" FontSize="10" Foreground="#CCCCCC" Margin="0,0,0,4"/>
+                    
+                    <!-- Spoof -->
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="S (Spoof):" FontSize="10" Foreground="#FF1744" FontWeight="Bold" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="2" x:Name="TxSpoofMinVol" Style="{StaticResource DarkInput}" Text="0" Height="22"/>
+                    </Grid>
+                    
+                    <!-- Iceberg -->
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="I (Iceberg):" FontSize="10" Foreground="#2979FF" FontWeight="Bold" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="2" x:Name="TxIcebergMinVol" Style="{StaticResource DarkInput}" Text="0" Height="22"/>
+                    </Grid>
+                    
+                    <!-- Renewable -->
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="R (Renewable):" FontSize="10" Foreground="#00C853" FontWeight="Bold" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="2" x:Name="TxRenewableMinVol" Style="{StaticResource DarkInput}" Text="0" Height="22"/>
+                    </Grid>
+                    
+                    <!-- Exhaustion -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="E (Exhaustion):" FontSize="10" Foreground="#FFD600" FontWeight="Bold" VerticalAlignment="Center" Width="80"/>
+                        <TextBox Grid.Column="2" x:Name="TxExhaustionMinVol" Style="{StaticResource DarkInput}" Text="0" Height="22"/>
+                    </Grid>
+                    
+                    <Button x:Name="BtnApplyAlertConfig" Content="Aplicar" Style="{StaticResource DarkButton}" HorizontalAlignment="Stretch" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+        
     </Grid>
 </Window>
+
+

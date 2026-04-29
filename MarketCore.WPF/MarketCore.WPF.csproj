@@ -13,4 +13,5 @@
   <ItemGroup>
     <ProjectReference Include="..\MarketCore.csproj" />
   </ItemGroup>
+
 </Project>

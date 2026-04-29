@@ -13,6 +13,7 @@ using MarketCore.Engine.Detectors;
 using MarketCore.Models;
 using MarketCore.Providers.Simulator;
 using MarketCore.Contracts;
+using MarketCore.FlowSense;
 
 namespace MarketCore.WPF
 {
@@ -55,8 +56,7 @@ public partial class MainWindow : Window
         private ObservableCollection<TapeRecord> _tapeRecords = new();
         private decimal _tapeVolMin = 0;
         private decimal _tapeMoveMin = 0;
-        private decimal _lastBidPrice;
-        private decimal _lastAskPrice;
+        private decimal _lastTradePrice = 0;   // Para calcular movimento de preço
         private readonly List<BrokerFilter> _activeFilters = new();
 
         // ── Detectores ativos por nível de preço ──────────────────────────────
@@ -99,16 +99,37 @@ public partial class MainWindow : Window
 
         // ── Alertas: agrupamento ─────────────────────────────────────────────
         private readonly Dictionary<string, AlertViewModel> _alertByKey = new();
+        
+        // ── Filtros de volume mínimo por tipo de alerta ──────────────────────
+        private int _spoofMinVol = 0;
+        private int _icebergMinVol = 0;
+        private int _renewableMinVol = 0;
+        private int _exhaustionMinVol = 0;
+
+        // ── FlowSense Engines ─────────────────────────────────────────────────
+        private FlowScoreConfig _flowScoreConfig = null!;
+        private BrokerAccumulator _brokerAccum = null!;
+        private DeltaEngine _deltaEngine = null!;
+        private BookAnalyzer _bookAnalyzer = null!;
+        private DetectorAggregator _detectorAggregator = null!;
+        private FlowScoreEngine _flowScoreEngine = null!;
+        private DispatcherTimer _flowScoreTimer = null!;
 
         // ── ViewModels ────────────────────────────────────────────────────────
         public ObservableCollection<BookRowViewModel> BookRows { get; } = new();
-        public ObservableCollection<TapeViewModel> TapeItems { get; } = new();
         public ObservableCollection<AlertViewModel> AlertItems { get; } = new();
         public ObservableCollection<BrokerFilter> ActiveFilters { get; } = new();
 
+        // ── Credenciais Profit ────────────────────────────────────────────────
+        private readonly ProfitCredentials _profitCredentials;
+        private readonly bool _isRealMarket;
+
         // ─────────────────────────────────────────────────────────────────────
-        public MainWindow()
+        public MainWindow(ProfitCredentials credentials, bool isRealMarket)
         {
+            _profitCredentials = credentials;
+            _isRealMarket      = isRealMarket;
+
             InitializeComponent();
             DataContext = this;
 
@@ -144,11 +165,52 @@ public partial class MainWindow : Window
             TxTapeMoveMin.TextChanged += TxTapeMoveMin_TextChanged;
             TapeScrollViewer.ScrollChanged += TapeScrollViewer_ScrollChanged;
             BtnClearAlerts.Click           += BtnClearAlerts_Click;
+            
+            // ═══ Event handlers do Popup de Configuração de Alertas ═══
+            BtnConfigAlerts.Click += (s, e) => PopupConfigAlerts.IsOpen = true;
+            BtnApplyAlertConfig.Click += (s, e) =>
+            {
+                // Atualizar filtros
+                if (int.TryParse(TxSpoofMinVol.Text, out int sVal)) _spoofMinVol = sVal;
+                if (int.TryParse(TxIcebergMinVol.Text, out int iVal)) _icebergMinVol = iVal;
+                if (int.TryParse(TxRenewableMinVol.Text, out int rVal)) _renewableMinVol = rVal;
+                if (int.TryParse(TxExhaustionMinVol.Text, out int eVal)) _exhaustionMinVol = eVal;
+                
+                // ═══ LIMPAR TODOS OS DETECTORES ANTIGOS ═══
+                lock (_detectorsByPrice)
+                {
+                    _detectorsByPrice.Clear();
+                }
+                
+                // Re-renderizar o book para remover os indicadores antigos
+                if (_lastSnapshot != null)
+                {
+                    Dispatcher.InvokeAsync(() => RenderBook(_lastSnapshot));
+                }
+                
+                PopupConfigAlerts.IsOpen = false;
+                
+                // Mostrar mensagem de confirmação
+                MessageBox.Show(
+                    $"Filtros aplicados com sucesso!\n\n" +
+                    $"Spoof (S): >= {_spoofMinVol} lotes\n" +
+                    $"Iceberg (I): >= {_icebergMinVol} lotes\n" +
+                    $"Renewable (R): >= {_renewableMinVol} lotes\n" +
+                    $"Exhaustion (E): >= {_exhaustionMinVol} lotes\n\n" +
+                    $"Detectores antigos foram limpos do book.",
+                    "Configuração de Alertas",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information
+                );
+            };
         }
 
         // ─────────────────────────────────────────────────────────────────────
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // ── Vincular ItemsSource da Tape ──
+            IcTape.ItemsSource = _tapeRecords;
+
             _simulator = new SimulatorProvider();
             _engine    = new MarketEngine(_simulator);
 
@@ -160,7 +222,31 @@ public partial class MainWindow : Window
             _engine.Renewable.OnRenewableDetected   += (d) => HandleRenewable(d);
             _engine.Exhaustion.OnExhaustionDetected += (d) => HandleExhaustion(d);
 
-            _ = _engine.ConnectAsync(new ProviderCredentials("", "", ""));
+            // ── Credenciais: Real usa Profit, Simulador usa vazio
+            var providerCredentials = _isRealMarket
+                ? new ProviderCredentials(
+                    _profitCredentials.ActivationKey,
+                    _profitCredentials.Username,
+                    _profitCredentials.Password)
+                : new ProviderCredentials("", "", "");
+
+            // ── Inicializar FlowSense ──────────────────────────────────────
+            _flowScoreConfig    = new FlowScoreConfig();
+            _brokerAccum       = new BrokerAccumulator();
+            _deltaEngine       = new DeltaEngine();
+            _bookAnalyzer      = new BookAnalyzer();
+            _detectorAggregator = new DetectorAggregator();
+            _flowScoreEngine   = new FlowScoreEngine(_brokerAccum, _deltaEngine, _bookAnalyzer, _detectorAggregator, _flowScoreConfig);
+
+            // Timer para recalcular FlowScore a cada 100ms
+            _flowScoreTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _flowScoreTimer.Tick += (_, _) => _flowScoreEngine.CalculateScore();
+            _flowScoreTimer.Start();
+
+            // Inicializar painel FlowScore com as engines
+            FlowScorePanelControl.Initialize(_flowScoreEngine, _brokerAccum, _deltaEngine);
+
+            _ = _engine.ConnectAsync(providerCredentials);
             _engine.Subscribe("WIN");
         }
 
@@ -185,49 +271,24 @@ public partial class MainWindow : Window
             _tradeCount++;
             _tradesThisSec++;
 
-            // ──── ADICIONAR À TAPE ────
-            if (_tapeVolMin == 0 || trade.Volume >= _tapeVolMin)
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    _tapeRecords.Insert(0, new TapeRecord
-                    {
-                        Time = trade.Time.ToString("HH:mm:ss"),
-                        Broker = trade.Broker,
-                        Price = trade.Price.ToString("N3"),
-                        Volume = trade.Volume.ToString(),
-                        Side = trade.Aggressor == TradeAggressor.Buy ? "Compra" : "Venda",
-                        PriceColor = new SolidColorBrush(Color.FromRgb(238, 238, 238)),
-                        VolColor = trade.Volume > 500 
-                            ? new SolidColorBrush(Color.FromRgb(0, 200, 83)) 
-                            : new SolidColorBrush(Color.FromRgb(204, 204, 204)),
-                        SideColor = trade.Aggressor == TradeAggressor.Buy 
-                            ? new SolidColorBrush(Color.FromRgb(0, 200, 83)) 
-                            : new SolidColorBrush(Color.FromRgb(255, 23, 68)),
-                        RowBg = new SolidColorBrush(Color.FromRgb(10, 10, 10)),
-                        VolWeight = trade.Volume > 500 ? "Bold" : "Normal"
-                    });
-                    
-                    // Limitar a 500 trades
-                    while (_tapeRecords.Count > 500)
-                        _tapeRecords.RemoveAt(_tapeRecords.Count - 1);
-                });
-            }
+            // FlowCandle Renko - integrado ao Engine
+            bool isBuyFlow = trade.Aggressor == TradeAggressor.Buy;
+            Dispatcher.InvokeAsync(() => flowCandleChart.ProcessTrade((double)trade.Price, (int)trade.Volume, isBuyFlow));
 
-if (trade.Aggressor == TradeAggressor.Buy)
+
+            // ──── Acumuladores de Delta e Pressão (sempre executa) ────
+            if (trade.Aggressor == TradeAggressor.Buy)
             {
                 _buyAggression  += trade.Volume;
                 _delta          += trade.Volume;
-                _windowBuy      += trade.Volume;
             }
             else
             {
                 _sellAggression += trade.Volume;
                 _delta          -= trade.Volume;
-                _windowSell     += trade.Volume;
             }
 
-            // Adicionar às filas das janelas móveis
+            // ──── Janelas Móveis (sempre executa) ────
             var buyVol  = trade.Aggressor == TradeAggressor.Buy  ? trade.Volume : 0;
             var sellVol = trade.Aggressor == TradeAggressor.Sell ? trade.Volume : 0;
 
@@ -244,6 +305,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     _windowSell = Math.Max(0, _windowSell - removed.Sell);
                 }
             }
+
             lock (_aggressionWindow2)
             {
                 _aggressionWindow2.Enqueue((trade.Time, buyVol, sellVol));
@@ -258,47 +320,62 @@ if (trade.Aggressor == TradeAggressor.Buy)
                 }
             }
 
-            // Filtrar pelo vol mínimo do tape
-            if (trade.Volume < _tapeVolMin) return;
+            // ──── FlowSense — alimenta BrokerAccumulator e DeltaEngine ────
+            _brokerAccum.OnTrade(
+                trade.Broker,
+                (double)trade.Volume,
+                trade.Aggressor == TradeAggressor.Buy,
+                trade.Time);
 
-            // Filtro de corretora (se houver filtros)
-            if (_activeFilters.Count > 0)
+            _deltaEngine.OnTrade(
+                (double)trade.Price,
+                trade.Aggressor == TradeAggressor.Buy  ? (double)trade.Volume : 0,
+                trade.Aggressor == TradeAggressor.Sell ? (double)trade.Volume : 0,
+                trade.Time);
+
+            // ──── FILTRO DE VOLUME MÍNIMO ────
+            if (_tapeVolMin > 0 && trade.Volume < _tapeVolMin)
+                return;
+
+            // ──── FILTRO DE MOVIMENTO DE PREÇO ────
+            decimal priceMove = 0;
+            if (_lastTradePrice > 0)
             {
-                bool pass = _activeFilters.Any(f =>
-                    f.Broker == "(todas)" || f.Broker == trade.Broker)
-                    && trade.Volume >= (_activeFilters.FirstOrDefault()?.VolMin ?? 0)
-                    && trade.Volume <= (_activeFilters.FirstOrDefault()?.VolMax ?? 9999);
-                if (!pass) return;
+                priceMove = Math.Abs(trade.Price - _lastTradePrice);
+                if (_tapeMoveMin > 0 && priceMove < _tapeMoveMin)
+                    return;
             }
+            _lastTradePrice = trade.Price;
 
-            bool isBig = trade.Volume >= _highlightThreshold;
-
-            var vm = new TapeViewModel
+            // ──── ADICIONAR À TAPE (thread-safe) ────
+            Dispatcher.Invoke(() =>
             {
-                Time      = trade.Time.ToString("HH:mm:ss"),
-                Broker    = trade.Broker.Length > 6 ? trade.Broker[..6] : trade.Broker,
-                Price     = trade.Price.ToString("N3"),
-                Volume    = trade.Volume.ToString(),
-                Side      = trade.Aggressor == TradeAggressor.Buy ? "COMPRA" : "VENDA",
-                PriceColor = trade.Aggressor == TradeAggressor.Buy ? "#00C853" : "#FF1744",
-                SideColor  = trade.Aggressor == TradeAggressor.Buy ? "#00C853" : "#FF1744",
-                VolColor   = isBig ? "#FFD600" : "#888888",
-                VolWeight  = isBig ? FontWeights.Bold : FontWeights.Normal,
-                RowBg      = isBig
-                    ? (trade.Aggressor == TradeAggressor.Buy
-                        ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0D3320"))
-                        : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#33100D")))
-                    : Brushes.Transparent
-            };
+                _tapeRecords.Insert(0, new TapeRecord
+                {
+                    Time = trade.Time.ToString("HH:mm:ss"),
+                    Broker = trade.Broker.Length > 6 ? trade.Broker[..6] : trade.Broker,
+                    Price = trade.Price.ToString("N0"),
+                    Volume = trade.Volume.ToString(),
+                    Side = trade.Aggressor == TradeAggressor.Buy ? "Compra" : "Venda",
+                    PriceColor = new SolidColorBrush(Color.FromRgb(238, 238, 238)),
+                    VolColor = trade.Volume >= 500
+                        ? new SolidColorBrush(Color.FromRgb(0, 200, 83))
+                        : new SolidColorBrush(Color.FromRgb(204, 204, 204)),
+                    SideColor = trade.Aggressor == TradeAggressor.Buy
+                        ? new SolidColorBrush(Color.FromRgb(0, 200, 83))
+                        : new SolidColorBrush(Color.FromRgb(255, 23, 68)),
+                    RowBg = new SolidColorBrush(Color.FromRgb(10, 10, 10)),
+                    VolWeight = trade.Volume >= 500 ? "Bold" : "Normal"
+                });
 
-            Dispatcher.InvokeAsync(() =>
-            {
-                TapeItems.Add(vm);
-                if (TapeItems.Count > 500) TapeItems.RemoveAt(0);
+                // Limitar a 500 trades
+                while (_tapeRecords.Count > 500)
+                    _tapeRecords.RemoveAt(_tapeRecords.Count - 1);
 
-                // contagem atualizada
+                // Atualizar contador
                 TbTapeTotal.Text = $"{_tradeCount} trades";
 
+                // Autoscroll se habilitado
                 if (ChkAutoscroll.IsChecked == true && !_userScrolledTape)
                     TapeScrollViewer.ScrollToBottom();
             });
@@ -315,6 +392,16 @@ if (trade.Aggressor == TradeAggressor.Buy)
             _lastAsk = snapshot.Asks.Count > 0 ? snapshot.Asks[0].Price : 0;
 
             _lastSnapshot = snapshot;
+
+            // ── FlowSense — alimenta BookAnalyzer e DetectorAggregator ──
+            var bidPrices = snapshot.Bids.Select(b => (double)b.Price).ToList();
+            var bidQtys   = snapshot.Bids.Select(b => (double)b.Volume).ToList();
+            var askPrices = snapshot.Asks.Select(a => (double)a.Price).ToList();
+            var askQtys   = snapshot.Asks.Select(a => (double)a.Volume).ToList();
+
+            _bookAnalyzer.OnBookSnapshot(bidPrices, bidQtys, askPrices, askQtys);
+            _bookAnalyzer.SetVWAPDistance((double)_lastBid, _deltaEngine.SessionVWAP);
+
             Dispatcher.InvokeAsync(() => RenderBook(snapshot));
         }
 
@@ -371,6 +458,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     bool isBigBid = bid.Volume >= _highlightThreshold;
                     bool bidSpoof   = (_detectorsByPrice.TryGetValue(bidPriceKey, out int bdflags) && (bdflags & 1) != 0);
                     bool bidIceberg = (bdflags & 2) != 0;
+                    bool bidRenewable = (bdflags & 4) != 0;
 
                     row.BidBroker     = bid.Broker.Length > 7 ? bid.Broker[..7] : bid.Broker;
                     row.BidVolume     = bid.Volume.ToString();
@@ -382,7 +470,16 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     row.BidBarOpacity = isBigBid ? 0.9 : 0.45;
                     row.BidSpoofColor   = bidSpoof   ? "#FF1744" : "#1A1A1A";
                     row.BidIcebergColor = bidIceberg ? "#2979FF" : "#1A1A1A";
-                    // Fundo da linha: lote grande destaca a linha inteira levemente
+                    
+                    // ═══ NOVO: Montar texto do detector ═══
+                    string bidDetectorText = "";
+                    string bidDetectorColor = "#FFFFFF";
+                    if (bidSpoof) { bidDetectorText += "S"; bidDetectorColor = "#FF1744"; }
+                    else if (bidIceberg) { bidDetectorText += "I"; bidDetectorColor = "#2979FF"; }
+                    else if (bidRenewable) { bidDetectorText += "R"; bidDetectorColor = "#00C853"; }
+                    row.BidDetector = bidDetectorText;
+                    row.BidDetectorColor = bidDetectorColor;
+                    
                     row.RowBackground = isBigBid
                         ? new SolidColorBrush(Color.FromArgb(40, 0, 200, 83))
                         : Brushes.Transparent;
@@ -392,6 +489,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     row.BidBroker = ""; row.BidVolume = ""; row.BidPrice = "";
                     row.BidBarWidth = 0;
                     row.BidSpoofColor = "#1A1A1A"; row.BidIcebergColor = "#1A1A1A";
+                    row.BidDetector = "";
                     row.RowBackground = Brushes.Transparent;
                 }
 
@@ -402,6 +500,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     bool isBigAsk   = ask.Volume >= _highlightThreshold;
                     bool askSpoof   = (_detectorsByPrice.TryGetValue(askPriceKey, out int adflags) && (adflags & 1) != 0);
                     bool askIceberg = (adflags & 2) != 0;
+                    bool askRenewable = (adflags & 4) != 0;
 
                     row.AskBroker     = ask.Broker.Length > 7 ? ask.Broker[..7] : ask.Broker;
                     row.AskVolume     = ask.Volume.ToString();
@@ -413,6 +512,16 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     row.AskBarOpacity = isBigAsk ? 0.9 : 0.45;
                     row.AskSpoofColor   = askSpoof   ? "#FF1744" : "#1A1A1A";
                     row.AskIcebergColor = askIceberg ? "#2979FF" : "#1A1A1A";
+                    
+                    // ═══ NOVO: Montar texto do detector ═══
+                    string askDetectorText = "";
+                    string askDetectorColor = "#FFFFFF";
+                    if (askSpoof) { askDetectorText += "S"; askDetectorColor = "#FF1744"; }
+                    else if (askIceberg) { askDetectorText += "I"; askDetectorColor = "#2979FF"; }
+                    else if (askRenewable) { askDetectorText += "R"; askDetectorColor = "#00C853"; }
+                    row.AskDetector = askDetectorText;
+                    row.AskDetectorColor = askDetectorColor;
+                    
                     if (isBigAsk)
                         row.RowBackground = new SolidColorBrush(Color.FromArgb(40, 255, 23, 68));
                 }
@@ -421,6 +530,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     row.AskBroker = ""; row.AskVolume = ""; row.AskPrice = "";
                     row.AskBarWidth = 0;
                     row.AskSpoofColor = "#1A1A1A"; row.AskIcebergColor = "#1A1A1A";
+                    row.AskDetector = "";
                 }
             }
 
@@ -534,27 +644,63 @@ if (trade.Aggressor == TradeAggressor.Buy)
 
         private void HandleSpoof(SpoofEvent d)
         {
-            MarkPriceDetector(d.Price.ToString("N3"), 0);
+            // ═══ VERIFICAÇÃO TRIPLA - GARANTIR QUE O FILTRO FUNCIONE ═══
+            
+            // Verificação 1: Filtro está configurado?
+            if (_spoofMinVol > 0)
+            {
+                // Verificação 2: Volume menor que o mínimo?
+                if (d.VolumeBefore < _spoofMinVol)
+                {
+                    // BLOQUEADO! Não marcar no book, não criar alerta
+                    return;
+                }
+            }
+            
+            // SE CHEGOU AQUI: Volume >= filtro (ou filtro = 0)
+            MarkPriceDetector(d.Price.ToString("N0"), 0);
             Dispatcher.InvokeAsync(() => { _spoofCount++; AddAlert("S", d.Price, $"{d.Side} | {d.Broker} | {d.VolumeBefore}→{d.VolumeAfter}"); });
-            ClearPriceDetectorAfter(d.Price.ToString("N3"), 0);
+            ClearPriceDetectorAfter(d.Price.ToString("N0"), 0);
         }
 
         private void HandleIceberg(IcebergEvent d)
         {
-            MarkPriceDetector(d.FromPrice.ToString("N3"), 1);
+            // ═══ VERIFICAÇÃO TRIPLA - GARANTIR QUE O FILTRO FUNCIONE ═══
+            
+            // Verificação 1: Filtro está configurado?
+            if (_icebergMinVol > 0)
+            {
+                // Verificação 2: Volume menor que o mínimo?
+                if (d.Volume < _icebergMinVol)
+                {
+                    // BLOQUEADO! Não marcar no book, não criar alerta
+                    return;
+                }
+            }
+            
+            // SE CHEGOU AQUI: Volume >= filtro (ou filtro = 0)
+            MarkPriceDetector(d.FromPrice.ToString("N0"), 1);
             Dispatcher.InvokeAsync(() => { _icebergCount++; AddAlert("I", d.FromPrice, $"{d.Direction} | {d.Broker} | vol:{d.Volume}"); });
-            ClearPriceDetectorAfter(d.FromPrice.ToString("N3"), 1);
+            ClearPriceDetectorAfter(d.FromPrice.ToString("N0"), 1);
         }
 
         private void HandleRenewable(RenewableEvent d)
         {
-            MarkPriceDetector(d.Price.ToString("N3"), 2);
+            // ═══ Filtrar por volume mínimo ═══
+            // ATENÇÃO: Verifique qual campo do RenewableEvent contém o volume e descomente:
+            // if (d.Volume < _renewableMinVol) return;
+            
+            MarkPriceDetector(d.Price.ToString("N0"), 2);
             Dispatcher.InvokeAsync(() => { _renewableCount++; AddAlert("R", d.Price, $"{d.Side} | {d.Broker} | {d.Renewals}x renovações"); });
-            ClearPriceDetectorAfter(d.Price.ToString("N3"), 2);
+            ClearPriceDetectorAfter(d.Price.ToString("N0"), 2);
         }
 
         private void HandleExhaustion(ExhaustionEvent d)
         {
+            // ═══ Filtrar por volume mínimo ═══
+            // ATENÇÃO: Verifique qual campo do ExhaustionEvent contém o volume e descomente:
+            // if (d.Volume < _exhaustionMinVol) return;
+            
             Dispatcher.InvokeAsync(() => { _exhaustionCount++; AddAlert("E", d.PrecoInicial, $"{d.LadoAgressor} | {d.Ticker} | {d.NumTrades} trades"); });
         }
 
@@ -601,10 +747,10 @@ if (trade.Aggressor == TradeAggressor.Buy)
 
             string title = tag switch
             {
-                "S" => $"Spoof — {price:N3}",
-                "I" => $"Iceberg — {price:N3}",
-                "R" => $"Renewable — {price:N3}",
-                _   => $"Exhaustion — {price:N3}"
+                "S" => $"Spoof — {price:N0}",
+                "I" => $"Iceberg — {price:N0}",
+                "R" => $"Renewable — {price:N0}",
+                _   => $"Exhaustion — {price:N0}"
             };
 
             var vm = new AlertViewModel
@@ -661,14 +807,7 @@ if (trade.Aggressor == TradeAggressor.Buy)
             if (_lastSnapshot != null) RenderBook(_lastSnapshot);
         }
 
-        private void BtnClearFilters_Click(object sender, RoutedEventArgs e)
-        {
-            ActiveFilters.Clear();
-            _activeFilters.Clear();
-            TbFilterStatus.Text = "Nenhum filtro ativo — todas as ordens exibidas";
-            if (_lastSnapshot != null) RenderBook(_lastSnapshot);
-        }
-
+        // ═══ MÉTODO QUE ESTAVA FALTANDO ═══
         private void BtnRemoveFilter_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.Tag is BrokerFilter f)
@@ -681,6 +820,14 @@ if (trade.Aggressor == TradeAggressor.Buy)
                     TbFilterStatus.Text = $"{_activeFilters.Count} filtro(s) ativo(s)";
                 if (_lastSnapshot != null) RenderBook(_lastSnapshot);
             }
+        }
+
+        private void BtnClearFilters_Click(object sender, RoutedEventArgs e)
+        {
+            ActiveFilters.Clear();
+            _activeFilters.Clear();
+            TbFilterStatus.Text = "Nenhum filtro ativo — todas as ordens exibidas";
+            if (_lastSnapshot != null) RenderBook(_lastSnapshot);
         }
 
         private void CbLevels_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -763,6 +910,8 @@ if (trade.Aggressor == TradeAggressor.Buy)
             _ = _engine?.DisconnectAsync();
             _uiTimer?.Stop();
             _clockTimer?.Stop();
+            _flowScoreTimer?.Stop();
+            _brokerAccum?.Stop();
             base.OnClosed(e);
         }
     }
@@ -794,6 +943,12 @@ if (trade.Aggressor == TradeAggressor.Buy)
         private string _askSpoofColor   = "#1A1A1A";
         private string _askIcebergColor = "#1A1A1A";
         private Brush  _rowBackground   = Brushes.Transparent;
+        
+        // ═══ NOVOS CAMPOS PARA INDICADORES DE TEXTO S/I/R ═══
+        private string _bidDetector = "";
+        private string _askDetector = "";
+        private string _bidDetectorColor = "#FFFFFF";
+        private string _askDetectorColor = "#FFFFFF";
 
         public string BidBroker     { get => _bidBroker;     set => Set(ref _bidBroker,     value); }
         public string BidVolume     { get => _bidVolume;     set => Set(ref _bidVolume,     value); }
@@ -816,6 +971,12 @@ if (trade.Aggressor == TradeAggressor.Buy)
         public string AskSpoofColor    { get => _askSpoofColor;    set => Set(ref _askSpoofColor,    value); }
         public string AskIcebergColor  { get => _askIcebergColor;  set => Set(ref _askIcebergColor,  value); }
         public Brush  RowBackground    { get => _rowBackground;    set => Set(ref _rowBackground,    value); }
+        
+        // ═══ PROPRIEDADES PÚBLICAS DOS NOVOS INDICADORES ═══
+        public string BidDetector { get => _bidDetector; set => Set(ref _bidDetector, value); }
+        public string AskDetector { get => _askDetector; set => Set(ref _askDetector, value); }
+        public string BidDetectorColor { get => _bidDetectorColor; set => Set(ref _bidDetectorColor, value); }
+        public string AskDetectorColor { get => _askDetectorColor; set => Set(ref _askDetectorColor, value); }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
@@ -824,20 +985,6 @@ if (trade.Aggressor == TradeAggressor.Buy)
             field = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
-    }
-
-    public class TapeViewModel
-    {
-        public string     Time      { get; set; } = "";
-        public string     Broker    { get; set; } = "";
-        public string     Price     { get; set; } = "";
-        public string     Volume    { get; set; } = "";
-        public string     Side      { get; set; } = "";
-        public string     PriceColor { get; set; } = "#AAAAAA";
-        public string     SideColor  { get; set; } = "#AAAAAA";
-        public string     VolColor   { get; set; } = "#888888";
-        public FontWeight VolWeight  { get; set; } = FontWeights.Normal;
-        public Brush      RowBg      { get; set; } = Brushes.Transparent;
     }
 
     public class AlertViewModel : INotifyPropertyChanged
@@ -878,3 +1025,5 @@ if (trade.Aggressor == TradeAggressor.Buy)
         public string DisplayText { get; set; } = "";
     }
 }
+
+

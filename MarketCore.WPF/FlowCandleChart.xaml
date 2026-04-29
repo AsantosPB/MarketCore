@@ -1,0 +1,296 @@
+﻿<UserControl x:Class="MarketCore.WPF.FlowCandleChart"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             Background="#0D0D0D"
+             d:DesignHeight="450" d:DesignWidth="700">
+
+    <UserControl.Resources>
+        <Style x:Key="DarkButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="Foreground" Value="#AAAAAA"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="BorderBrush" Value="#555555"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ApplyButtonStyle" TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}">
+            <Setter Property="Background" Value="#1A3A1A"/>
+            <Setter Property="BorderBrush" Value="#2E7D2E"/>
+            <Setter Property="Foreground" Value="#88FF88"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style x:Key="DarkTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#111111"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="CaretBrush" Value="White"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="18"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="72"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                Background="#0A0A0A" BorderBrush="#1A1A1A" BorderThickness="0,0,0,1">
+            <Grid Margin="8,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="FLOW RENKO" Foreground="#666666" FontSize="10" FontWeight="Bold"
+                               FontFamily="Consolas" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="lblSymbol" Text="WINFUT" Foreground="#00DDFF"
+                               FontSize="13" FontWeight="Bold" FontFamily="Consolas" Margin="0,0,12,0"/>
+                    <!-- Filtro Renko em destaque -->
+                    <Border Background="#0A1A2A" BorderBrush="#1A5A8A" BorderThickness="1"
+                            CornerRadius="2" Padding="6,2" Margin="0,0,12,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Renko " Foreground="#5588AA" FontSize="10" FontFamily="Consolas"/>
+                            <TextBlock x:Name="lblRenkoFilter" Text="5pts" Foreground="#00DDFF"
+                                       FontSize="10" FontWeight="Bold" FontFamily="Consolas"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Legenda cores -->
+                    <Border Width="9" Height="9" Background="#00CC44" Margin="0,0,4,0" CornerRadius="1"/>
+                    <TextBlock Text="Alta" Foreground="#888888" FontSize="10" Margin="0,0,10,0"/>
+                    <Border Width="9" Height="9" Background="#CC2222" Margin="0,0,4,0" CornerRadius="1"/>
+                    <TextBlock Text="Baixa" Foreground="#888888" FontSize="10" Margin="0,0,10,0"/>
+                    <Border Width="9" Height="9" Background="#606060" Margin="0,0,4,0" CornerRadius="1"/>
+                    <TextBlock Text="Exaustão" Foreground="#888888" FontSize="10" Margin="0,0,10,0"/>
+                    <Border Width="9" Height="11" Background="#FFD700" Margin="0,0,4,0" CornerRadius="1"/>
+                    <TextBlock Text="Volume" Foreground="#888888" FontSize="10" Margin="0,0,10,0"/>
+                    <TextBlock Text="Lote≥" Foreground="#666666" FontSize="10"/>
+                    <TextBlock x:Name="lblBigLotFilter" Text="300" Foreground="#FFD700"
+                               FontSize="10" FontWeight="Bold" FontFamily="Consolas"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="btnClear" Content="LIMPAR"
+                            Style="{StaticResource DarkButtonStyle}"
+                            Height="20" FontSize="10" Margin="0,0,4,0"/>
+                    <Button x:Name="btnConfig" Content="⚙"
+                            Style="{StaticResource DarkButtonStyle}"
+                            Height="20" Width="24" Padding="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- CANVAS PRINCIPAL -->
+        <Canvas Grid.Row="1" Grid.Column="0" x:Name="canvasChart"
+                Background="#0D0D0D" ClipToBounds="True">
+            <Canvas x:Name="canvasGrid"/>
+            <Canvas x:Name="canvasCandles"/>
+            <Line x:Name="lineCurrentPrice"
+                  Stroke="#00CCFF" StrokeThickness="0.8"
+                  StrokeDashArray="4,3" Opacity="0.7"
+                  X1="0" X2="2000" Y1="0" Y2="0"/>
+            <Line x:Name="crossHairH" Stroke="#2A2A2A" StrokeThickness="0.5"
+                  StrokeDashArray="2,4" X1="0" X2="2000" Y1="-100" Y2="-100"
+                  IsHitTestVisible="False"/>
+            <Line x:Name="crossHairV" Stroke="#2A2A2A" StrokeThickness="0.5"
+                  StrokeDashArray="2,4" X1="-100" X2="-100" Y1="0" Y2="2000"
+                  IsHitTestVisible="False"/>
+            <Border x:Name="tooltipBorder" Background="#CC0A0A0A"
+                    BorderBrush="#333333" BorderThickness="1"
+                    CornerRadius="2" Padding="6,4"
+                    Visibility="Collapsed" IsHitTestVisible="False">
+                <StackPanel>
+                    <TextBlock x:Name="tooltipPrice" Foreground="#FFFFFF" FontSize="10" FontFamily="Consolas"/>
+                    <TextBlock x:Name="tooltipVolume" Foreground="#888888" FontSize="9" FontFamily="Consolas"/>
+                    <TextBlock x:Name="tooltipAggression" Foreground="#888888" FontSize="9" FontFamily="Consolas"/>
+                </StackPanel>
+            </Border>
+        </Canvas>
+
+        <!-- EIXO Y DIREITO -->
+        <Canvas Grid.Row="1" Grid.Column="1" x:Name="canvasYAxis"
+                Background="#0A0A0A" ClipToBounds="True" Cursor="SizeNS"/>
+
+        <!-- EIXO X -->
+        <Canvas Grid.Row="2" Grid.Column="0" x:Name="canvasXAxis"
+                Background="#0A0A0A" ClipToBounds="True"/>
+        <Border Grid.Row="2" Grid.Column="1" Background="#0A0A0A"/>
+
+        <!-- POPUP CONFIG -->
+        <Grid Grid.Row="0" Grid.Column="0" Grid.RowSpan="3" Grid.ColumnSpan="2"
+              x:Name="configOverlay" Visibility="Collapsed">
+            <Border Background="#AA000000"/>
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Width="330" Background="#1A1A1A"
+                    BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="4">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="24" Opacity="0.9" ShadowDepth="0"/>
+                </Border.Effect>
+                <StackPanel>
+                    <!-- Header popup -->
+                    <Border Background="#111111" BorderBrush="#1A1A1A"
+                            BorderThickness="0,0,0,1" CornerRadius="4,4,0,0">
+                        <Grid Margin="12,8">
+                            <TextBlock Text="⚙  CONFIGURAÇÕES — FLOW RENKO"
+                                       Foreground="#888888" FontSize="10" FontWeight="Bold" FontFamily="Consolas"/>
+                            <Button x:Name="btnCloseConfig" Content="✕"
+                                    Style="{StaticResource DarkButtonStyle}"
+                                    HorizontalAlignment="Right"
+                                    Width="20" Height="20" Padding="0" FontSize="10"/>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Margin="14,12,14,12">
+
+                        <!-- ★ SEÇÃO RENKO (destaque) -->
+                        <Border Background="#0A1520" BorderBrush="#1A4060"
+                                BorderThickness="1" CornerRadius="4" Padding="10,8" Margin="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="TAMANHO DO BLOCO RENKO" Foreground="#226688"
+                                               FontSize="9" FontWeight="Bold" FontFamily="Consolas"/>
+                                    <TextBlock Text="Pontos necessários para fechar uma barra"
+                                               Foreground="#446688" FontSize="10" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBox x:Name="txtRenkoPoints"
+                                             Style="{StaticResource DarkTextBoxStyle}"
+                                             Text="5" HorizontalContentAlignment="Center"
+                                             FontSize="16" FontWeight="Bold" Height="36"
+                                             Foreground="#00CCFF"/>
+                                    <TextBlock Text="pontos" Foreground="#446688" FontSize="9"
+                                               HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Separador -->
+                        <Border Height="1" Background="#1A1A1A" Margin="0,0,0,10"/>
+
+                        <!-- Filtro Volume -->
+                        <TextBlock Text="FILTRO DE VOLUME" Foreground="#444444" FontSize="9"
+                                   FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Lote mínimo p/ candle grande:"
+                                       Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="txtBigLot"
+                                     Style="{StaticResource DarkTextBoxStyle}"
+                                     Text="300" HorizontalContentAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Separador -->
+                        <Border Height="1" Background="#1A1A1A" Margin="0,0,0,10"/>
+
+                        <!-- Exaustão -->
+                        <TextBlock Text="DETECÇÃO DE EXAUSTÃO" Foreground="#444444" FontSize="9"
+                                   FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Vol. mín. p/ exaustão:"
+                                       Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="txtExhaustionVol"
+                                     Style="{StaticResource DarkTextBoxStyle}"
+                                     Text="100" HorizontalContentAlignment="Center"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Máx. variação de preço (pts):"
+                                       Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="txtExhaustionPriceDelta"
+                                     Style="{StaticResource DarkTextBoxStyle}"
+                                     Text="1" HorizontalContentAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Separador -->
+                        <Border Height="1" Background="#1A1A1A" Margin="0,0,0,10"/>
+
+                        <!-- Visual -->
+                        <TextBlock Text="VISUAL" Foreground="#444444" FontSize="9"
+                                   FontWeight="Bold" FontFamily="Consolas" Margin="0,0,0,6"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Largura base (px):"
+                                       Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="txtCandleWidth"
+                                     Style="{StaticResource DarkTextBoxStyle}"
+                                     Text="8" HorizontalContentAlignment="Center"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Multiplicador grande:"
+                                       Foreground="#666666" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="1" x:Name="txtBigCandleMultiplier"
+                                     Style="{StaticResource DarkTextBoxStyle}"
+                                     Text="2.0" HorizontalContentAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Erro -->
+                        <TextBlock x:Name="lblConfigError" Foreground="#FF4444" FontSize="10"
+                                   Visibility="Collapsed" Margin="0,0,0,6" TextWrapping="Wrap"/>
+
+                        <!-- Botões -->
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" x:Name="btnCancelConfig" Content="CANCELAR"
+                                    Style="{StaticResource DarkButtonStyle}" Height="26"/>
+                            <Button Grid.Column="2" x:Name="btnApplyConfig" Content="✔  APLICAR"
+                                    Style="{StaticResource ApplyButtonStyle}"
+                                    Height="26" Padding="14,0"/>
+                        </Grid>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>

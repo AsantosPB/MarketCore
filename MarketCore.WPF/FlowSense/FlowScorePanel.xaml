@@ -1,0 +1,246 @@
+<UserControl x:Class="MarketCore.FlowSense.FlowScorePanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#0D0D0D">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Header -->
+            <RowDefinition Height="*"/>     <!-- Corpo -->
+        </Grid.RowDefinitions>
+
+        <!-- ══════════════════════════════════ -->
+        <!-- HEADER                             -->
+        <!-- ══════════════════════════════════ -->
+        <Border Grid.Row="0" Background="#1A1A1A" Padding="14,10">
+            <Grid Height="35">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="FlowScore Engine v2"
+                           FontSize="15" FontWeight="Bold"
+                           Foreground="White"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="BtnConfig" Grid.Column="1"
+                        Content="⚙"
+                        Width="35" Height="35"
+                        Margin="0,0,8,0"
+                        ToolTip="Calibrar FlowScore"
+                        Background="#2A2A2A"
+                        Foreground="#00BFFF"
+                        BorderBrush="#555"
+                        BorderThickness="1"
+                        FontSize="16"
+                        Cursor="Hand"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"/>
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════ -->
+        <!-- CORPO — 3 COLUNAS                                      -->
+        <!-- Col1 (25%): FlowScore, Componentes, BrokerFlow        -->
+        <!-- Col2 (25%): Contexto, Delta 3min                      -->
+        <!-- Col3 (50%): ÁREA RESERVADA                            -->
+        <!-- ══════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>  <!-- 25% — Coluna 1 -->
+                <ColumnDefinition Width="1*"/>  <!-- 25% — Coluna 2 -->
+                <ColumnDefinition Width="2*"/>  <!-- 50% — Área Reservada -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ══ COLUNA 1 — FlowScore + Componentes + BrokerFlow ══ -->
+            <ScrollViewer Grid.Column="0"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Background="#0D0D0D">
+                <StackPanel Margin="12,10,6,10">
+
+                    <!-- FLOWSCORE -->
+                    <TextBlock Text="FLOWSCORE"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#00BFFF"
+                               Margin="0,0,0,4"/>
+                    <Border Background="#1A1A1A" CornerRadius="3" Padding="12,10" Margin="0,0,0,12">
+                        <TextBlock x:Name="ScoreLabel"
+                                   Text="—"
+                                   FontSize="38" FontWeight="Bold"
+                                   Foreground="Gray"/>
+                    </Border>
+
+                    <!-- COMPONENTES -->
+                    <TextBlock Text="COMPONENTES"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#00BFFF"
+                               Margin="0,0,0,4"/>
+                    <Border Background="#1A1A1A" CornerRadius="3" Padding="10,8" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="BrokerFlow" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="BrokerFlowLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Fluxo Direto" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="FluxoLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Book" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="BookLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Detectores" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="DetectoresLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- BROKERFLOW (últimos 60s) -->
+                    <TextBlock Text="BROKERFLOW (últimos 60s)"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#00BFFF"
+                               Margin="0,0,0,4"/>
+                    <Border Background="#1A1A1A" CornerRadius="3" Padding="10,8">
+                        <StackPanel>
+                            <TextBlock Text="Compradores ativos:" 
+                                       Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
+                            <TextBlock x:Name="BuyerActivityLabel" Text="—" 
+                                       Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold" 
+                                       TextWrapping="Wrap" Margin="0,0,0,8"/>
+                            <TextBlock Text="Vendedores ativos:" 
+                                       Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
+                            <TextBlock x:Name="TopSellerLabel" Text="—" 
+                                       Foreground="#F44336" FontSize="11" FontWeight="SemiBold" 
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ══ COLUNA 2 — Contexto + Delta 3min ══ -->
+            <ScrollViewer Grid.Column="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Background="#0D0D0D">
+                <StackPanel Margin="6,10,12,10">
+
+                    <!-- CONTEXTO -->
+                    <TextBlock Text="CONTEXTO"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#00BFFF"
+                               Margin="0,0,0,4"/>
+                    <Border Background="#1A1A1A" CornerRadius="3" Padding="10,8" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="RVOL" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="RVOLLabel" Grid.Column="1" Text="—" 
+                                           Foreground="White" FontSize="12" FontWeight="Bold"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Fase da sessão" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="SessionLabel" Grid.Column="1" Text="—" 
+                                           Foreground="White" FontSize="12" FontWeight="Bold"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="VWAP" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="VWAPLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12"/>
+                            </Grid>
+                            <Grid Margin="0,0,0,5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="CVD Divergence" 
+                                           Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="CVDLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Stop Hunt" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="StopHuntLabel" Grid.Column="1" Text="—" 
+                                           Foreground="Gray" FontSize="12"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- DELTA ACUMULADO (3min) -->
+                    <TextBlock Text="DELTA ACUMULADO (3min)"
+                               FontSize="10" FontWeight="SemiBold"
+                               Foreground="#00BFFF"
+                               Margin="0,0,0,4"/>
+                    <Border Background="#1A1A1A" CornerRadius="3" Padding="10,12">
+                        <TextBlock x:Name="Delta3minLabel" Text="—" 
+                                   FontSize="28" FontWeight="Bold" 
+                                   Foreground="Gray" TextAlignment="Center"/>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ══ COLUNA 3 — ÁREA RESERVADA (50% direita) ══ -->
+            <Border Grid.Column="2"
+                    Background="#0A0A0A"
+                    BorderBrush="#1A1A1A"
+                    BorderThickness="1,0,0,0">
+                <TextBlock Text="ÁREA RESERVADA"
+                           Foreground="#222"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+
+        </Grid>
+
+        <!-- Labels ocultos necessários pelo code-behind -->
+        <StackPanel Grid.Row="1" Visibility="Collapsed">
+            <TextBlock x:Name="WeightBrokerLabel"/>
+            <TextBlock x:Name="WeightFluxoLabel"/>
+            <TextBlock x:Name="WeightBookLabel"/>
+            <TextBlock x:Name="WeightDetectLabel"/>
+            <TextBlock x:Name="RVOLContextLabel"/>
+            <TextBlock x:Name="SessionContextLabel"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

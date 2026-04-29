@@ -6,26 +6,21 @@ public sealed class SpoofDetector
 {
     public event Action<SpoofEvent>? OnSpoofDetected;
 
-    private readonly int    _minVolume;
-    private readonly int    _priceDistance;
-    private readonly double _dropThreshold;
-    private readonly int    _maxHistory;
+    private readonly int _minVolume;
+    private readonly int _maxHistory;
 
     private readonly Dictionary<string, LevelSnapshot> _prevLevels = new();
     private readonly LinkedList<SpoofEvent> _history = new();
+    private readonly Dictionary<decimal, SpoofMarker> _activeMarkers = new();
 
     public IReadOnlyCollection<SpoofEvent> History => _history;
 
     public SpoofDetector(
-        int    minVolume     = 200,
-        int    priceDistance = 30,
-        double dropThreshold = 0.65,
-        int    maxHistory    = 500)
+        int minVolume  = 200,
+        int maxHistory = 500)
     {
-        _minVolume     = minVolume;
-        _priceDistance = priceDistance;
-        _dropThreshold = dropThreshold;
-        _maxHistory    = maxHistory;
+        _minVolume  = minVolume;
+        _maxHistory = maxHistory;
     }
 
     public void ProcessLevel(BookLevel current, decimal lastPrice)
@@ -34,34 +29,62 @@ public sealed class SpoofDetector
 
         if (_prevLevels.TryGetValue(key, out var prev))
         {
-            if (prev.Volume >= _minVolume)
+            // ═══ REGRA DO SPOOF ═══
+            // 1. O nível anterior tinha volume >= mínimo (ordem grande)
+            // 2. O nível atual ZEROU completamente (cancelamento total)
+            if (prev.Volume >= _minVolume && current.Volume == 0)
             {
-                var distance = Math.Abs(current.Price - lastPrice);
-                var dropped  = prev.Volume - current.Volume;
-                var dropPct  = (double)dropped / prev.Volume;
+                var evt = new SpoofEvent(
+                    Time:          DateTime.Now,
+                    Ticker:        current.Ticker,
+                    Side:          current.Side == BookSide.Bid ? "COMPRA" : "VENDA",
+                    Broker:        prev.Broker,
+                    Price:         current.Price,
+                    VolumeBefore:  prev.Volume,
+                    VolumeAfter:   0,
+                    PriceDistance: Math.Abs(current.Price - lastPrice)
+                );
 
-                if (dropPct >= _dropThreshold && distance <= _priceDistance)
+                AddHistory(evt);
+                OnSpoofDetected?.Invoke(evt);
+
+                _activeMarkers[current.Price] = new SpoofMarker
                 {
-                    var evt = new SpoofEvent(
-                        Time:          DateTime.Now,
-                        Ticker:        current.Ticker,
-                        Side:          current.Side == BookSide.Bid ? "COMPRA" : "VENDA",
-                        Broker:        prev.Broker,
-                        Price:         current.Price,
-                        VolumeBefore:  prev.Volume,
-                        VolumeAfter:   current.Volume,
-                        PriceDistance: distance
-                    );
-                    AddHistory(evt);
-                    OnSpoofDetected?.Invoke(evt);
-                }
+                    Side       = current.Side,
+                    Broker     = prev.Broker,
+                    DetectedAt = DateTime.Now
+                };
             }
         }
 
-        _prevLevels[key] = new LevelSnapshot(current.Volume, current.Broker);
+        // Só salva no histórico se o nível tem volume > 0
+        // Se zerou, remove do histórico para não re-detectar
+        if (current.Volume > 0)
+            _prevLevels[key] = new LevelSnapshot(current.Volume, current.Broker);
+        else
+            _prevLevels.Remove(key);
     }
 
-    public void Clear() { _prevLevels.Clear(); _history.Clear(); }
+    public bool HasSpoofMarker(decimal price, BookSide side)
+    {
+        if (_activeMarkers.TryGetValue(price, out var marker))
+        {
+            if ((DateTime.Now - marker.DetectedAt).TotalSeconds > 30)
+            {
+                _activeMarkers.Remove(price);
+                return false;
+            }
+            return marker.Side == side;
+        }
+        return false;
+    }
+
+    public void Clear()
+    {
+        _prevLevels.Clear();
+        _history.Clear();
+        _activeMarkers.Clear();
+    }
 
     private void AddHistory(SpoofEvent evt)
     {
@@ -71,4 +94,11 @@ public sealed class SpoofDetector
     }
 
     private record LevelSnapshot(int Volume, string Broker);
+
+    private class SpoofMarker
+    {
+        public BookSide Side       { get; set; }
+        public string   Broker     { get; set; } = "";
+        public DateTime DetectedAt { get; set; }
+    }
 }
