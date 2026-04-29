@@ -12,6 +12,7 @@ using MarketCore.Engine;
 using MarketCore.Engine.Detectors;
 using MarketCore.Models;
 using MarketCore.Providers.Simulator;
+using MarketCore.Providers.Nelogica;
 using MarketCore.Contracts;
 using MarketCore.FlowSense;
 
@@ -211,8 +212,19 @@ public partial class MainWindow : Window
             // ── Vincular ItemsSource da Tape ──
             IcTape.ItemsSource = _tapeRecords;
 
-            _simulator = new SimulatorProvider();
-            _engine    = new MarketEngine(_simulator);
+            // ── Escolher provider conforme modo de operação ──
+            IMarketDataProvider provider;
+            if (_isRealMarket)
+            {
+                provider = new ProfitDLLProvider();
+            }
+            else
+            {
+                _simulator = new SimulatorProvider();
+                provider   = _simulator;
+            }
+
+            _engine = new MarketEngine(provider);
 
             _engine.OnTrade          += Engine_OnTrade;
             _engine.OnBookSnapshot   += Engine_OnBookSnapshot;
@@ -222,7 +234,6 @@ public partial class MainWindow : Window
             _engine.Renewable.OnRenewableDetected   += (d) => HandleRenewable(d);
             _engine.Exhaustion.OnExhaustionDetected += (d) => HandleExhaustion(d);
 
-            // ── Credenciais: Real usa Profit, Simulador usa vazio
             var providerCredentials = _isRealMarket
                 ? new ProviderCredentials(
                     _profitCredentials.ActivationKey,
