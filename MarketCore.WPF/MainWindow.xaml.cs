@@ -120,6 +120,7 @@ public partial class MainWindow : Window
         public ObservableCollection<BookRowViewModel> BookRows { get; } = new();
         public ObservableCollection<AlertViewModel> AlertItems { get; } = new();
         public ObservableCollection<BrokerFilter> ActiveFilters { get; } = new();
+        private readonly ObservableCollection<SpoofNotificationViewModel> _spoofNotifications = new();
 
         // ── Credenciais Profit ────────────────────────────────────────────────
         private readonly ProfitCredentials _profitCredentials;
@@ -211,6 +212,8 @@ public partial class MainWindow : Window
         {
             // ── Vincular ItemsSource da Tape ──
             IcTape.ItemsSource = _tapeRecords;
+            IcSpoofNotifications.ItemsSource = _spoofNotifications;
+            BtnPower.Click += BtnPower_Click;
 
             // ── Escolher provider conforme modo de operação ──
             IMarketDataProvider provider;
@@ -467,9 +470,10 @@ public partial class MainWindow : Window
                 {
                     string bidPriceKey = bid.Price.ToString("N0");
                     bool isBigBid = bid.Volume >= _highlightThreshold;
-                    bool bidSpoof   = (_detectorsByPrice.TryGetValue(bidPriceKey, out int bdflags) && (bdflags & 1) != 0);
-                    bool bidIceberg = (bdflags & 2) != 0;
+                    bool bidSpoof     = (_detectorsByPrice.TryGetValue(bidPriceKey, out int bdflags) && (bdflags & 1) != 0);
+                    bool bidIceberg   = (bdflags & 2) != 0;
                     bool bidRenewable = (bdflags & 4) != 0;
+                    bool bidExhaustion = (bdflags & 8) != 0;
 
                     row.BidBroker     = bid.Broker.Length > 7 ? bid.Broker[..7] : bid.Broker;
                     row.BidVolume     = bid.Volume.ToString();
@@ -485,9 +489,10 @@ public partial class MainWindow : Window
                     // ═══ NOVO: Montar texto do detector ═══
                     string bidDetectorText = "";
                     string bidDetectorColor = "#FFFFFF";
-                    if (bidSpoof) { bidDetectorText += "S"; bidDetectorColor = "#FF1744"; }
-                    else if (bidIceberg) { bidDetectorText += "I"; bidDetectorColor = "#2979FF"; }
-                    else if (bidRenewable) { bidDetectorText += "R"; bidDetectorColor = "#00C853"; }
+                    if (bidSpoof)      { bidDetectorText += "S"; bidDetectorColor = "#FF1744"; }
+                    else if (bidIceberg)    { bidDetectorText += "I"; bidDetectorColor = "#2979FF"; }
+                    else if (bidRenewable)  { bidDetectorText += "R"; bidDetectorColor = "#00C853"; }
+                    else if (bidExhaustion) { bidDetectorText += "E"; bidDetectorColor = "#FFD600"; }
                     row.BidDetector = bidDetectorText;
                     row.BidDetectorColor = bidDetectorColor;
                     
@@ -509,9 +514,10 @@ public partial class MainWindow : Window
                 {
                     string askPriceKey = ask.Price.ToString("N0");
                     bool isBigAsk   = ask.Volume >= _highlightThreshold;
-                    bool askSpoof   = (_detectorsByPrice.TryGetValue(askPriceKey, out int adflags) && (adflags & 1) != 0);
-                    bool askIceberg = (adflags & 2) != 0;
+                    bool askSpoof     = (_detectorsByPrice.TryGetValue(askPriceKey, out int adflags) && (adflags & 1) != 0);
+                    bool askIceberg   = (adflags & 2) != 0;
                     bool askRenewable = (adflags & 4) != 0;
+                    bool askExhaustion = (adflags & 8) != 0;
 
                     row.AskBroker     = ask.Broker.Length > 7 ? ask.Broker[..7] : ask.Broker;
                     row.AskVolume     = ask.Volume.ToString();
@@ -527,9 +533,10 @@ public partial class MainWindow : Window
                     // ═══ NOVO: Montar texto do detector ═══
                     string askDetectorText = "";
                     string askDetectorColor = "#FFFFFF";
-                    if (askSpoof) { askDetectorText += "S"; askDetectorColor = "#FF1744"; }
-                    else if (askIceberg) { askDetectorText += "I"; askDetectorColor = "#2979FF"; }
-                    else if (askRenewable) { askDetectorText += "R"; askDetectorColor = "#00C853"; }
+                    if (askSpoof)      { askDetectorText += "S"; askDetectorColor = "#FF1744"; }
+                    else if (askIceberg)    { askDetectorText += "I"; askDetectorColor = "#2979FF"; }
+                    else if (askRenewable)  { askDetectorText += "R"; askDetectorColor = "#00C853"; }
+                    else if (askExhaustion) { askDetectorText += "E"; askDetectorColor = "#FFD600"; }
                     row.AskDetector = askDetectorText;
                     row.AskDetectorColor = askDetectorColor;
                     
@@ -655,64 +662,112 @@ public partial class MainWindow : Window
 
         private void HandleSpoof(SpoofEvent d)
         {
-            // ═══ VERIFICAÇÃO TRIPLA - GARANTIR QUE O FILTRO FUNCIONE ═══
-            
-            // Verificação 1: Filtro está configurado?
-            if (_spoofMinVol > 0)
+            if (_spoofMinVol > 0 && d.VolumeBefore < _spoofMinVol) return;
+
+            string key = d.Price.ToString("N0");
+
+            // O spoof ocorre quando a ordem some — preço pode não estar mais no book.
+            // Marca o preço exato E o preço vizinho mais próximo visível no book.
+            MarkPriceDetector(key, 0);
+
+            if (_lastSnapshot != null)
             {
-                // Verificação 2: Volume menor que o mínimo?
-                if (d.VolumeBefore < _spoofMinVol)
+                if (d.Side == "COMPRA")
                 {
-                    // BLOQUEADO! Não marcar no book, não criar alerta
-                    return;
+                    // Busca bid mais próximo do preço do spoof
+                    var nearest = _lastSnapshot.Bids
+                        .OrderBy(b => Math.Abs((double)(b.Price - d.Price)))
+                        .FirstOrDefault();
+                    if (nearest != null)
+                        MarkPriceDetector(nearest.Price.ToString("N0"), 0);
+                }
+                else
+                {
+                    // Busca ask mais próximo do preço do spoof
+                    var nearest = _lastSnapshot.Asks
+                        .OrderBy(a => Math.Abs((double)(a.Price - d.Price)))
+                        .FirstOrDefault();
+                    if (nearest != null)
+                        MarkPriceDetector(nearest.Price.ToString("N0"), 0);
                 }
             }
-            
-            // SE CHEGOU AQUI: Volume >= filtro (ou filtro = 0)
-            MarkPriceDetector(d.Price.ToString("N0"), 0);
-            Dispatcher.InvokeAsync(() => { _spoofCount++; AddAlert("S", d.Price, $"{d.Side} | {d.Broker} | {d.VolumeBefore}→{d.VolumeAfter}"); });
-            ClearPriceDetectorAfter(d.Price.ToString("N0"), 0);
+
+            Dispatcher.InvokeAsync(() =>
+            {
+                _spoofCount++;
+                AddAlert("S", d.Price, $"{d.Side} | {d.Broker} | {d.VolumeBefore}→{d.VolumeAfter}");
+                AddSpoofNotification(d.Side, d.Broker, d.VolumeBefore, d.Price, isCyclic: false);
+            });
+            ClearPriceDetectorAfter(key, 0);
+        }
+
+        private void AddSpoofNotification(string side, string broker, int vol, decimal price, bool isCyclic)
+        {
+            bool isCompra      = side.Contains("COMPRA") || side == "C";
+            string brokerShort = broker.Length > 6 ? broker[..6] : broker;
+
+            var vm = new SpoofNotificationViewModel
+            {
+                Time       = DateTime.Now.ToString("HH:mm:ss"),
+                SideLetter = isCompra ? "C" : "V",
+                SideColor  = isCompra ? "#00E676" : "#FF4444",
+                Broker     = brokerShort.ToUpper(),
+                Vol        = vol.ToString(),
+                Price      = price.ToString("N0"),
+                TypeLabel  = isCyclic ? "CICL" : "CLASS",
+                TypeColor  = isCyclic ? "#FFD600" : "#FF6B6B",
+                RowBg      = "Transparent"
+            };
+
+            _spoofNotifications.Insert(0, vm);
+            while (_spoofNotifications.Count > 8)
+                _spoofNotifications.RemoveAt(_spoofNotifications.Count - 1);
+
+            // Esconde placeholder quando há notificações
+            if (TbSpoofEmpty != null)
+                TbSpoofEmpty.Visibility = Visibility.Collapsed;
         }
 
         private void HandleIceberg(IcebergEvent d)
         {
-            // ═══ VERIFICAÇÃO TRIPLA - GARANTIR QUE O FILTRO FUNCIONE ═══
-            
-            // Verificação 1: Filtro está configurado?
-            if (_icebergMinVol > 0)
+            if (_icebergMinVol > 0 && d.Volume < _icebergMinVol) return;
+
+            string key = d.FromPrice.ToString("N0");
+            MarkPriceDetector(key, 1);
+            Dispatcher.InvokeAsync(() =>
             {
-                // Verificação 2: Volume menor que o mínimo?
-                if (d.Volume < _icebergMinVol)
-                {
-                    // BLOQUEADO! Não marcar no book, não criar alerta
-                    return;
-                }
-            }
-            
-            // SE CHEGOU AQUI: Volume >= filtro (ou filtro = 0)
-            MarkPriceDetector(d.FromPrice.ToString("N0"), 1);
-            Dispatcher.InvokeAsync(() => { _icebergCount++; AddAlert("I", d.FromPrice, $"{d.Direction} | {d.Broker} | vol:{d.Volume}"); });
-            ClearPriceDetectorAfter(d.FromPrice.ToString("N0"), 1);
+                _icebergCount++;
+                AddAlert("I", d.FromPrice, $"{d.Direction} | {d.Broker} | vol:{d.Volume}");
+            });
+            ClearPriceDetectorAfter(key, 1);
         }
 
         private void HandleRenewable(RenewableEvent d)
         {
-            // ═══ Filtrar por volume mínimo ═══
-            // ATENÇÃO: Verifique qual campo do RenewableEvent contém o volume e descomente:
-            // if (d.Volume < _renewableMinVol) return;
-            
-            MarkPriceDetector(d.Price.ToString("N0"), 2);
-            Dispatcher.InvokeAsync(() => { _renewableCount++; AddAlert("R", d.Price, $"{d.Side} | {d.Broker} | {d.Renewals}x renovações"); });
-            ClearPriceDetectorAfter(d.Price.ToString("N0"), 2);
+            if (_renewableMinVol > 0 && d.VolumePerCycle < _renewableMinVol) return;
+
+            string key = d.Price.ToString("N0");
+            MarkPriceDetector(key, 2);
+            Dispatcher.InvokeAsync(() =>
+            {
+                _renewableCount++;
+                AddAlert("R", d.Price, $"{d.Side} | {d.Broker} | {d.Renewals}x renovações");
+            });
+            ClearPriceDetectorAfter(key, 2);
         }
 
         private void HandleExhaustion(ExhaustionEvent d)
         {
-            // ═══ Filtrar por volume mínimo ═══
-            // ATENÇÃO: Verifique qual campo do ExhaustionEvent contém o volume e descomente:
-            // if (d.Volume < _exhaustionMinVol) return;
-            
-            Dispatcher.InvokeAsync(() => { _exhaustionCount++; AddAlert("E", d.PrecoInicial, $"{d.LadoAgressor} | {d.Ticker} | {d.NumTrades} trades"); });
+            if (_exhaustionMinVol > 0 && d.NumTrades < _exhaustionMinVol) return;
+
+            string key = d.PrecoInicial.ToString("N0");
+            MarkPriceDetector(key, 3);
+            Dispatcher.InvokeAsync(() =>
+            {
+                _exhaustionCount++;
+                AddAlert("E", d.PrecoInicial, $"{d.LadoAgressor} | {d.Ticker} | {d.NumTrades} trades");
+            });
+            ClearPriceDetectorAfter(key, 3);
         }
 
         private void MarkPriceDetector(string priceKey, int bit)
@@ -797,6 +852,21 @@ public partial class MainWindow : Window
         // ══════════════════════════════════════════════════════════════════════
         //  EVENT HANDLERS UI
         // ══════════════════════════════════════════════════════════════════════
+
+        private void BtnPower_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show(
+                "Deseja encerrar o MarketCore?",
+                "Encerrar",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _engine?.Dispose();
+                Application.Current.Shutdown();
+            }
+        }
 
         private void BtnAddFilter_Click(object sender, RoutedEventArgs e)
         {
@@ -1026,6 +1096,19 @@ public partial class MainWindow : Window
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    public class SpoofNotificationViewModel
+    {
+        public string Time       { get; set; } = "";   // HH:mm:ss
+        public string SideLetter { get; set; } = "";   // C ou V
+        public string SideColor  { get; set; } = "";   // verde/vermelho
+        public string Broker     { get; set; } = "";   // nome da corretora (max 6 chars)
+        public string Vol        { get; set; } = "";   // volume
+        public string Price      { get; set; } = "";   // preço formatado
+        public string TypeLabel  { get; set; } = "";   // CLASS ou CICL
+        public string TypeColor  { get; set; } = "";   // cor do tipo
+        public string RowBg      { get; set; } = "Transparent";
     }
 
     public class BrokerFilter
