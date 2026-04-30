@@ -17,13 +17,11 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Margin" Value="0,12,0,4"/>
         </Style>
-
         <Style x:Key="ParamLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="#CCCCCC"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Width" Value="210"/>
         </Style>
-
         <Style x:Key="ValueLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Width" Value="42"/>
@@ -31,7 +29,6 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
-
         <Style x:Key="BtnPrimary" TargetType="Button">
             <Setter Property="Background" Value="#00BFFF"/>
             <Setter Property="Foreground" Value="#0D0D0D"/>
@@ -42,9 +39,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -56,7 +51,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <Style x:Key="BtnSecondary" TargetType="Button">
             <Setter Property="Background" Value="#2A2A2A"/>
             <Setter Property="Foreground" Value="#AAAAAA"/>
@@ -70,8 +64,7 @@
                         <Border Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3"
-                                Padding="{TemplateBinding Padding}">
+                                CornerRadius="3" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -83,7 +76,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <Style TargetType="Separator">
             <Setter Property="Background" Value="#222"/>
             <Setter Property="Margin" Value="0,6,0,0"/>
@@ -93,17 +85,15 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20,16,20,16">
         <StackPanel>
 
-            <TextBlock Text="⚙  Calibrar FlowScore Engine"
-                       FontSize="14" FontWeight="Bold"
-                       Foreground="White" Margin="0,0,0,4"/>
+            <TextBlock Text="&#9881;  Calibrar FlowScore Engine"
+                       FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,4"/>
             <TextBlock Text="Ajuste os pesos e parâmetros de cada componente. Clique em Aplicar para confirmar."
                        Foreground="#777" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
             <Separator/>
 
-            <!-- PESOS DOS COMPONENTES -->
+            <!-- ── PESOS DOS COMPONENTES ─────────────────────────────── -->
             <TextBlock Text="PESOS DOS COMPONENTES  (serão normalizados para 100%)"
                        Style="{StaticResource SectionHeader}"/>
-
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
                 <TextBlock Text="BrokerFlow" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
@@ -131,7 +121,7 @@
             <TextBlock x:Name="WeightSumLabel" Foreground="#888" FontSize="11" Margin="0,4,0,0" TextAlignment="Right"/>
             <Separator/>
 
-            <!-- BROKERFLOW -->
+            <!-- ── BROKERFLOW ────────────────────────────────────────── -->
             <TextBlock Text="BROKERFLOW" Style="{StaticResource SectionHeader}"/>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
@@ -159,7 +149,7 @@
             </Grid>
             <Separator/>
 
-            <!-- FLUXO DIRETO -->
+            <!-- ── FLUXO DIRETO ──────────────────────────────────────── -->
             <TextBlock Text="FLUXO DIRETO" Style="{StaticResource SectionHeader}"/>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
@@ -175,7 +165,7 @@
             </Grid>
             <Separator/>
 
-            <!-- BOOK -->
+            <!-- ── BOOK ──────────────────────────────────────────────── -->
             <TextBlock Text="BOOK" Style="{StaticResource SectionHeader}"/>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
@@ -209,7 +199,7 @@
             </Grid>
             <Separator/>
 
-            <!-- DETECTORES -->
+            <!-- ── DETECTORES ────────────────────────────────────────── -->
             <TextBlock Text="DETECTORES" Style="{StaticResource SectionHeader}"/>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
@@ -248,12 +238,198 @@
                 <TextBlock x:Name="LabelCVDScore" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
             </Grid>
 
-            <!-- BOTÕES -->
+            <!-- ══════════════════════════════════════════════════════════
+                 AUTO-CALIBRADOR
+                 ══════════════════════════════════════════════════════════ -->
+            <Separator Margin="0,16,0,0"/>
+            <Border Margin="0,12,0,0" Background="#0A1A0A" BorderBrush="#00C853"
+                    BorderThickness="1" CornerRadius="4" Padding="12,10">
+                <StackPanel>
+
+                    <!-- Título -->
+                    <TextBlock Text="&#9889;  Auto-Calibração com Dados Históricos"
+                               FontSize="12" FontWeight="Bold" Foreground="#00C853" Margin="0,0,0,4"/>
+                    <TextBlock Text="Analisa correlação entre os componentes e o movimento real do preço."
+                               FontSize="10" Foreground="#888888" Margin="0,0,0,10"/>
+
+                    <!-- Seletores -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="16"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="130"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Período:" FontSize="11"
+                                   Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="1" x:Name="ComboPeriodo"
+                                  Background="#1A1A1A" Foreground="#E8E8E8"
+                                  BorderBrush="#3A3A3A" FontFamily="Consolas" FontSize="11"/>
+                        <TextBlock Grid.Column="3" Text="Mov. mín.:" FontSize="11"
+                                   Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="4" x:Name="ComboMovMin"
+                                  Background="#1A1A1A" Foreground="#E8E8E8"
+                                  BorderBrush="#3A3A3A" FontFamily="Consolas" FontSize="11"/>
+                    </Grid>
+
+                    <!-- Botão iniciar -->
+                    <Button x:Name="BtnAutoCalibrar"
+                            Content="&#9889;  Iniciar Auto-Calibração"
+                            Margin="0,0,0,10" Padding="14,7"
+                            Background="#003A10" BorderBrush="#00C853" Foreground="#00C853"
+                            FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="1" CornerRadius="4"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#005A18"/>
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.5"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- Painel de progresso -->
+                    <StackPanel x:Name="PainelProgresso" Visibility="Collapsed" Margin="0,0,0,10">
+                        <ProgressBar x:Name="ProgressoCalib"
+                                     Minimum="0" Maximum="100" Value="0"
+                                     Height="12" Margin="0,0,0,4"
+                                     Foreground="#00C853" Background="#1A1A1A"/>
+                        <TextBlock x:Name="LabelStatusCalib"
+                                   Text="Analisando..." FontSize="10"
+                                   Foreground="#AAAAAA" FontFamily="Consolas"/>
+                    </StackPanel>
+
+                    <!-- Painel de resultado -->
+                    <Border x:Name="PainelResultado" Visibility="Collapsed"
+                            Background="#0D0D0D" BorderBrush="#2A2A2A"
+                            BorderThickness="1" CornerRadius="3" Padding="10,8">
+                        <StackPanel>
+                            <TextBlock Text="RESULTADO DA CALIBRAÇÃO"
+                                       FontSize="10" FontWeight="Bold"
+                                       Foreground="#AAAAAA" FontFamily="Consolas" Margin="0,0,0,6"/>
+
+                            <!-- Cabeçalho -->
+                            <Grid Margin="0,0,0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Componente" FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" Text="Acerto"     FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="2" Text="Ratio"      FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="3" Text="Atual"      FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" Text="Sugerido"   FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="5" Text=""           FontSize="9" Foreground="#666666" FontFamily="Consolas"/>
+                            </Grid>
+                            <Rectangle Height="1" Fill="#2A2A2A" Margin="0,2,0,4"/>
+
+                            <!-- BrokerFlow -->
+                            <Grid Margin="0,1,0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="BrokerFlow"  FontSize="10" Foreground="#CCCCCC" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" x:Name="TxtResultBrokerAcerto" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="2" x:Name="TxtResultBrokerRatio"  FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="3" x:Name="TxtResultBrokerAtual"  FontSize="10" Foreground="#888888" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" x:Name="TxtResultBrokerSug"    FontSize="10" Foreground="#00C853" FontFamily="Consolas" FontWeight="Bold"/>
+                                <TextBlock Grid.Column="5" x:Name="TxtResultBrokerTend"   FontSize="12" Foreground="#00C853" FontFamily="Consolas"/>
+                            </Grid>
+
+                            <!-- FluxoDireto -->
+                            <Grid Margin="0,1,0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Fluxo Direto" FontSize="10" Foreground="#CCCCCC" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" x:Name="TxtResultFluxoAcerto" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="2" x:Name="TxtResultFluxoRatio"  FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="3" x:Name="TxtResultFluxoAtual"  FontSize="10" Foreground="#888888" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" x:Name="TxtResultFluxoSug"    FontSize="10" Foreground="#00C853" FontFamily="Consolas" FontWeight="Bold"/>
+                                <TextBlock Grid.Column="5" x:Name="TxtResultFluxoTend"   FontSize="12" Foreground="#00C853" FontFamily="Consolas"/>
+                            </Grid>
+
+                            <!-- Book -->
+                            <Grid Margin="0,1,0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Book"        FontSize="10" Foreground="#CCCCCC" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" x:Name="TxtResultBookAcerto" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="2" x:Name="TxtResultBookRatio"  FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="3" x:Name="TxtResultBookAtual"  FontSize="10" Foreground="#888888" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" x:Name="TxtResultBookSug"    FontSize="10" Foreground="#00C853" FontFamily="Consolas" FontWeight="Bold"/>
+                                <TextBlock Grid.Column="5" x:Name="TxtResultBookTend"   FontSize="12" Foreground="#00C853" FontFamily="Consolas"/>
+                            </Grid>
+
+                            <!-- Detectores -->
+                            <Grid Margin="0,1,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="50"/>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="60"/>
+                                    <ColumnDefinition Width="25"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Detectores"  FontSize="10" Foreground="#CCCCCC" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="1" x:Name="TxtResultDetectAcerto" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="2" x:Name="TxtResultDetectRatio"  FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="3" x:Name="TxtResultDetectAtual"  FontSize="10" Foreground="#888888" FontFamily="Consolas"/>
+                                <TextBlock Grid.Column="4" x:Name="TxtResultDetectSug"    FontSize="10" Foreground="#00C853" FontFamily="Consolas" FontWeight="Bold"/>
+                                <TextBlock Grid.Column="5" x:Name="TxtResultDetectTend"   FontSize="12" Foreground="#00C853" FontFamily="Consolas"/>
+                            </Grid>
+
+                            <Rectangle Height="1" Fill="#2A2A2A" Margin="0,2,0,4"/>
+                            <TextBlock x:Name="TxtResultJanelas"
+                                       FontSize="9" Foreground="#666666"
+                                       FontFamily="Consolas" TextWrapping="Wrap"/>
+                            <TextBlock Text="&#8593; Sliders atualizados — clique Aplicar para confirmar"
+                                       FontSize="9" Foreground="#00C853"
+                                       Margin="0,4,0,0" FontFamily="Consolas"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+            </Border>
+
+            <!-- ── BOTÕES ─────────────────────────────────────────────── -->
             <Separator Margin="0,16,0,0"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-                <Button x:Name="BtnReset" Content="Restaurar padrões" Style="{StaticResource BtnSecondary}" Margin="0,0,8,0"/>
-                <Button x:Name="BtnCancel" Content="Cancelar" Style="{StaticResource BtnSecondary}" Margin="0,0,8,0"/>
-                <Button x:Name="BtnApply" Content="✔  Aplicar" Style="{StaticResource BtnPrimary}"/>
+                <Button x:Name="BtnReset"  Content="Restaurar padrões" Style="{StaticResource BtnSecondary}" Margin="0,0,8,0"/>
+                <Button x:Name="BtnCancel" Content="Cancelar"          Style="{StaticResource BtnSecondary}" Margin="0,0,8,0"/>
+                <Button x:Name="BtnApply"  Content="&#10004;  Aplicar" Style="{StaticResource BtnPrimary}"/>
             </StackPanel>
 
         </StackPanel>

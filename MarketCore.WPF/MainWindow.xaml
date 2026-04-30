@@ -153,6 +153,25 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Botão Configuração de Gravação -->
+                <Button Grid.Column="3" x:Name="BtnRecordingConfig"
+                        Width="22" Height="22"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Configurar caminho de gravação"
+                        HorizontalAlignment="Left"
+                        Margin="190,0,0,0"
+                        VerticalAlignment="Center">
+                    <Viewbox Width="14" Height="14">
+                        <Canvas Width="24" Height="24">
+                            <!-- Ícone de pasta/disco -->
+                            <Path Fill="#4488FF" Data="M2,6 L8,6 L10,4 L22,4 L22,18 L2,18 Z"/>
+                            <Path Fill="#2266CC" Data="M2,8 L22,8 L22,18 L2,18 Z"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
                 <!-- Botão Power -->
                 <Button Grid.Column="3" x:Name="BtnPower"
                         Width="22" Height="22"

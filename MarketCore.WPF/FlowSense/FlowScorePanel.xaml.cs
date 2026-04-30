@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,6 +14,10 @@ namespace MarketCore.FlowSense
         private DeltaEngine?       _deltaEngine;
         private DispatcherTimer?   _updateTimer;
 
+        // ── Auto-Calibrador ───────────────────────────────────────────────
+        private List<FlowScoreSnapshot>? _snapshots;
+        private string? _diretorioGravacao;
+
         public FlowScorePanel()
         {
             InitializeComponent();
@@ -20,13 +25,17 @@ namespace MarketCore.FlowSense
         }
 
         public void Initialize(
-            FlowScoreEngine   flowScoreEngine,
-            BrokerAccumulator brokerAccum,
-            DeltaEngine       deltaEngine)
+            FlowScoreEngine        flowScoreEngine,
+            BrokerAccumulator      brokerAccum,
+            DeltaEngine            deltaEngine,
+            List<FlowScoreSnapshot>? snapshots         = null,
+            string?                  diretorioGravacao = null)
         {
-            _flowScoreEngine = flowScoreEngine;
-            _brokerAccum     = brokerAccum;
-            _deltaEngine     = deltaEngine;
+            _flowScoreEngine   = flowScoreEngine;
+            _brokerAccum       = brokerAccum;
+            _deltaEngine       = deltaEngine;
+            _snapshots         = snapshots;
+            _diretorioGravacao = diretorioGravacao;
 
             _updateTimer = new DispatcherTimer
             {
@@ -40,7 +49,10 @@ namespace MarketCore.FlowSense
         {
             if (_flowScoreEngine == null) return;
 
-            var window = new FlowScoreConfigWindow(_flowScoreEngine.Config)
+            var window = new FlowScoreConfigWindow(
+                _flowScoreEngine.Config,
+                _snapshots,
+                _diretorioGravacao)
             {
                 Owner = Window.GetWindow(this)
             };
@@ -68,7 +80,7 @@ namespace MarketCore.FlowSense
             DetectoresLabel.Text       = $"{_flowScoreEngine.DetectoresComponent:+0;-0;0}";
             DetectoresLabel.Foreground = GetColorForScore(_flowScoreEngine.DetectoresComponent);
 
-            // Pesos (ocultos)
+            // Pesos
             WeightBrokerLabel.Text = $"{_flowScoreEngine.Config.WeightBrokerFlow * 100:0}%";
             WeightFluxoLabel.Text  = $"{_flowScoreEngine.Config.WeightFluxoDireto * 100:0}%";
             WeightBookLabel.Text   = $"{_flowScoreEngine.Config.WeightBook * 100:0}%";
@@ -122,7 +134,7 @@ namespace MarketCore.FlowSense
                 StopHuntLabel.Foreground = Brushes.Gray;
             }
 
-            // BrokerFlow ativo
+            // BrokerFlow ativo — Compradores
             var activeBuyers = _brokerAccum?.GetActiveBuyers60s();
             if (activeBuyers != null && activeBuyers.Count > 0)
             {
@@ -135,6 +147,7 @@ namespace MarketCore.FlowSense
                 BuyerActivityLabel.Text = lines.ToString();
             }
 
+            // BrokerFlow ativo — Vendedores
             var activeSellers = _brokerAccum?.GetActiveSellers60s();
             if (activeSellers != null && activeSellers.Count > 0)
             {

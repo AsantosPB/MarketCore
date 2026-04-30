@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,31 +18,44 @@ public sealed class MarketRecorder : IMarketRecorder
     private string? _diretorioPregao;
     private DateOnly? _pregaoAtivo = null;
 
-    private readonly ConcurrentQueue<(string ativo, TradeEvent trade)> _filaTrades = new();
-    private readonly ConcurrentQueue<(string ativo, BookSnapshot snapshot)> _filaBooks = new();
-    private readonly ConcurrentQueue<(string mensagem, DateTime timestamp)> _filaEventos = new();
+    private readonly ConcurrentQueue<(string ativo, TradeEvent trade)>          _filaTrades     = new();
+    private readonly ConcurrentQueue<(string ativo, BookSnapshot snapshot)>     _filaBooks      = new();
+    private readonly ConcurrentQueue<(string mensagem, DateTime timestamp)>     _filaEventos    = new();
+    private readonly ConcurrentQueue<FlowScoreRecord>                           _filaFlowScore  = new();
 
-    private long _totaisTrades = 0;
-    private long _totaisBooks = 0;
-    private long _bytesGravados = 0;
+    private long _totaisTrades   = 0;
+    private long _totaisBooks    = 0;
+    private long _bytesGravados  = 0;
 
     private Task? _taskProcessamentoTrades;
     private Task? _taskProcessamentoBooks;
     private Task? _taskProcessamentoEventos;
+    private Task? _taskProcessamentoFlowScore;
     private CancellationTokenSource? _cts;
 
-    public event EventHandler<RecorderErrorEventArgs>? ErroGravacao;
+    public event EventHandler<RecorderErrorEventArgs>?   ErroGravacao;
     public event EventHandler<RecorderWarningEventArgs>? AvisoGravacao;
+
+    // ── Modelo interno FlowScore ─────────────────────────────────────────
+    private readonly record struct FlowScoreRecord(
+        string   Ativo,
+        DateTime Timestamp,
+        double   Preco,
+        double   ScoreTotal,
+        double   BrokerFlow,
+        double   FluxoDireto,
+        double   Book,
+        double   Detectores);
 
     public RecorderStatus Status => new RecorderStatus
     {
-        PregaoAtivo = _pregaoAtivo,
-        EspacoLivreGB = ObterEspacoLivreGB(),
-        FilaTrades = _filaTrades.Count,
-        FileBook = _filaBooks.Count,
-        TotaisTrades = _totaisTrades,
-        TotaisBooks = _totaisBooks,
-        BytesGravados = _bytesGravados
+        PregaoAtivo    = _pregaoAtivo,
+        EspacoLivreGB  = ObterEspacoLivreGB(),
+        FilaTrades     = _filaTrades.Count,
+        FileBook       = _filaBooks.Count,
+        TotaisTrades   = _totaisTrades,
+        TotaisBooks    = _totaisBooks,
+        BytesGravados  = _bytesGravados
     };
 
     public MarketRecorder(string diretorioBase)
@@ -58,7 +72,7 @@ public sealed class MarketRecorder : IMarketRecorder
             return Task.FromResult(false);
         }
 
-        _pregaoAtivo = data;
+        _pregaoAtivo     = data;
         _diretorioPregao = Path.Combine(_diretorioBase, data.ToString("yyyy-MM-dd"));
 
         try
@@ -75,14 +89,15 @@ public sealed class MarketRecorder : IMarketRecorder
             if (espacoLivre < 10)
                 DispararAviso($"Espaço em disco baixo: {espacoLivre:F2} GB");
 
-            _totaisTrades = 0;
-            _totaisBooks = 0;
+            _totaisTrades  = 0;
+            _totaisBooks   = 0;
             _bytesGravados = 0;
 
             _cts = new CancellationTokenSource();
-            _taskProcessamentoTrades = Task.Run(() => ProcessarFilaTrades(_cts.Token));
-            _taskProcessamentoBooks  = Task.Run(() => ProcessarFilaBooks(_cts.Token));
-            _taskProcessamentoEventos = Task.Run(() => ProcessarFilaEventos(_cts.Token));
+            _taskProcessamentoTrades     = Task.Run(() => ProcessarFilaTrades(_cts.Token));
+            _taskProcessamentoBooks      = Task.Run(() => ProcessarFilaBooks(_cts.Token));
+            _taskProcessamentoEventos    = Task.Run(() => ProcessarFilaEventos(_cts.Token));
+            _taskProcessamentoFlowScore  = Task.Run(() => ProcessarFilaFlowScore(_cts.Token));
 
             GravarEventoAsync("PREGAO_INICIADO", DateTime.UtcNow).Wait();
             DispararAviso($"Pregão {data:yyyy-MM-dd} iniciado. Espaço livre: {espacoLivre:F2} GB");
@@ -111,8 +126,12 @@ public sealed class MarketRecorder : IMarketRecorder
             _cts?.Cancel();
 
             Task.WaitAll(
-                new[] { _taskProcessamentoTrades, _taskProcessamentoBooks, _taskProcessamentoEventos }
-                    .Where(t => t != null).ToArray()!,
+                new[] {
+                    _taskProcessamentoTrades,
+                    _taskProcessamentoBooks,
+                    _taskProcessamentoEventos,
+                    _taskProcessamentoFlowScore
+                }.Where(t => t != null).ToArray()!,
                 TimeSpan.FromSeconds(10)
             );
 
@@ -137,18 +156,14 @@ public sealed class MarketRecorder : IMarketRecorder
 
     public Task<bool> GravarTradeAsync(string ativo, TradeEvent trade)
     {
-        if (!_pregaoAtivo.HasValue)
-            return Task.FromResult(false);
-
+        if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
         _filaTrades.Enqueue((ativo, trade));
         return Task.FromResult(true);
     }
 
     public Task<bool> GravarBookAsync(string ativo, BookSnapshot snapshot)
     {
-        if (!_pregaoAtivo.HasValue)
-            return Task.FromResult(false);
-
+        if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
         _filaBooks.Enqueue((ativo, snapshot));
         return Task.FromResult(true);
     }
@@ -156,10 +171,29 @@ public sealed class MarketRecorder : IMarketRecorder
     public Task<bool> GravarEventoAsync(string mensagem, DateTime timestamp)
     {
         if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
-
         _filaEventos.Enqueue((mensagem, timestamp));
         return Task.FromResult(true);
     }
+
+    /// <summary>
+    /// Grava um snapshot do FlowScore no arquivo WIN_flowscore.bin.
+    /// Chamado a cada 1 segundo pelo timer do FlowScoreEngine.
+    /// 56 bytes por registro.
+    /// </summary>
+    public Task<bool> GravarFlowScoreAsync(
+        string ativo, double preco, double scoreTotal,
+        double brokerFlow, double fluxoDireto, double book, double detectores)
+    {
+        if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
+
+        _filaFlowScore.Enqueue(new FlowScoreRecord(
+            ativo, DateTime.UtcNow, preco, scoreTotal,
+            brokerFlow, fluxoDireto, book, detectores));
+
+        return Task.FromResult(true);
+    }
+
+    // ── Processamento de filas ────────────────────────────────────────────
 
     private void ProcessarFilaTrades(CancellationToken ct)
     {
@@ -183,15 +217,13 @@ public sealed class MarketRecorder : IMarketRecorder
                     }
 
                     var w = writers[ativo];
-
-                    // Formato: timestamp(8) + price(16) + volume(4) + aggressor(1) + brokerLen(1) + broker(n)
-                    w.Write(trade.Time.Ticks);                          // 8 bytes
-                    w.Write(trade.Price);                               // 16 bytes (decimal)
-                    w.Write(trade.Volume);                              // 4 bytes
-                    w.Write((byte)trade.Aggressor);                     // 1 byte
+                    w.Write(trade.Time.Ticks);
+                    w.Write(trade.Price);
+                    w.Write(trade.Volume);
+                    w.Write((byte)trade.Aggressor);
                     var brokerBytes = Encoding.UTF8.GetBytes(trade.Broker ?? "");
-                    w.Write((byte)brokerBytes.Length);                  // 1 byte (tamanho)
-                    w.Write(brokerBytes);                               // n bytes
+                    w.Write((byte)brokerBytes.Length);
+                    w.Write(brokerBytes);
 
                     Interlocked.Increment(ref _totaisTrades);
                     Interlocked.Add(ref _bytesGravados, 30 + brokerBytes.Length);
@@ -233,7 +265,6 @@ public sealed class MarketRecorder : IMarketRecorder
 
                     var w = writers[ativo];
 
-                    // Detectar gap (>2 segundos)
                     if (ultimoTimestamp.HasValue && (snapshot.Time - ultimoTimestamp.Value).TotalSeconds > 2)
                     {
                         var gap = (snapshot.Time - ultimoTimestamp.Value).TotalSeconds;
@@ -242,25 +273,14 @@ public sealed class MarketRecorder : IMarketRecorder
 
                     ultimoTimestamp = snapshot.Time;
 
-                    // Formato: timestamp(8) + numBids(4) + [price(16)+volume(4)]... + numAsks(4) + [price(16)+volume(4)]...
                     w.Write(snapshot.Time.Ticks);
                     w.Write(snapshot.Bids.Count);
-                    foreach (var bid in snapshot.Bids)
-                    {
-                        w.Write(bid.Price);
-                        w.Write(bid.Volume);
-                    }
+                    foreach (var bid in snapshot.Bids) { w.Write(bid.Price); w.Write(bid.Volume); }
                     w.Write(snapshot.Asks.Count);
-                    foreach (var ask in snapshot.Asks)
-                    {
-                        w.Write(ask.Price);
-                        w.Write(ask.Volume);
-                    }
+                    foreach (var ask in snapshot.Asks) { w.Write(ask.Price); w.Write(ask.Volume); }
 
                     Interlocked.Increment(ref _totaisBooks);
-
-                    var bytes = 8 + 4 + (snapshot.Bids.Count * 20) + 4 + (snapshot.Asks.Count * 20);
-                    Interlocked.Add(ref _bytesGravados, bytes);
+                    Interlocked.Add(ref _bytesGravados, 8 + 4 + (snapshot.Bids.Count * 20) + 4 + (snapshot.Asks.Count * 20));
                 }
                 else
                 {
@@ -303,19 +323,63 @@ public sealed class MarketRecorder : IMarketRecorder
         }
     }
 
+    private void ProcessarFilaFlowScore(CancellationToken ct)
+    {
+        var arquivos = new Dictionary<string, FileStream>();
+        var writers  = new Dictionary<string, BinaryWriter>();
+
+        try
+        {
+            while (!ct.IsCancellationRequested || !_filaFlowScore.IsEmpty)
+            {
+                if (_filaFlowScore.TryDequeue(out var item))
+                {
+                    if (!writers.ContainsKey(item.Ativo))
+                    {
+                        var path = Path.Combine(_diretorioPregao!, $"{item.Ativo}_flowscore.bin");
+                        var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+                        arquivos[item.Ativo] = fs;
+                        writers[item.Ativo]  = new BinaryWriter(fs);
+                    }
+
+                    var w = writers[item.Ativo];
+                    // 56 bytes por registro
+                    w.Write(item.Timestamp.Ticks);  // 8
+                    w.Write(item.Preco);             // 8
+                    w.Write(item.ScoreTotal);        // 8
+                    w.Write(item.BrokerFlow);        // 8
+                    w.Write(item.FluxoDireto);       // 8
+                    w.Write(item.Book);              // 8
+                    w.Write(item.Detectores);        // 8
+
+                    Interlocked.Add(ref _bytesGravados, 56);
+                }
+                else
+                {
+                    Thread.Sleep(50); // FlowScore a cada 1s — pode dormir mais
+                }
+            }
+        }
+        finally
+        {
+            foreach (var w in writers.Values) w?.Dispose();
+            foreach (var f in arquivos.Values) f?.Dispose();
+        }
+    }
+
     private void SalvarMetadata()
     {
         var metadata = new
         {
-            data = _pregaoAtivo!.Value.ToString("yyyy-MM-dd"),
-            timestamp_gravacao = DateTime.UtcNow.ToString("o"),
-            timezone = "UTC",
-            total_trades = _totaisTrades,
-            total_books = _totaisBooks,
-            bytes_brutos = _bytesGravados,
-            ativos = new[] { "WIN", "WDO", "WSP" },
-            versao_formato = "FLOWSENSE_V1",
-            hashes = new { }
+            data                = _pregaoAtivo!.Value.ToString("yyyy-MM-dd"),
+            timestamp_gravacao  = DateTime.UtcNow.ToString("o"),
+            timezone            = "UTC",
+            total_trades        = _totaisTrades,
+            total_books         = _totaisBooks,
+            bytes_brutos        = _bytesGravados,
+            ativos              = new[] { "WIN", "WDO", "WSP" },
+            versao_formato      = "FLOWSENSE_V2",
+            hashes              = new { }
         };
 
         var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
@@ -335,15 +399,15 @@ public sealed class MarketRecorder : IMarketRecorder
     private void DispararErro(string mensagem, Exception? excecao)
         => ErroGravacao?.Invoke(this, new RecorderErrorEventArgs
         {
-            Mensagem = mensagem,
-            Excecao = excecao,
-            Timestamp = DateTime.UtcNow
+            Mensagem   = mensagem,
+            Excecao    = excecao,
+            Timestamp  = DateTime.UtcNow
         });
 
     private void DispararAviso(string mensagem)
         => AvisoGravacao?.Invoke(this, new RecorderWarningEventArgs
         {
-            Mensagem = mensagem,
+            Mensagem  = mensagem,
             Timestamp = DateTime.UtcNow
         });
 
@@ -351,7 +415,6 @@ public sealed class MarketRecorder : IMarketRecorder
     {
         if (_pregaoAtivo.HasValue)
             FinalizarPregaoAsync().Wait();
-
         _cts?.Dispose();
     }
 }

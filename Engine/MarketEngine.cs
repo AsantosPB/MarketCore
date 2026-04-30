@@ -42,8 +42,12 @@ public sealed class MarketEngine : IDisposable
         _provider.OnConnectionChanged += HandleConnectionChanged;
     }
 
-    public void HabilitarGravacao(string diretorioBase)
+    public void HabilitarGravacao(string diretorioBase, bool isSimulator = false)
     {
+        // Adiciona sufixo _SIM na pasta quando for simulador
+        if (isSimulator)
+            diretorioBase = System.IO.Path.Combine(diretorioBase, "_SIM");
+
         _recorder = new MarketRecorder(diretorioBase);
 
         _recorder.ErroGravacao += (s, e) =>
@@ -70,6 +74,14 @@ public sealed class MarketEngine : IDisposable
         _recorder?.Dispose();
         _recorder = null;
         Console.WriteLine("[RECORDER] Gravação desabilitada");
+    }
+
+    public void GravarFlowScore(double preco, double scoreTotal,
+        double brokerFlow, double fluxoDireto, double book, double detectores)
+    {
+        if (_recordingEnabled && _recorder != null)
+            _ = _recorder.GravarFlowScoreAsync(
+                "WIN", preco, scoreTotal, brokerFlow, fluxoDireto, book, detectores);
     }
 
     public async Task ConnectAsync(ProviderCredentials credentials)
@@ -247,7 +259,6 @@ internal sealed class BookState
             _bids.Clear();
             _asks.Clear();
 
-            // Reinserir apenas o nível atual
             var dict2 = level.Side == BookSide.Bid ? _bids : _asks;
             if (level.Volume > 0)
                 dict2[level.Price] = level;
