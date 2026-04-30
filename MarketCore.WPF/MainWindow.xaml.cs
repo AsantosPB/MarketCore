@@ -299,8 +299,12 @@ public partial class MainWindow : Window
             bool isSimulator = _engine.ProviderName == "Simulator";
 _engine.HabilitarGravacao(recordingsPath, isSimulator);
 
-            _ = _engine.ConnectAsync(providerCredentials);
-            _engine.Subscribe("WIN");
+            _engine.ConnectAsync(providerCredentials).ContinueWith(t =>
+{
+    if (t.IsFaulted)
+        Console.WriteLine($"[ConnectAsync] ERRO: {t.Exception?.InnerException?.Message}");
+});
+            _engine.Subscribe(TbTicker.Text.Trim().ToUpper());
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -1039,6 +1043,47 @@ _engine.HabilitarGravacao(recordingsPath, isSimulator);
             _flowScoreTimer?.Stop();
             _brokerAccum?.Stop();
             base.OnClosed(e);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  TROCA DE ATIVO — pressionar Enter no campo do ticker
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void TbTicker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key != System.Windows.Input.Key.Enter) return;
+
+            var novoTicker = TbTicker.Text.Trim().ToUpper();
+            if (string.IsNullOrEmpty(novoTicker)) return;
+
+            // Desincreve ticker anterior
+            _engine.Unsubscribe(TbTicker.Text.Trim().ToUpper());
+
+            // Limpa dados da tela
+            Dispatcher.Invoke(() =>
+            {
+                TbLastPrice.Text = "--";
+                TbFooterBid.Text = "--";
+                TbFooterAsk.Text = "--";
+                TbSpread.Text    = "-- pts";
+                _tapeRecords.Clear();
+                BookRows.Clear();
+                _delta          = 0;
+                _buyAggression  = 0;
+                _sellAggression = 0;
+                _lastBid        = 0;
+                _lastAsk        = 0;
+                _lastSnapshot   = null;
+                lock (_aggressionWindow)  { _aggressionWindow.Clear();  _windowBuy  = 0; _windowSell  = 0; }
+                lock (_aggressionWindow2) { _aggressionWindow2.Clear(); _windowBuy2 = 0; _windowSell2 = 0; }
+            });
+
+            // Subscreve novo ticker
+            _engine.Subscribe(novoTicker);
+
+            // Tira o foco do campo
+            TbTicker.MoveFocus(new System.Windows.Input.TraversalRequest(
+                System.Windows.Input.FocusNavigationDirection.Next));
         }
     }
 

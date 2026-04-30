@@ -1,0 +1,30 @@
+#7E5C #01D074B4 30/04 11:51:20.580 | 11:51:20.579 : ********** FirstEntry **********
+#7E5C #5D60F280 30/04 11:51:20.580 | 11:51:20.579 : Session Uptime (64-bit)=359 | System Uptime (32-bit)=10572484 | System Uptime (64-bit)=10572484
+#7E5C #AECE1CBD 30/04 11:51:20.580 | 11:51:20.579 : TEventWriter.Execute Started | ThreadID=32348 (#00007E5C)
+#1FF4 #376B720C 30/04 11:51:20.582 | 11:51:20.579 : ************************ DLLMarketInitialize (64 bit) 4.0.0.35 **************************
+#1FF4 #78BA359F 30/04 11:51:20.582 | 11:51:20.579 : AppendLogMachineDiag ThreadID=34072
+#8CEC #00A7E3C3 30/04 11:51:20.887 | 11:51:20.876 : TDataFeedManager       Handle:467586
+#8CEC #F2DF8077 30/04 11:51:20.897 | 11:51:20.891 : TInfoClient            Thread:11544 (#00002D18)
+#8CEC #3E46AA57 30/04 11:51:20.902 | 11:51:20.891 : TInfoClient            Creation Completed
+#8CEC #9C90CA0A 30/04 11:51:20.902 | 11:51:20.891 : TDataFeedManager       Creation Completed
+#8CEC #B6DCF58F 30/04 11:51:20.995 | 11:51:20.985 : TFilesThread           Thread:37468 (#0000925C)
+#8CEC #8C810495 30/04 11:51:20.995 | 11:51:20.985 : TFilesThread           Creation Completed
+#8CEC #B1BD9D5C 30/04 11:51:21.026 | 11:51:21.016 : TTickerInfoManager     Handle:336448
+#8CEC #D19354CD 30/04 11:51:21.015 | 11:51:21.016 : TTickerInfoManager     Creation Completed
+#2D18 #E88D553F 30/04 11:51:21.436 | 11:51:21.438 : TPingManager.TestIpv6Connectivity ThreadID=16972
+#8CEC #9396A424 30/04 11:57:10.914 | 11:57:10.907 : TPingManager.Destroy Terminating thread ID=2 (#00000002)
+#6CA8 #85809A37 30/04 11:57:49.480 | 11:57:49.476 : ********** FirstEntry **********
+#6CA8 #D7C7C659 30/04 11:57:49.480 | 11:57:49.476 : Session Uptime (64-bit)=329 | System Uptime (32-bit)=10961375 | System Uptime (64-bit)=10961375
+#58DC #D552EDA1 30/04 11:57:49.480 | 11:57:49.476 : ************************ DLLMarketInitialize (64 bit) 4.0.0.35 **************************
+#6CA8 #6657CE0C 30/04 11:57:49.480 | 11:57:49.476 : TEventWriter.Execute Started | ThreadID=27816 (#00006CA8)
+#58DC #8F331D4D 30/04 11:57:49.492 | 11:57:49.491 : AppendLogMachineDiag ThreadID=36268
+#7AC0 #A74719E6 30/04 11:57:49.704 | 11:57:49.710 : TDataFeedManager       Handle:270986
+#7AC0 #7F674B3B 30/04 11:57:49.715 | 11:57:49.710 : TInfoClient            Thread:36560 (#00008ED0)
+#7AC0 #651AAE3B 30/04 11:57:49.718 | 11:57:49.726 : TInfoClient            Creation Completed
+#7AC0 #E213C9BE 30/04 11:57:49.719 | 11:57:49.726 : TDataFeedManager       Creation Completed
+#7AC0 #2B74FF81 30/04 11:57:49.816 | 11:57:49.819 : TFilesThread           Thread:35508 (#00008AB4)
+#7AC0 #B6A6F097 30/04 11:57:49.816 | 11:57:49.819 : TFilesThread           Creation Completed
+#7AC0 #B58BA530 30/04 11:57:49.847 | 11:57:49.851 : TTickerInfoManager     Handle:533224
+#7AC0 #85D4026B 30/04 11:57:49.848 | 11:57:49.851 : TTickerInfoManager     Creation Completed
+#8ED0 #13E6794D 30/04 11:57:51.049 | 11:57:51.054 : TPingManager.TestIpv6Connectivity ThreadID=10616
+#7AC0 #1E6469E2 30/04 12:04:49.742 | 12:04:49.741 : TPingManager.Destroy Terminating thread ID=1 (#00000001)

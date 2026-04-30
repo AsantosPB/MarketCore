@@ -4,108 +4,147 @@ namespace MarketCore.Providers.Nelogica;
 
 /// <summary>
 /// Mapeamento P/Invoke da ProfitDLL64.dll.
-/// Isolado aqui para que nenhuma outra classe precise importar a DLL diretamente.
-/// Baseado no Manual ProfitDLL e exemplos oficiais da Nelogica.
+/// Baseado no Manual ProfitDLL v4.0.0.34 da Nelogica.
 /// </summary>
 internal static class ProfitDLL
 {
     private const string DLL = "ProfitDLL64.dll";
 
-    // ----------------------------------------------------------------
-    // DELEGATES (tipos dos callbacks)
-    // ----------------------------------------------------------------
+    // ── Delegates ────────────────────────────────────────────────────
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public delegate void TStateCallback(int state, string? message);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void TStateCallback(int state, [MarshalAs(UnmanagedType.LPWStr)] string? message);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
     public delegate void TNewTradeCallback(
-        string ticker, double price, int volume,
-        string buyBroker, string sellBroker,
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        double price, int volume,
+        [MarshalAs(UnmanagedType.LPWStr)] string buyBroker,
+        [MarshalAs(UnmanagedType.LPWStr)] string sellBroker,
         int aggressor, long time);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public delegate void TNewBookCallback(
-        string ticker, int side, int position,
-        double price, int volume, string broker, long time);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void TOfferBookCallback(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        int side, int position,
+        double price, int volume,
+        [MarshalAs(UnmanagedType.LPWStr)] string broker,
+        long time);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
     public delegate void TChangeCotationCallback(
-        string ticker, double last, double bid, double ask,
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        double last, double bid, double ask,
         double open, double high, double low,
         long volume, long time);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public delegate void THistoryCallback(
-        string ticker, double open, double high,
-        double low, double close, long volume, long time);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void TNewDailyCallback(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        double open, double high, double low, double close,
+        long volume, long time);
 
-    // ----------------------------------------------------------------
-    // INICIALIZAÇÃO
-    // ----------------------------------------------------------------
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void TPriceBookCallback(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        int side, int position,
+        double price, long quantity, long time);
 
-    // Market Data + Roteamento de ordens
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void THistoryTradeCallback(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        double price, int volume,
+        [MarshalAs(UnmanagedType.LPWStr)] string buyBroker,
+        [MarshalAs(UnmanagedType.LPWStr)] string sellBroker,
+        int aggressor, long time);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    public delegate void TProgressCallback(int progress);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public delegate void TTinyBookCallback(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        double bid, double ask,
+        int bidSize, int askSize);
+
+    // ── Inicialização ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Market Data + Roteamento de ordens.
+    /// Parâmetros: ActivationKey, User, Password,
+    /// StateCallback, HistoryCallback, OrderChangeCallback, AccountCallback,
+    /// NewTradeCallback, NewDailyCallback, PriceBookCallback,
+    /// OfferBookCallback, HistoryTradeCallback, ProgressCallback, TinyBookCallback
+    /// </summary>
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
     public static extern int DLLInitializeLogin(
-        string activationCode, string username, string password,
-        TStateCallback       stateCallback,
-        TNewTradeCallback    tradeCallback,
-        TNewBookCallback     bookCallback,
-        TChangeCotationCallback cotationCallback,
-        THistoryCallback     historyCallback,
-        TStateCallback       accountCallback,
-        TStateCallback       orderCallback);
+        [MarshalAs(UnmanagedType.LPWStr)] string activationCode,
+        [MarshalAs(UnmanagedType.LPWStr)] string username,
+        [MarshalAs(UnmanagedType.LPWStr)] string password,
+        TStateCallback        stateCallback,
+        IntPtr                historyCallback,
+        IntPtr                orderChangeCallback,
+        IntPtr                accountCallback,
+        TNewTradeCallback     tradeCallback,
+        TNewDailyCallback?    dailyCallback,
+        TPriceBookCallback?   priceBookCallback,
+        TOfferBookCallback?   offerBookCallback,
+        THistoryTradeCallback? historyTradeCallback,
+        TProgressCallback?    progressCallback,
+        TTinyBookCallback?    tinyBookCallback);
 
-    // Apenas Market Data (sem roteamento)
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    /// <summary>
+    /// Apenas Market Data (sem roteamento).
+    /// Parâmetros: ActivationKey, User, Password,
+    /// StateCallback, NewTradeCallback, NewDailyCallback, PriceBookCallback,
+    /// OfferBookCallback, HistoryTradeCallback, ProgressCallback, TinyBookCallback
+    /// </summary>
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
     public static extern int DLLInitializeMarketLogin(
-        string activationCode, string username, string password,
-        TStateCallback          stateCallback,
-        TNewTradeCallback       tradeCallback,
-        TNewBookCallback        bookCallback,
-        TChangeCotationCallback cotationCallback);
+        [MarshalAs(UnmanagedType.LPWStr)] string activationCode,
+        [MarshalAs(UnmanagedType.LPWStr)] string username,
+        [MarshalAs(UnmanagedType.LPWStr)] string password,
+        TStateCallback        stateCallback,
+        TNewTradeCallback?    tradeCallback,
+        TNewDailyCallback?    dailyCallback,
+        TPriceBookCallback?   priceBookCallback,
+        TOfferBookCallback?   offerBookCallback,
+        THistoryTradeCallback? historyTradeCallback,
+        TProgressCallback?    progressCallback,
+        TTinyBookCallback?    tinyBookCallback);
 
     [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
     public static extern int DLLFinalize();
 
-    // ----------------------------------------------------------------
-    // CALLBACKS QUE PRECISAM SER REGISTRADOS MANUALMENTE
-    // ----------------------------------------------------------------
+    // ── Callbacks manuais ────────────────────────────────────────────
 
     [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
-    public static extern void SetChangeCotationCallback(TChangeCotationCallback cb);
+    public static extern int SetChangeCotationCallback(TChangeCotationCallback cb);
 
-    // ----------------------------------------------------------------
-    // ASSINATURAS
-    // ----------------------------------------------------------------
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
+    public static extern int SetStateCallback(TStateCallback cb);
 
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int SubscribeTicker(string ticker);
+    // ── Assinaturas ──────────────────────────────────────────────────
 
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int UnsubscribeTicker(string ticker);
+    /// <summary>ticker = "WINFUT", bolsa = "BMF"</summary>
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public static extern int SubscribeTicker(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        [MarshalAs(UnmanagedType.LPWStr)] string bolsa);
 
-    // ----------------------------------------------------------------
-    // ENVIO DE ORDENS (só disponível com DLLInitializeLogin)
-    // ----------------------------------------------------------------
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public static extern int UnsubscribeTicker(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        [MarshalAs(UnmanagedType.LPWStr)] string bolsa);
 
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int SendBuyOrder(
-        string ticker, int quantity, double price,
-        string brokerCode, string accountCode);
+    /// <summary>Assina livro de ofertas — ticker = "WINFUT", bolsa = "BMF"</summary>
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public static extern int SubscribeOfferBook(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        [MarshalAs(UnmanagedType.LPWStr)] string bolsa);
 
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int SendSellOrder(
-        string ticker, int quantity, double price,
-        string brokerCode, string accountCode);
-
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int CancelOrder(string orderId);
-
-    // ----------------------------------------------------------------
-    // HISTÓRICO
-    // ----------------------------------------------------------------
-
-    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-    public static extern int GetHistoryData(string ticker, int periodType, int periodValue);
+    [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode)]
+    public static extern int UnsubscribeOfferBook(
+        [MarshalAs(UnmanagedType.LPWStr)] string ticker,
+        [MarshalAs(UnmanagedType.LPWStr)] string bolsa);
 }

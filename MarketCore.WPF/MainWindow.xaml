@@ -138,7 +138,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="WINFUT" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBox Grid.Column="0" x:Name="TbTicker" Text="WINM26" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" Background="Transparent" BorderBrush="#2A2A2A" BorderThickness="1" VerticalAlignment="Center" Margin="0,0,12,0" Width="80" Padding="4,2" FontFamily="Consolas" CaretBrush="#E8E8E8" KeyDown="TbTicker_KeyDown"/>
                 <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440" FontSize="14" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center" Margin="0,0,16,0"/>
                 <Border Grid.Column="2" Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
