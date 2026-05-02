@@ -8,35 +8,36 @@ public enum BookSide { Bid, Ask }
 
 // Um negócio executado (vem do TNewTradeCallback)
 public record TradeEvent(
-    string      Ticker,
-    decimal     Price,
-    int         Volume,
-    string      Broker,
+    string         Ticker,
+    decimal        Price,
+    int            Volume,
+    string         Broker,
     TradeAggressor Aggressor,
-    DateTime    Time
+    DateTime       Time
 );
 
-// Um nível do book (vem do TNewBookCallback)
+// Uma oferta individual do book (vem do TOfferBookCallback)
 public record BookLevel(
-    string      Ticker,
-    BookSide    Side,
-    decimal     Price,
-    int         Volume,
-    string      Broker,
-    DateTime    Time
+    string   Ticker,
+    BookSide Side,
+    decimal  Price,
+    int      Volume,
+    string   Broker,
+    DateTime Time,
+    long     OfferId = 0   // ID único da oferta — 0 = sem ID (book agregado)
 );
 
 // Cotação (vem do TChangeCotationCallback)
 public record QuoteEvent(
-    string      Ticker,
-    decimal     Last,
-    decimal     Bid,
-    decimal     Ask,
-    decimal     Open,
-    decimal     High,
-    decimal     Low,
-    long        Volume,
-    DateTime    Time
+    string   Ticker,
+    decimal  Last,
+    decimal  Bid,
+    decimal  Ask,
+    decimal  Open,
+    decimal  High,
+    decimal  Low,
+    long     Volume,
+    DateTime Time
 );
 
 // Status da conexão com o provedor
@@ -49,8 +50,8 @@ public record ConnectionChangedEvent(
 
 // Snapshot completo do book em um momento específico (usado pelo Recorder)
 public record BookSnapshot(
-    string Ticker,
+    string                   Ticker,
     IReadOnlyList<BookLevel> Bids,
     IReadOnlyList<BookLevel> Asks,
-    DateTime Time
+    DateTime                 Time
 );

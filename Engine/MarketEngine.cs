@@ -44,7 +44,6 @@ public sealed class MarketEngine : IDisposable
 
     public void HabilitarGravacao(string diretorioBase, bool isSimulator = false)
     {
-        // Adiciona sufixo _SIM na pasta quando for simulador
         if (isSimulator)
             diretorioBase = System.IO.Path.Combine(diretorioBase, "_SIM");
 
@@ -228,8 +227,15 @@ public sealed class MarketEngine : IDisposable
 internal sealed class BookState
 {
     private readonly string _ticker;
-    private readonly Dictionary<decimal, BookLevel> _bids = new();
-    private readonly Dictionary<decimal, BookLevel> _asks = new();
+
+    // Chave: OfferId quando disponível (oferta individual), Price quando OfferId=0 (agregado)
+    private readonly Dictionary<long, BookLevel>  _bidsByOffer = new();
+    private readonly Dictionary<long, BookLevel>  _asksByOffer = new();
+
+    // Para ofertas sem ID (OfferId=0), usa preço como chave negativa para não colidir
+    private long _pseudoIdCounter = -1;
+    private readonly Dictionary<decimal, long> _priceToPseudoId = new();
+
     private BookSnapshot _snapshot;
 
     public bool NeedsUiUpdate { get; set; }
@@ -243,28 +249,59 @@ internal sealed class BookState
 
     public void Update(BookLevel level)
     {
-        var dict = level.Side == BookSide.Bid ? _bids : _asks;
+        var dict = level.Side == BookSide.Bid ? _bidsByOffer : _asksByOffer;
 
-        if (level.Volume <= 0)
-            dict.Remove(level.Price);
+        if (level.OfferId != 0)
+        {
+            // Oferta individual com ID único
+            if (level.Volume <= 0)
+                dict.Remove(level.OfferId);
+            else
+                dict[level.OfferId] = level;
+        }
         else
-            dict[level.Price] = level;
+        {
+            // Sem OfferId — agrega por preço (fallback)
+            if (!_priceToPseudoId.TryGetValue(level.Price, out long pid))
+            {
+                pid = _pseudoIdCounter--;
+                _priceToPseudoId[level.Price] = pid;
+            }
 
-        var bids = _bids.Values.OrderByDescending(b => b.Price).ToArray();
-        var asks = _asks.Values.OrderBy(a => a.Price).ToArray();
+            if (level.Volume <= 0)
+            {
+                dict.Remove(pid);
+                _priceToPseudoId.Remove(level.Price);
+            }
+            else
+            {
+                dict[pid] = level;
+            }
+        }
 
-        // Se preços cruzados (bid >= ask), limpar tudo — dados obsoletos
+        var bids = _bidsByOffer.Values
+            .OrderByDescending(b => b.Price)
+            .ThenBy(b => b.OfferId)
+            .ToArray();
+
+        var asks = _asksByOffer.Values
+            .OrderBy(a => a.Price)
+            .ThenBy(a => a.OfferId)
+            .ToArray();
+
+        // Preços cruzados = dados obsoletos, limpa tudo
         if (bids.Length > 0 && asks.Length > 0 && bids[0].Price >= asks[0].Price)
         {
-            _bids.Clear();
-            _asks.Clear();
+            _bidsByOffer.Clear();
+            _asksByOffer.Clear();
+            _priceToPseudoId.Clear();
 
-            var dict2 = level.Side == BookSide.Bid ? _bids : _asks;
-            if (level.Volume > 0)
-                dict2[level.Price] = level;
+            var dict2 = level.Side == BookSide.Bid ? _bidsByOffer : _asksByOffer;
+            if (level.Volume > 0 && level.OfferId != 0)
+                dict2[level.OfferId] = level;
 
-            bids = _bids.Values.OrderByDescending(b => b.Price).ToArray();
-            asks = _asks.Values.OrderBy(a => a.Price).ToArray();
+            bids = _bidsByOffer.Values.OrderByDescending(b => b.Price).ToArray();
+            asks = _asksByOffer.Values.OrderBy(a => a.Price).ToArray();
         }
 
         _snapshot = new BookSnapshot(

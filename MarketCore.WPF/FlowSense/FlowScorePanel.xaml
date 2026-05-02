@@ -17,13 +17,121 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+
+                <!-- Título -->
                 <TextBlock Grid.Column="0"
                            Text="FlowScore Engine v2"
                            FontSize="15" FontWeight="Bold"
                            Foreground="White"
                            VerticalAlignment="Center"/>
-                <Button x:Name="BtnConfig" Grid.Column="1"
+
+                <!-- ═══════════════════════════════════════ -->
+                <!-- BOTÃO AGENT PANEL — robozinho           -->
+                <!-- Abre a janela flutuante do agente de IA -->
+                <!-- ═══════════════════════════════════════ -->
+                <Button x:Name="BtnAgentPanel"
+                        Grid.Column="1"
+                        Width="35" Height="35"
+                        Margin="0,0,6,0"
+                        ToolTip="Abrir Agent Panel"
+                        Background="#1E2A1E"
+                        BorderBrush="#2A4A2A"
+                        BorderThickness="1"
+                        Cursor="Hand"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Right"
+                        Click="BtnAgentPanel_Click">
+                    <Button.Content>
+                        <!-- Robozinho SVG inline — mesmo visual do print -->
+                        <Viewbox Width="20" Height="20">
+                            <Canvas Width="24" Height="24">
+                                <!-- Antena -->
+                                <Line X1="12" Y1="2" X2="12" Y2="5"
+                                      Stroke="#00FF88" StrokeThickness="1.5"/>
+                                <Ellipse Canvas.Left="10.5" Canvas.Top="1"
+                                         Width="3" Height="3"
+                                         Fill="#00FF88"/>
+                                <!-- Cabeça -->
+                                <Rectangle Canvas.Left="4" Canvas.Top="5"
+                                           Width="16" Height="11"
+                                           RadiusX="3" RadiusY="3"
+                                           Fill="#1E2A1E"
+                                           Stroke="#00FF88"
+                                           StrokeThickness="1.5"/>
+                                <!-- Olho esquerdo -->
+                                <Ellipse Canvas.Left="7" Canvas.Top="8"
+                                         Width="3" Height="3"
+                                         Fill="#00FF88"/>
+                                <!-- Olho direito -->
+                                <Ellipse Canvas.Left="14" Canvas.Top="8"
+                                         Width="3" Height="3"
+                                         Fill="#00FF88"/>
+                                <!-- Boca -->
+                                <Rectangle Canvas.Left="8" Canvas.Top="13"
+                                           Width="8" Height="1.5"
+                                           RadiusX="1" RadiusY="1"
+                                           Fill="#00FF88"/>
+                                <!-- Corpo -->
+                                <Rectangle Canvas.Left="6" Canvas.Top="16"
+                                           Width="12" Height="6"
+                                           RadiusX="2" RadiusY="2"
+                                           Fill="#1E2A1E"
+                                           Stroke="#00FF88"
+                                           StrokeThickness="1.5"/>
+                                <!-- Braço esquerdo -->
+                                <Rectangle Canvas.Left="2" Canvas.Top="17"
+                                           Width="4" Height="3"
+                                           RadiusX="1" RadiusY="1"
+                                           Fill="#1E2A1E"
+                                           Stroke="#00FF88"
+                                           StrokeThickness="1.2"/>
+                                <!-- Braço direito -->
+                                <Rectangle Canvas.Left="18" Canvas.Top="17"
+                                           Width="4" Height="3"
+                                           RadiusX="1" RadiusY="1"
+                                           Fill="#1E2A1E"
+                                           Stroke="#00FF88"
+                                           StrokeThickness="1.2"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button.Content>
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#1E2A1E"/>
+                            <Setter Property="BorderBrush" Value="#2A4A2A"/>
+                            <Setter Property="BorderThickness" Value="1"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#2A3D2A"/>
+                                                <Setter Property="BorderBrush" Value="#00FF88"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter Property="Background" Value="#00FF8822"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Botão Calibração — inalterado -->
+                <Button x:Name="BtnConfig"
+                        Grid.Column="2"
                         Content="⚙"
                         Width="35" Height="35"
                         Margin="0,0,8,0"
@@ -36,6 +144,7 @@
                         Cursor="Hand"
                         VerticalAlignment="Center"
                         HorizontalAlignment="Right"/>
+
             </Grid>
         </Border>
 
@@ -84,7 +193,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="BrokerFlow" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="BrokerFlowLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="BrokerFlowLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -93,7 +202,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Fluxo Direto" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="FluxoLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="FluxoLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -102,7 +211,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Book" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="BookLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="BookLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid>
@@ -111,7 +220,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Detectores" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="DetectoresLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="DetectoresLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                         </StackPanel>
@@ -124,15 +233,15 @@
                                Margin="0,0,0,4"/>
                     <Border Background="#1A1A1A" CornerRadius="3" Padding="10,8">
                         <StackPanel>
-                            <TextBlock Text="Compradores ativos:" 
+                            <TextBlock Text="Compradores ativos:"
                                        Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
-                            <TextBlock x:Name="BuyerActivityLabel" Text="—" 
-                                       Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold" 
+                            <TextBlock x:Name="BuyerActivityLabel" Text="—"
+                                       Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
-                            <TextBlock Text="Vendedores ativos:" 
+                            <TextBlock Text="Vendedores ativos:"
                                        Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
-                            <TextBlock x:Name="TopSellerLabel" Text="—" 
-                                       Foreground="#F44336" FontSize="11" FontWeight="SemiBold" 
+                            <TextBlock x:Name="TopSellerLabel" Text="—"
+                                       Foreground="#F44336" FontSize="11" FontWeight="SemiBold"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
@@ -160,7 +269,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="RVOL" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="RVOLLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="RVOLLabel" Grid.Column="1" Text="—"
                                            Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -169,7 +278,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Fase da sessão" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="SessionLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="SessionLabel" Grid.Column="1" Text="—"
                                            Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -178,7 +287,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="VWAP" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="VWAPLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="VWAPLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -186,9 +295,8 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="CVD Divergence" 
-                                           Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="CVDLabel" Grid.Column="1" Text="—" 
+                                <TextBlock Grid.Column="0" Text="CVD Divergence" Foreground="#CCC" FontSize="12"/>
+                                <TextBlock x:Name="CVDLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                             <Grid>
@@ -197,7 +305,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Stop Hunt" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="StopHuntLabel" Grid.Column="1" Text="—" 
+                                <TextBlock x:Name="StopHuntLabel" Grid.Column="1" Text="—"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                         </StackPanel>
@@ -209,8 +317,8 @@
                                Foreground="#00BFFF"
                                Margin="0,0,0,4"/>
                     <Border Background="#1A1A1A" CornerRadius="3" Padding="10,12">
-                        <TextBlock x:Name="Delta3minLabel" Text="—" 
-                                   FontSize="28" FontWeight="Bold" 
+                        <TextBlock x:Name="Delta3minLabel" Text="—"
+                                   FontSize="28" FontWeight="Bold"
                                    Foreground="Gray" TextAlignment="Center"/>
                     </Border>
 

@@ -16,6 +16,7 @@ using MarketCore.Providers.Simulator;
 using MarketCore.Providers.Nelogica;
 using MarketCore.Contracts;
 using MarketCore.FlowSense;
+using MarketCore.AgentPanel;
 
 namespace MarketCore.WPF
 {
@@ -116,8 +117,12 @@ public partial class MainWindow : Window
         private DetectorAggregator _detectorAggregator = null!;
         private FlowScoreEngine _flowScoreEngine = null!;
         private DispatcherTimer _flowScoreTimer = null!;
-        private readonly List<FlowScoreSnapshot> _flowScoreSnapshots = new();
-        private string _recordingsPath = "";
+
+        // ── Agent Panel ───────────────────────────────────────────────────────
+        private AgentPanelWindow? _agentPanelWindow;
+        private AgentViewModel?   _agentViewModel;
+        private AgentBridge?      _agentBridge;
+        private DispatcherTimer?  _agentTimer;
 
         // ── ViewModels ────────────────────────────────────────────────────────
         public ObservableCollection<BookRowViewModel> BookRows { get; } = new();
@@ -218,6 +223,7 @@ public partial class MainWindow : Window
             IcSpoofNotifications.ItemsSource = _spoofNotifications;
             BtnPower.Click += BtnPower_Click;
             BtnRecordingConfig.Click += BtnRecordingConfig_Click;
+            BtnAgentPanel.Click += BtnAgentPanel_Click;
 
             // ── Escolher provider conforme modo de operação ──
             IMarketDataProvider provider;
@@ -256,55 +262,47 @@ public partial class MainWindow : Window
             _detectorAggregator = new DetectorAggregator();
             _flowScoreEngine   = new FlowScoreEngine(_brokerAccum, _deltaEngine, _bookAnalyzer, _detectorAggregator, _flowScoreConfig);
 
-            // Timer para gravar FlowScore a cada 1 segundo
-            _flowScoreTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _flowScoreTimer.Tick += (_, _) =>
-            {
-                _flowScoreEngine.CalculateScore();
-
-                var snap = new FlowScoreSnapshot
-                {
-                    Timestamp   = DateTime.Now,
-                    Preco       = (double)(_lastBid > 0 ? _lastBid : _lastAsk),
-                    ScoreTotal  = _flowScoreEngine.FlowScore,
-                    BrokerFlow  = _flowScoreEngine.BrokerFlowComponent,
-                    FluxoDireto = _flowScoreEngine.FluxoDirectoComponent,
-                    Book        = _flowScoreEngine.BookComponent,
-                    Detectores  = _flowScoreEngine.DetectoresComponent
-                };
-                _flowScoreSnapshots.Add(snap);
-                if (_flowScoreSnapshots.Count > 7200) _flowScoreSnapshots.RemoveAt(0);
-                _engine.GravarFlowScore(snap.Preco, snap.ScoreTotal, snap.BrokerFlow,
-                                        snap.FluxoDireto, snap.Book, snap.Detectores);
-            };
+            // Timer para recalcular FlowScore a cada 100ms
+            _flowScoreTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _flowScoreTimer.Tick += (_, _) => _flowScoreEngine.CalculateScore();
             _flowScoreTimer.Start();
 
-            // Inicializar painel FlowScore com as engines e snapshots
-            FlowScorePanelControl.Initialize(_flowScoreEngine, _brokerAccum, _deltaEngine,
-                                              _flowScoreSnapshots, _recordingsPath);
+            // ── Agent Panel ───────────────────────────────────────────────────
+            _agentPanelWindow = new AgentPanelWindow();
+            _agentViewModel   = new AgentViewModel();
+            _agentViewModel.AttachWindow(_agentPanelWindow);
+            _agentViewModel.Start();
+
+            _agentBridge = new AgentBridge(
+                _agentViewModel,
+                _flowScoreEngine,
+                _brokerAccum,
+                _deltaEngine,
+                _bookAnalyzer,
+                _detectorAggregator);
+
+            _agentTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _agentTimer.Tick += (_, _) => _agentBridge.Atualizar();
+            _agentTimer.Start();
+
+            // Inicializar painel FlowScore com as engines
+            FlowScorePanelControl.Initialize(_flowScoreEngine, _brokerAccum, _deltaEngine, _bookAnalyzer, _detectorAggregator);
 
             // ── Ativar gravação automática ──────────────────────────────────
             var recordingConfig = RecordingConfig.Load();
             var recordingsPath  = recordingConfig.RecordingsPath;
-            _recordingsPath     = recordingsPath;
 
             // Se o drive não existir (HD externo desconectado), usa padrão
             var root = System.IO.Path.GetPathRoot(recordingsPath);
             if (!string.IsNullOrEmpty(root) && !Directory.Exists(root))
             {
                 recordingsPath = RecordingConfig.GetDefaultPath();
-                // Drive não encontrado — usando caminho padrão
             }
 
-            bool isSimulator = _engine.ProviderName == "Simulator";
-_engine.HabilitarGravacao(recordingsPath, isSimulator);
+            _engine.HabilitarGravacao(recordingsPath);
 
-            _engine.ConnectAsync(providerCredentials).ContinueWith(t =>
-{
-    if (t.IsFaulted)
-        Console.WriteLine($"[ConnectAsync] ERRO: {t.Exception?.InnerException?.Message}");
-});
-            _engine.Subscribe(TbTicker.Text.Trim().ToUpper());
+            _ = _engine.ConnectAsync(providerCredentials);
+            _engine.Subscribe("WIN");
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -896,6 +894,15 @@ _engine.HabilitarGravacao(recordingsPath, isSimulator);
         //  EVENT HANDLERS UI
         // ══════════════════════════════════════════════════════════════════════
 
+        private void BtnAgentPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (_agentPanelWindow == null) return;
+            if (_agentPanelWindow.IsVisible)
+                _agentPanelWindow.Hide();
+            else
+                _agentPanelWindow.Show();
+        }
+
         private void BtnRecordingConfig_Click(object sender, RoutedEventArgs e)
         {
             var window = new RecordingConfigWindow { Owner = this };
@@ -1042,48 +1049,10 @@ _engine.HabilitarGravacao(recordingsPath, isSimulator);
             _clockTimer?.Stop();
             _flowScoreTimer?.Stop();
             _brokerAccum?.Stop();
+            _agentTimer?.Stop();
+            _agentViewModel?.Stop();
+            _agentPanelWindow?.Close();
             base.OnClosed(e);
-        }
-
-        // ══════════════════════════════════════════════════════════════════════
-        //  TROCA DE ATIVO — pressionar Enter no campo do ticker
-        // ══════════════════════════════════════════════════════════════════════
-
-        private void TbTicker_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e.Key != System.Windows.Input.Key.Enter) return;
-
-            var novoTicker = TbTicker.Text.Trim().ToUpper();
-            if (string.IsNullOrEmpty(novoTicker)) return;
-
-            // Desincreve ticker anterior
-            _engine.Unsubscribe(TbTicker.Text.Trim().ToUpper());
-
-            // Limpa dados da tela
-            Dispatcher.Invoke(() =>
-            {
-                TbLastPrice.Text = "--";
-                TbFooterBid.Text = "--";
-                TbFooterAsk.Text = "--";
-                TbSpread.Text    = "-- pts";
-                _tapeRecords.Clear();
-                BookRows.Clear();
-                _delta          = 0;
-                _buyAggression  = 0;
-                _sellAggression = 0;
-                _lastBid        = 0;
-                _lastAsk        = 0;
-                _lastSnapshot   = null;
-                lock (_aggressionWindow)  { _aggressionWindow.Clear();  _windowBuy  = 0; _windowSell  = 0; }
-                lock (_aggressionWindow2) { _aggressionWindow2.Clear(); _windowBuy2 = 0; _windowSell2 = 0; }
-            });
-
-            // Subscreve novo ticker
-            _engine.Subscribe(novoTicker);
-
-            // Tira o foco do campo
-            TbTicker.MoveFocus(new System.Windows.Input.TraversalRequest(
-                System.Windows.Input.FocusNavigationDirection.Next));
         }
     }
 

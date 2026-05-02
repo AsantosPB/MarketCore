@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using MarketCore.Contracts;
 using MarketCore.Models;
 
@@ -14,15 +12,15 @@ namespace MarketCore.Providers.Nelogica
 {
     public class ProfitDLLProvider : IMarketDataProvider
     {
-        #region DLL Path
+        #region Constantes
 
         private const string DLL_PATH     = @"ProfitDLL64.dll";
-        private const string EXCHANGE_BMF  = "F";  // gc_bvBMF = 70 = 'F'
-        private const string EXCHANGE_BVMF = "B";  // gc_bvBovespa = 66 = 'B'
+        private const string EXCHANGE_BMF  = "F";
+        private const string EXCHANGE_BVMF = "B";
 
         #endregion
 
-        #region Structs / Delegates da Nelogica
+        #region Structs e Delegates da Nelogica
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct TAssetID
@@ -30,6 +28,25 @@ namespace MarketCore.Providers.Nelogica
             [MarshalAs(UnmanagedType.LPWStr)] public string Ticker;
             [MarshalAs(UnmanagedType.LPWStr)] public string Bolsa;
             public int nFeedType;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct TConnectorAssetIdentifier
+        {
+            public byte Version;
+            [MarshalAs(UnmanagedType.LPWStr)] public string Ticker;
+            [MarshalAs(UnmanagedType.LPWStr)] public string Exchange;
+            public byte FeedType;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct TConnectorPriceGroup
+        {
+            public byte   Version;
+            public double Price;
+            public uint   Count;
+            public long   Quantity;
+            public uint   PriceGroupFlags;
         }
 
         private delegate void TStateCallback(int nResult, int result);
@@ -63,6 +80,8 @@ namespace MarketCore.Providers.Nelogica
         private delegate void TChangeCotation(
             TAssetID assetId, [MarshalAs(UnmanagedType.LPWStr)] string date,
             uint tradeNumber, double sPrice);
+        private delegate void TConnectorPriceDepthCallback(
+            TConnectorAssetIdentifier assetID, byte side, int position, byte updateType);
 
         #endregion
 
@@ -86,22 +105,15 @@ namespace MarketCore.Providers.Nelogica
         private static extern int SetChangeCotationCallback(TChangeCotation a_ChangeCotation);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int SetPriceDepthCallback(TConnectorPriceDepthCallback a_Callback);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
         private static extern int SubscribeTicker(
             [MarshalAs(UnmanagedType.LPWStr)] string pwcTicker,
             [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
         private static extern int UnsubscribeTicker(
-            [MarshalAs(UnmanagedType.LPWStr)] string pwcTicker,
-            [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
-
-        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
-        private static extern int SubscribePriceBook(
-            [MarshalAs(UnmanagedType.LPWStr)] string pwcTicker,
-            [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
-
-        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
-        private static extern int UnsubscribePriceBook(
             [MarshalAs(UnmanagedType.LPWStr)] string pwcTicker,
             [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
 
@@ -116,6 +128,21 @@ namespace MarketCore.Providers.Nelogica
             [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int SubscribePriceDepth(in TConnectorAssetIdentifier assetID);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int UnsubscribePriceDepth(in TConnectorAssetIdentifier assetID);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int GetPriceDepthSideCount(
+            in TConnectorAssetIdentifier assetID, byte side);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int GetPriceGroup(
+            in TConnectorAssetIdentifier assetID,
+            byte side, int position, ref TConnectorPriceGroup priceGroup);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
         private static extern int GetAgentNameLength(int nAgentID, int nShortName);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
@@ -126,9 +153,8 @@ namespace MarketCore.Providers.Nelogica
 
         #endregion
 
-        #region Tipos internos para a fila
+        #region Tipos internos para filas
 
-        // Dados brutos enfileirados pelo callback (sem processar nomes)
         private readonly struct RawTrade
         {
             public readonly string Ticker;
@@ -148,8 +174,16 @@ namespace MarketCore.Providers.Nelogica
             public readonly double Price;
             public readonly int    Volume;
             public readonly int    Agent;
-            public RawBook(string t, int si, double p, int v, int a)
-            { Ticker=t; Side=si; Price=p; Volume=v; Agent=a; }
+            public readonly long   OfferId;
+            public RawBook(string t, int si, double p, int v, int a, long o)
+            { Ticker=t; Side=si; Price=p; Volume=v; Agent=a; OfferId=o; }
+        }
+
+        private readonly struct RawDepth
+        {
+            public readonly byte Side;
+            public readonly byte UpdateType;
+            public RawDepth(byte s, byte u) { Side=s; UpdateType=u; }
         }
 
         #endregion
@@ -160,11 +194,12 @@ namespace MarketCore.Providers.Nelogica
         private readonly object _lock = new object();
         private readonly List<string> _subscribedTickers = new();
 
-        // Filas lock-free para desacoplar callbacks da DLL do processamento
+        // Filas lock-free
         private readonly ConcurrentQueue<RawTrade> _tradeQueue = new();
         private readonly ConcurrentQueue<RawBook>  _bookQueue  = new();
+        private readonly ConcurrentQueue<RawDepth> _depthQueue = new();
 
-        // Cache de corretoras — preenchido na thread de processamento, nunca nos callbacks
+        // Cache de corretoras
         private readonly Dictionary<int, string> _brokerCache = new();
 
         // Thread de processamento
@@ -176,17 +211,19 @@ namespace MarketCore.Providers.Nelogica
         private ProviderCredentials? _lastCredentials = null;
 
         // GC protection dos delegates
-        private TStateCallback?        _stateCallback;
-        private TTradeCallback?        _tradeCallback;
-        private TNewDailyCallback?     _dailyCallback;
-        private TPriceBookCallback?    _priceBookCallback;
-        private TOfferBookCallback?    _offerBookCallback;
-        private THistoryTradeCallback? _historyCallback;
-        private TProgressCallBack?     _progressCallback;
-        private TNewTinyBookCallBack?  _tinyBookCallback;
-        private TChangeCotation?       _cotationCallback;
+        private TStateCallback?               _stateCallback;
+        private TTradeCallback?               _tradeCallback;
+        private TNewDailyCallback?            _dailyCallback;
+        private TPriceBookCallback?           _priceBookCallback;
+        private TOfferBookCallback?           _offerBookCallback;
+        private THistoryTradeCallback?        _historyCallback;
+        private TProgressCallBack?            _progressCallback;
+        private TNewTinyBookCallBack?         _tinyBookCallback;
+        private TChangeCotation?              _cotationCallback;
+        private TConnectorPriceDepthCallback? _priceDepthCb;
 
         private volatile bool _readyToSubscribe = false;
+        private TConnectorAssetIdentifier _currentAssetID;
 
         #endregion
 
@@ -256,13 +293,12 @@ namespace MarketCore.Providers.Nelogica
                                       : TradeAggressor.Unknown;
 
                         int agentId = aggressor == TradeAggressor.Buy ? raw.BuyAgent : raw.SellAgent;
-                        string broker = GetBrokerNameSafe(agentId);
 
                         OnTrade?.Invoke(new TradeEvent(
                             Ticker:    raw.Ticker,
                             Price:     (decimal)raw.Price,
                             Volume:    raw.Qtd,
-                            Broker:    broker,
+                            Broker:    GetBrokerNameSafe(agentId),
                             Aggressor: aggressor,
                             Time:      DateTime.Now
                         ));
@@ -270,7 +306,7 @@ namespace MarketCore.Providers.Nelogica
                     catch (Exception ex) { _logger.Log($"Erro ProcessTrade: {ex.Message}"); }
                 }
 
-                // Processa book
+                // Processa book (OfferBook — para SpoofDetector e detectores)
                 while (_bookQueue.TryDequeue(out var raw))
                 {
                     hadWork = true;
@@ -279,41 +315,76 @@ namespace MarketCore.Providers.Nelogica
                         string broker = raw.Agent > 0 ? GetBrokerNameSafe(raw.Agent) : string.Empty;
 
                         OnBook?.Invoke(new BookLevel(
-                            Ticker: raw.Ticker,
-                            Side:   raw.Side == 0 ? BookSide.Bid : BookSide.Ask,
-                            Price:  (decimal)raw.Price,
-                            Volume: raw.Volume,
-                            Broker: broker,
-                            Time:   DateTime.Now
+                            Ticker:  raw.Ticker,
+                            Side:    raw.Side == 0 ? BookSide.Bid : BookSide.Ask,
+                            Price:   (decimal)raw.Price,
+                            Volume:  raw.Volume,
+                            Broker:  broker,
+                            Time:    DateTime.Now,
+                            OfferId: raw.OfferId
                         ));
                     }
                     catch (Exception ex) { _logger.Log($"Erro ProcessBook: {ex.Message}"); }
                 }
 
-                // Se não teve trabalho, espera um pouco
-                if (!hadWork)
-                    Thread.Sleep(1);
+                // Processa PriceDepth (book visual com níveis agregados por preço)
+                while (_depthQueue.TryDequeue(out var depth))
+                {
+                    hadWork = true;
+                    try { ProcessPriceDepth(depth.Side, depth.UpdateType); }
+                    catch (Exception ex) { _logger.Log($"Erro ProcessDepth: {ex.Message}"); }
+                }
+
+                if (!hadWork) Thread.Sleep(1);
             }
         }
 
-        // Chamado FORA dos callbacks da DLL — seguro para chamar GetAgentName
+        private void ProcessPriceDepth(byte side, byte updateType)
+        {
+            const byte BUY         = 0;
+            const byte SELL        = 1;
+            const byte BOTH        = 254;
+            const uint PG_THEORIC  = 1;
+
+            byte[] sides = side == BOTH ? new[] { BUY, SELL } : new[] { side };
+
+            foreach (var s in sides)
+            {
+                int count = GetPriceDepthSideCount(_currentAssetID, s);
+                if (count <= 0) continue;
+
+                for (int pos = 0; pos < count; pos++)
+                {
+                    var pg = new TConnectorPriceGroup { Version = 0 };
+                    if (GetPriceGroup(_currentAssetID, s, pos, ref pg) != 0) continue;
+                    if ((pg.PriceGroupFlags & PG_THEORIC) != 0) continue;
+                    if (pg.Price <= 0 || pg.Price > 10_000_000) continue;
+
+                    OnBook?.Invoke(new BookLevel(
+                        Ticker:  _currentAssetID.Ticker ?? string.Empty,
+                        Side:    s == BUY ? BookSide.Bid : BookSide.Ask,
+                        Price:   (decimal)pg.Price,
+                        Volume:  (int)pg.Quantity,
+                        Broker:  string.Empty,
+                        Time:    DateTime.Now,
+                        OfferId: 0
+                    ));
+                }
+            }
+        }
+
         private string GetBrokerNameSafe(int agentId)
         {
             if (agentId <= 0) return string.Empty;
-
-            if (_brokerCache.TryGetValue(agentId, out var cached))
-                return cached;
+            if (_brokerCache.TryGetValue(agentId, out var cached)) return cached;
 
             try
             {
-                // Usa buffer fixo grande — evita problemas de tamanho Unicode
                 var sb = new StringBuilder(128);
                 int result = GetAgentName(128, agentId, sb, 1);
-
                 string name = result == 0 && sb.Length > 0
                     ? sb.ToString().Trim()
                     : agentId.ToString();
-
                 _brokerCache[agentId] = name;
                 return name;
             }
@@ -361,6 +432,7 @@ namespace MarketCore.Providers.Nelogica
                 _progressCallback  = OnProgressCallback;
                 _tinyBookCallback  = OnTinyBookCallback;
                 _cotationCallback  = OnCotationCallback;
+                _priceDepthCb      = OnPriceDepthCallback;
 
                 int result = DLLInitializeMarketLogin(
                     credentials.ActivationCode ?? string.Empty,
@@ -384,8 +456,8 @@ namespace MarketCore.Providers.Nelogica
                 }
 
                 SetChangeCotationCallback(_cotationCallback);
+                SetPriceDepthCallback(_priceDepthCb);
 
-                // Aguarda Market conectado (nConnStateType=2, result=4)
                 int waited = 0;
                 while (!_readyToSubscribe && waited < 20000)
                 {
@@ -399,14 +471,12 @@ namespace MarketCore.Providers.Nelogica
                     return;
                 }
 
-                // Inicia thread de processamento
                 StartProcessingThread();
 
                 _initialized = true;
                 SetStatus(ConnectionStatus.Connected, "Conectado");
                 _logger.Log("✓ CONEXÃO ESTABELECIDA!");
 
-                // Subscreve tickers pendentes
                 List<string> pendentes;
                 lock (_lock) pendentes = new List<string>(_subscribedTickers);
                 foreach (var ticker in pendentes)
@@ -424,13 +494,11 @@ namespace MarketCore.Providers.Nelogica
             await Task.Run(() =>
             {
                 StopProcessingThread();
-
                 lock (_lock)
                 {
                     _logger.Log("Desconectando...");
                     foreach (var ticker in _subscribedTickers.ToArray())
                         InternalUnsubscribe(ticker);
-
                     _initialized      = false;
                     _readyToSubscribe = false;
                     SetStatus(ConnectionStatus.Disconnected, "Desconectado");
@@ -441,16 +509,15 @@ namespace MarketCore.Providers.Nelogica
 
         #endregion
 
-        #region Callbacks da DLL — apenas enfileiram, nunca processam
+        #region Callbacks da DLL — apenas enfileiram
 
         private void OnStateCallback(int nConnStateType, int result)
         {
-            // ⚠️ NUNCA chamar funções da DLL aqui dentro!
             _logger.Log($"[StateCallback] nConnStateType={nConnStateType} result={result}");
 
             switch (nConnStateType)
             {
-                case 0: // Login
+                case 0:
                     switch (result)
                     {
                         case 0: _logger.Log("[Login] Conectado"); break;
@@ -461,11 +528,11 @@ namespace MarketCore.Providers.Nelogica
                     }
                     break;
 
-                case 1: // Broker
+                case 1:
                     _logger.Log($"[Broker] result={result}");
                     break;
 
-                case 2: // Market
+                case 2:
                     switch (result)
                     {
                         case 0:
@@ -474,14 +541,12 @@ namespace MarketCore.Providers.Nelogica
                             if (_initialized)
                             {
                                 _initialized = false;
-                                // Não marca como ERROR — DLL reconecta automaticamente
                                 SetStatus(ConnectionStatus.Connecting, "Reconectando...");
                             }
                             break;
                         case 4:
                             _logger.Log("[Market] CONECTADO — pronto para subscrições!");
                             _readyToSubscribe = true;
-                            // Se já estava inicializado antes, reinscreve automaticamente
                             if (!_initialized && Status != ConnectionStatus.Disconnected)
                             {
                                 _initialized = true;
@@ -498,7 +563,7 @@ namespace MarketCore.Providers.Nelogica
                     }
                     break;
 
-                case 3: // Licença
+                case 3:
                     if (result != 0)
                         SetStatus(ConnectionStatus.Error, "Licença inválida");
                     else
@@ -512,10 +577,8 @@ namespace MarketCore.Providers.Nelogica
             double price, double vol, int qtd,
             int buyAgent, int sellAgent, int tradeType, int bIsEdit)
         {
-            // ⚠️ Apenas enfileira — NÃO processa aqui!
             if (price <= 0 || price > 10_000_000 || double.IsNaN(price)) return;
             if (qtd <= 0) return;
-
             _tradeQueue.Enqueue(new RawTrade(
                 assetId.Ticker ?? string.Empty,
                 price, qtd, buyAgent, sellAgent, tradeType));
@@ -526,7 +589,7 @@ namespace MarketCore.Providers.Nelogica
             int side, int nQtd, int nCount, double sPrice,
             IntPtr pArraySell, IntPtr pArrayBuy)
         {
-            // Ignorado — usamos apenas OfferBook (por oferta individual com corretora)
+            // Ignorado — usamos PriceDepth para o book visual
         }
 
         private void OnOfferBookCallback(
@@ -535,15 +598,19 @@ namespace MarketCore.Providers.Nelogica
             int bHasPrice, int bHasQtd, int bHasDate, int bHasOfferID, int bHasAgent,
             string date, IntPtr pArraySell, IntPtr pArrayBuy)
         {
-            // ⚠️ Apenas enfileira — NÃO processa aqui!
             if (sPrice <= 0 || sPrice > 10_000_000 ||
                 double.IsNaN(sPrice) || double.IsInfinity(sPrice)) return;
 
             int volume = nQtd < 0 ? 0 : nQtd;
-
             _bookQueue.Enqueue(new RawBook(
                 assetId.Ticker ?? string.Empty,
-                side, sPrice, volume, nAgent));
+                side, sPrice, volume, nAgent, nOfferID));
+        }
+
+        private void OnPriceDepthCallback(
+            TConnectorAssetIdentifier assetID, byte side, int position, byte updateType)
+        {
+            // Não usado — book visual via OnOfferBookCallback com OfferId
         }
 
         private void OnCotationCallback(
@@ -556,8 +623,7 @@ namespace MarketCore.Providers.Nelogica
                     Ticker: assetId.Ticker ?? string.Empty,
                     Last:   (decimal)sPrice,
                     Bid: 0, Ask: 0, Open: 0, High: 0, Low: 0,
-                    Volume: 0,
-                    Time:   DateTime.Now
+                    Volume: 0, Time: DateTime.Now
                 ));
             }
             catch { }
@@ -580,8 +646,7 @@ namespace MarketCore.Providers.Nelogica
                     Open:   (decimal)sOpen,
                     High:   (decimal)sHigh,
                     Low:    (decimal)sLow,
-                    Volume: nQtd,
-                    Time:   DateTime.Now
+                    Volume: nQtd, Time: DateTime.Now
                 ));
             }
             catch { }
@@ -596,14 +661,7 @@ namespace MarketCore.Providers.Nelogica
 
         private void OnTinyBookCallback(TAssetID assetId, double price, int qtd, int side)
         {
-            if (price <= 0 || price > 10_000_000 ||
-                double.IsNaN(price) || double.IsInfinity(price)) return;
-
-            int volume = qtd < 0 ? 0 : qtd;
-
-            _bookQueue.Enqueue(new RawBook(
-                assetId.Ticker ?? string.Empty,
-                side, price, volume, 0));
+            // Ignorado — usamos PriceDepth
         }
 
         #endregion
@@ -618,9 +676,7 @@ namespace MarketCore.Providers.Nelogica
                 _subscribedTickers.Add(ticker);
                 _logger.Log($"Subscribe agendado: {ticker}");
             }
-
-            if (_initialized)
-                InternalSubscribe(ticker);
+            if (_initialized) InternalSubscribe(ticker);
         }
 
         public void Unsubscribe(string ticker)
@@ -630,26 +686,35 @@ namespace MarketCore.Providers.Nelogica
                 if (!_subscribedTickers.Contains(ticker)) return;
                 _subscribedTickers.Remove(ticker);
             }
-
-            if (_initialized)
-                InternalUnsubscribe(ticker);
+            if (_initialized) InternalUnsubscribe(ticker);
         }
 
         private void InternalSubscribe(string ticker)
         {
             try
             {
-                // Apenas Ticker e OfferBook — PriceBook ignorado (sem corretora por oferta)
+                // Trades
                 int r1 = SubscribeTicker(ticker, EXCHANGE_BMF);
-                int r3 = SubscribeOfferBook(ticker, EXCHANGE_BMF);
-                _logger.Log($"Subscribe {ticker}/{EXCHANGE_BMF} — Ticker:{r1} OfferBook:{r3}");
-
+                _logger.Log($"SubscribeTicker {ticker}/{EXCHANGE_BMF}: {r1}");
                 if (r1 != 0)
                 {
                     r1 = SubscribeTicker(ticker, EXCHANGE_BVMF);
-                    r3 = SubscribeOfferBook(ticker, EXCHANGE_BVMF);
-                    _logger.Log($"Subscribe {ticker}/{EXCHANGE_BVMF} — Ticker:{r1} OfferBook:{r3}");
+                    _logger.Log($"SubscribeTicker {ticker}/{EXCHANGE_BVMF}: {r1}");
                 }
+
+                // OfferBook (para book visual com corretora por oferta individual)
+                string exchange = r1 == 0 ? EXCHANGE_BMF : EXCHANGE_BVMF;
+                int r2 = SubscribeOfferBook(ticker, exchange);
+                _logger.Log($"SubscribeOfferBook {ticker}/{exchange}: {r2}");
+
+                // Salva AssetID para PriceDepth (caso necessário futuramente)
+                _currentAssetID = new TConnectorAssetIdentifier
+                {
+                    Version  = 0,
+                    Ticker   = ticker,
+                    Exchange = exchange,
+                    FeedType = 0
+                };
             }
             catch (Exception ex)
             {
@@ -662,9 +727,10 @@ namespace MarketCore.Providers.Nelogica
             try
             {
                 UnsubscribeTicker(ticker, EXCHANGE_BMF);
-                UnsubscribeOfferBook(ticker, EXCHANGE_BMF);
                 UnsubscribeTicker(ticker, EXCHANGE_BVMF);
+                UnsubscribeOfferBook(ticker, EXCHANGE_BMF);
                 UnsubscribeOfferBook(ticker, EXCHANGE_BVMF);
+                UnsubscribePriceDepth(_currentAssetID);
                 _logger.Log($"Unsubscribe {ticker} OK");
             }
             catch (Exception ex)
@@ -692,9 +758,7 @@ namespace MarketCore.Providers.Nelogica
         {
             if (_disposed) return;
             _disposed = true;
-
             StopProcessingThread();
-
             lock (_lock)
             {
                 foreach (var ticker in _subscribedTickers.ToArray())
@@ -702,7 +766,6 @@ namespace MarketCore.Providers.Nelogica
                 _initialized      = false;
                 _readyToSubscribe = false;
             }
-
             _logger?.Dispose();
             GC.SuppressFinalize(this);
         }

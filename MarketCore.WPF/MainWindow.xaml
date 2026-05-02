@@ -138,7 +138,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" x:Name="TbTicker" Text="WINM26" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" Background="Transparent" BorderBrush="#2A2A2A" BorderThickness="1" VerticalAlignment="Center" Margin="0,0,12,0" Width="80" Padding="4,2" FontFamily="Consolas" CaretBrush="#E8E8E8" KeyDown="TbTicker_KeyDown"/>
+                <TextBlock Grid.Column="0" Text="WINFUT" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440" FontSize="14" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center" Margin="0,0,16,0"/>
                 <Border Grid.Column="2" Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
@@ -152,6 +152,31 @@
                         <TextBlock x:Name="TbDepth" Text="-- níveis" FontSize="11" Foreground="#EEEEEE" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
+
+                <!-- Botão Agent Panel -->
+                <Button Grid.Column="3" x:Name="BtnAgentPanel"
+                        Width="22" Height="22"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Abrir Agent Panel"
+                        HorizontalAlignment="Left"
+                        Margin="220,0,0,0"
+                        VerticalAlignment="Center">
+                    <Viewbox Width="15" Height="15">
+                        <Canvas Width="24" Height="24">
+                            <Line X1="12" Y1="2" X2="12" Y2="5" Stroke="#00FF88" StrokeThickness="1.5"/>
+                            <Ellipse Canvas.Left="10.5" Canvas.Top="1" Width="3" Height="3" Fill="#00FF88"/>
+                            <Rectangle Canvas.Left="4" Canvas.Top="5" Width="16" Height="11" RadiusX="3" RadiusY="3" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.5"/>
+                            <Ellipse Canvas.Left="7" Canvas.Top="8" Width="3" Height="3" Fill="#00FF88"/>
+                            <Ellipse Canvas.Left="14" Canvas.Top="8" Width="3" Height="3" Fill="#00FF88"/>
+                            <Rectangle Canvas.Left="8" Canvas.Top="13" Width="8" Height="1.5" RadiusX="1" RadiusY="1" Fill="#00FF88"/>
+                            <Rectangle Canvas.Left="6" Canvas.Top="16" Width="12" Height="6" RadiusX="2" RadiusY="2" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.5"/>
+                            <Rectangle Canvas.Left="2" Canvas.Top="17" Width="4" Height="3" RadiusX="1" RadiusY="1" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.2"/>
+                            <Rectangle Canvas.Left="18" Canvas.Top="17" Width="4" Height="3" RadiusX="1" RadiusY="1" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.2"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
 
                 <!-- Botão Configuração de Gravação -->
                 <Button Grid.Column="3" x:Name="BtnRecordingConfig"
