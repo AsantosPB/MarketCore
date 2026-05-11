@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 
 namespace MarketCore.Providers.Nelogica
@@ -37,7 +37,7 @@ namespace MarketCore.Providers.Nelogica
             }
             catch (Exception ex)
             {
-                // Se não conseguir criar o log, continua sem ele
+                // Se nÃ£o conseguir criar o log, continua sem ele
                 Console.WriteLine($"Erro ao criar log: {ex.Message}");
             }
         }
@@ -54,7 +54,7 @@ namespace MarketCore.Providers.Nelogica
                     // Escreve no arquivo
                     _writer?.WriteLine(logLine);
 
-                    // Também escreve no console para debug
+                    // TambÃ©m escreve no console para debug
                     Console.WriteLine(logLine);
                 }
                 catch (Exception ex)
@@ -101,3 +101,4 @@ namespace MarketCore.Providers.Nelogica
         }
     }
 }
+

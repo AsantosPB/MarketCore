@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using MarketCore.AgentPanel;
+using MarketCore.WPF;
 
 namespace MarketCore.FlowSense
 {
@@ -111,11 +112,15 @@ namespace MarketCore.FlowSense
         // ═══════════════════════════════════════════════════════
         private void OnTick(object sender, EventArgs e)
         {
-            // 1. Atualiza display do FlowScore (comportamento original)
-            UpdateDisplay();
-
-            // 2. Atualiza o AgentPanel (novo)
-            _agentBridge?.Atualizar();
+            try
+            {
+                UpdateDisplay();
+                _agentBridge?.Atualizar();
+            }
+            catch (Exception ex)
+            {
+                App.AppendCrashLog("FlowScorePanel.OnTick", ex);
+            }
         }
 
         // ═══════════════════════════════════════════════════════

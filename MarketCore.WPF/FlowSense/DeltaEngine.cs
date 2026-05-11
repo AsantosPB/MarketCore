@@ -14,6 +14,12 @@ namespace MarketCore.FlowSense
     /// </summary>
     public class DeltaEngine
     {
+        /// <summary>
+        /// Trades chegam na thread do provider; FlowScore/Agent lêem na UI —
+        /// sem lock há exceção ao enumerar/modificar listas e valores incoerentes.
+        /// </summary>
+        private readonly object _sync = new();
+
         private List<double> _prices = new List<double>(1000);
         private List<double> _buyVolumes = new List<double>(1000);
         private List<double> _sellVolumes = new List<double>(1000);
@@ -40,15 +46,24 @@ namespace MarketCore.FlowSense
         private Queue<double> _volumeHistory = new Queue<double>(100);
         private readonly int _rvolWindowSize = 20; // últimas 20 barras
 
-        // Propriedades públicas — lidas pelo FlowScoreEngine
-        public long CumulativeDelta { get { return _cumulativeDelta; } }
-        public double CurrentDelta1min { get; private set; }
-        public double CurrentDelta3min { get; private set; }
-        public double CVDDivergence { get; private set; }      // slope preco vs slope delta
-        public double RVOL { get; private set; }                // vol atual / media 20 bars
-        public double SessionVWAP { get; private set; }         // preco medio ponderado por volume
-        public bool StopHuntDetected { get; private set; }      // true se sweep + retorno ativo
-        public SessionPhase CurrentSessionPhase { get; private set; } // abertura/meio/leilao
+        // Campos espelhados — escritos só dentro de lock (_sync) em OnTrade
+        private double _currentDelta1min;
+        private double _currentDelta3min;
+        private double _cvdDivergence;
+        private double _rvol = 1;
+        private double _sessionVWAP;
+        private bool _stopHuntDetected;
+        private SessionPhase _currentSessionPhase = SessionPhase.Meio;
+
+        /// <summary>Lidas pelo FlowScoreEngine / Agent — thread-safe.</summary>
+        public long CumulativeDelta           { get { lock (_sync) return _cumulativeDelta; } }
+        public double CurrentDelta1min           { get { lock (_sync) return _currentDelta1min; } }
+        public double CurrentDelta3min           { get { lock (_sync) return _currentDelta3min; } }
+        public double CVDDivergence              { get { lock (_sync) return _cvdDivergence; } }
+        public double RVOL                       { get { lock (_sync) return _rvol; } }
+        public double SessionVWAP                { get { lock (_sync) return _sessionVWAP; } }
+        public bool StopHuntDetected             { get { lock (_sync) return _stopHuntDetected; } }
+        public SessionPhase CurrentSessionPhase  { get { lock (_sync) return _currentSessionPhase; } }
 
         public DeltaEngine()
         {
@@ -60,64 +75,56 @@ namespace MarketCore.FlowSense
         /// </summary>
         public void OnTrade(double price, double buyVolume, double sellVolume, DateTime timestamp)
         {
-            double volume = buyVolume + sellVolume;
-            int delta = (int)(buyVolume - sellVolume);
+            lock (_sync)
+            {
+                double volume = buyVolume + sellVolume;
+                int delta = (int)(buyVolume - sellVolume);
 
-            _prices.Add(price);
-            _buyVolumes.Add(buyVolume);
-            _sellVolumes.Add(sellVolume);
-            _deltaValues.Add(delta);
+                _prices.Add(price);
+                _buyVolumes.Add(buyVolume);
+                _sellVolumes.Add(sellVolume);
+                _deltaValues.Add(delta);
 
-            // Atualiza acumulados
-            _cumulativeDelta += delta;
-            _totalVolume += volume;
-            _cumulativePriceVolume += price * volume;
+                _cumulativeDelta += delta;
+                _totalVolume += volume;
+                _cumulativePriceVolume += price * volume;
 
-            // Atualiza VWAP
-            SessionVWAP = _totalVolume > 0 ? _cumulativePriceVolume / _totalVolume : price;
+                _sessionVWAP = _totalVolume > 0 ? _cumulativePriceVolume / _totalVolume : price;
 
-            // Atualiza session high/low para stop hunt detection
-            if (price > _sessionHigh)
-                _sessionHigh = price;
-            if (price < _sessionLow)
-                _sessionLow = price;
+                if (price > _sessionHigh)
+                    _sessionHigh = price;
+                if (price < _sessionLow)
+                    _sessionLow = price;
 
-            // Atualiza volume history para RVOL
-            _volumeHistory.Enqueue(volume);
-            if (_volumeHistory.Count > _rvolWindowSize)
-                _volumeHistory.Dequeue();
-            CalculateRVOL(volume);
+                _volumeHistory.Enqueue(volume);
+                if (_volumeHistory.Count > _rvolWindowSize)
+                    _volumeHistory.Dequeue();
+                CalculateRVOL(volume);
 
-            // Atualiza janelas 1min/3min
-            UpdateTimeWindows(timestamp);
-
-            // Calcula CVD divergence
-            CalculateCVDDivergence();
-
-            // Detecta stop hunt
-            DetectStopHunt(price);
-
-            // Atualiza session phase
-            UpdateSessionPhase(timestamp);
+                UpdateTimeWindows(timestamp);
+                CalculateCVDDivergence();
+                DetectStopHunt(price);
+                UpdateSessionPhase(timestamp);
+            }
         }
 
         private void CalculateRVOL(double currentVolume)
         {
             if (_volumeHistory.Count == 0)
             {
-                RVOL = 1.0;
+                _rvol = 1.0;
                 return;
             }
 
             double avgVolume = _volumeHistory.Average();
-            RVOL = avgVolume > 0 ? currentVolume / avgVolume : 1.0;
+            _rvol = avgVolume > 0 ? currentVolume / avgVolume : 1.0;
         }
 
         private void CalculateCVDDivergence()
         {
             if (_prices.Count < 5)
             {
-                CVDDivergence = 0;
+                _cvdDivergence = 0;
                 return;
             }
 
@@ -132,12 +139,12 @@ namespace MarketCore.FlowSense
             // Retorna valor de -100 (maxima divergencia vendedora) a +100 (maxima divergencia compradora)
             if (Math.Abs(priceSlope) < 0.0001)
             {
-                CVDDivergence = 0;
+                _cvdDivergence = 0;
                 return;
             }
 
-            CVDDivergence = (deltaSlope / priceSlope) * 100;
-            CVDDivergence = Math.Max(-100, Math.Min(100, CVDDivergence)); // clamp
+            _cvdDivergence = (deltaSlope / priceSlope) * 100;
+            _cvdDivergence = Math.Max(-100, Math.Min(100, _cvdDivergence));
         }
 
         private double CalculateSlope(List<double> values)
@@ -173,7 +180,7 @@ namespace MarketCore.FlowSense
                 _last1minReset = timestamp;
             }
             _delta1min.Add(_cumulativeDelta);
-            CurrentDelta1min = _delta1min.Count > 0 ? _delta1min.Last() : 0;
+            _currentDelta1min = _delta1min.Count > 0 ? _delta1min.Last() : 0;
 
             // Delta 3min — reseta a cada 3 minutos
             if ((timestamp - _last3minReset).TotalSeconds >= 180)
@@ -182,7 +189,7 @@ namespace MarketCore.FlowSense
                 _last3minReset = timestamp;
             }
             _delta3min.Add(_cumulativeDelta);
-            CurrentDelta3min = _delta3min.Count > 0 ? _delta3min.Last() : 0;
+            _currentDelta3min = _delta3min.Count > 0 ? _delta3min.Last() : 0;
         }
 
         private void DetectStopHunt(double price)
@@ -214,7 +221,7 @@ namespace MarketCore.FlowSense
             }
 
             // Se bateu o extremo e reverteu em 2 bars, ativa flag
-            StopHuntDetected = (_barsAboveHigh >= confirmationBars || _barsBelowLow >= confirmationBars);
+            _stopHuntDetected = (_barsAboveHigh >= confirmationBars || _barsBelowLow >= confirmationBars);
         }
 
         private void UpdateSessionPhase(DateTime timestamp)
@@ -224,25 +231,43 @@ namespace MarketCore.FlowSense
             int minute = timestamp.Minute;
 
             if (hour == 9)
-                CurrentSessionPhase = SessionPhase.Abertura;
+                _currentSessionPhase = SessionPhase.Abertura;
             else if (hour == 16 && minute >= 0 && minute < 30)
-                CurrentSessionPhase = SessionPhase.Leilao;
+                _currentSessionPhase = SessionPhase.Leilao;
             else if (hour >= 10 && hour < 16)
-                CurrentSessionPhase = SessionPhase.Meio;
+                _currentSessionPhase = SessionPhase.Meio;
             else
-                CurrentSessionPhase = SessionPhase.PosLeilao;
+                _currentSessionPhase = SessionPhase.PosLeilao;
         }
 
         private void ResetSession()
         {
-            _cumulativeDelta = 0;
-            _totalVolume = 0;
-            _cumulativePriceVolume = 0;
-            _sessionHigh = double.MinValue;
-            _sessionLow = double.MaxValue;
-            SessionVWAP = 0;
-            StopHuntDetected = false;
-            CurrentSessionPhase = SessionPhase.Meio;
+            lock (_sync)
+            {
+                _prices.Clear();
+                _buyVolumes.Clear();
+                _sellVolumes.Clear();
+                _deltaValues.Clear();
+                _delta1min.Clear();
+                _delta3min.Clear();
+                _volumeHistory.Clear();
+                _barsAboveHigh = 0;
+                _barsBelowLow = 0;
+                _cumulativeDelta = 0;
+                _totalVolume = 0;
+                _cumulativePriceVolume = 0;
+                _sessionHigh = double.MinValue;
+                _sessionLow = double.MaxValue;
+                _sessionVWAP = 0;
+                _stopHuntDetected = false;
+                _currentSessionPhase = SessionPhase.Meio;
+                _cvdDivergence = 0;
+                _rvol = 1;
+                _currentDelta1min = 0;
+                _currentDelta3min = 0;
+                _last1minReset = DateTime.UtcNow;
+                _last3minReset = DateTime.UtcNow;
+            }
         }
 
         /// <summary>
@@ -251,10 +276,12 @@ namespace MarketCore.FlowSense
         /// </summary>
         public long GetDeltaForRenkoBar(int barIndex)
         {
-            if (barIndex < 0 || barIndex >= _deltaValues.Count)
-                return 0;
-
-            return _deltaValues[barIndex];
+            lock (_sync)
+            {
+                if (barIndex < 0 || barIndex >= _deltaValues.Count)
+                    return 0;
+                return _deltaValues[barIndex];
+            }
         }
     }
 

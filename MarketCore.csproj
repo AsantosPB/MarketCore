@@ -13,11 +13,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="MarketCore.WPF\**" />
+    <Compile Remove="MarketCore.HistoricalImporter\**" />
+    <Compile Remove="HistoricalImporterTool\**" />
     <None Remove="MarketCore.WPF\**" />
     <EmbeddedResource Remove="MarketCore.WPF\**" />
     <Page Remove="MarketCore.WPF\**" />
     <Resource Remove="MarketCore.WPF\**" />
     <ApplicationDefinition Remove="MarketCore.WPF\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="MarketCore.HistoricalImporter\MarketCore.HistoricalImporter.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="ProfitDLL64.dll">

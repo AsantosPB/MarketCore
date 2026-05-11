@@ -12,6 +12,7 @@ namespace MarketCore.FlowSense
     /// </summary>
     public class BrokerAccumulator
     {
+        private readonly object _sync = new();
         private Dictionary<string, BrokerStats> _brokers = new Dictionary<string, BrokerStats>(64);
         private DispatcherTimer? _resetTimer;
 
@@ -28,12 +29,13 @@ namespace MarketCore.FlowSense
             if (string.IsNullOrEmpty(brokerName))
                 return;
 
-            if (!_brokers.ContainsKey(brokerName))
+            lock (_sync)
             {
-                _brokers[brokerName] = new BrokerStats(brokerName);
-            }
+                if (!_brokers.ContainsKey(brokerName))
+                    _brokers[brokerName] = new BrokerStats(brokerName);
 
-            _brokers[brokerName].RecordTrade(volume, isBuyAggressor, timestamp);
+                _brokers[brokerName].RecordTrade(volume, isBuyAggressor, timestamp);
+            }
         }
 
         /// <summary>
@@ -41,10 +43,11 @@ namespace MarketCore.FlowSense
         /// </summary>
         public List<BrokerStats> GetTop4Buyers()
         {
-            return _brokers.Values
-                .OrderByDescending(b => b.BuyVolume)
-                .Take(4)
-                .ToList();
+            lock (_sync)
+                return _brokers.Values
+                    .OrderByDescending(b => b.BuyVolume)
+                    .Take(4)
+                    .ToList();
         }
 
         /// <summary>
@@ -52,10 +55,11 @@ namespace MarketCore.FlowSense
         /// </summary>
         public List<BrokerStats> GetTop4Sellers()
         {
-            return _brokers.Values
-                .OrderByDescending(b => b.SellVolume)
-                .Take(4)
-                .ToList();
+            lock (_sync)
+                return _brokers.Values
+                    .OrderByDescending(b => b.SellVolume)
+                    .Take(4)
+                    .ToList();
         }
 
         /// <summary>
@@ -64,11 +68,12 @@ namespace MarketCore.FlowSense
         /// </summary>
         public List<BrokerStats> GetActiveBuyers60s()
         {
-            return _brokers.Values
-                .Where(b => b.ActiveBuyVol60s > 0)
-                .OrderByDescending(b => b.ActiveBuyVol60s)
-                .Take(4)
-                .ToList();
+            lock (_sync)
+                return _brokers.Values
+                    .Where(b => b.ActiveBuyVol60s > 0)
+                    .OrderByDescending(b => b.ActiveBuyVol60s)
+                    .Take(4)
+                    .ToList();
         }
 
         /// <summary>
@@ -76,11 +81,12 @@ namespace MarketCore.FlowSense
         /// </summary>
         public List<BrokerStats> GetActiveSellers60s()
         {
-            return _brokers.Values
-                .Where(b => b.ActiveSellVol60s > 0)
-                .OrderByDescending(b => b.ActiveSellVol60s)
-                .Take(4)
-                .ToList();
+            lock (_sync)
+                return _brokers.Values
+                    .Where(b => b.ActiveSellVol60s > 0)
+                    .OrderByDescending(b => b.ActiveSellVol60s)
+                    .Take(4)
+                    .ToList();
         }
 
         /// <summary>
@@ -88,7 +94,8 @@ namespace MarketCore.FlowSense
         /// </summary>
         public BrokerStats? GetBroker(string brokerName)
         {
-            return _brokers.ContainsKey(brokerName) ? _brokers[brokerName] : null;
+            lock (_sync)
+                return _brokers.ContainsKey(brokerName) ? _brokers[brokerName] : null;
         }
 
         /// <summary>
@@ -96,7 +103,8 @@ namespace MarketCore.FlowSense
         /// </summary>
         public IReadOnlyDictionary<string, BrokerStats> GetAllBrokers()
         {
-            return _brokers;
+            lock (_sync)
+                return new Dictionary<string, BrokerStats>(_brokers);
         }
 
         private void InitializeResetTimer()
@@ -119,9 +127,10 @@ namespace MarketCore.FlowSense
 
         private void ResetDaily()
         {
-            foreach (var broker in _brokers.Values)
+            lock (_sync)
             {
-                broker.ResetDaily();
+                foreach (var broker in _brokers.Values)
+                    broker.ResetDaily();
             }
         }
 

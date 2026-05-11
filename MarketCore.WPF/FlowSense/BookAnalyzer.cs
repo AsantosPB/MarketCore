@@ -10,6 +10,9 @@ namespace MarketCore.FlowSense
     /// </summary>
     public class BookAnalyzer
     {
+        /// <summary>Snapshot do livro arrive na MarketEngine UiDispatch; leituras na UI timer.</summary>
+        private readonly object _sync = new();
+
         private List<double> _bidPrices = new List<double>(30);
         private List<double> _bidQtys = new List<double>(30);
         private List<double> _askPrices = new List<double>(30);
@@ -23,13 +26,16 @@ namespace MarketCore.FlowSense
             List<double> bidPrices, List<double> bidQtys,
             List<double> askPrices, List<double> askQtys)
         {
-            _bidPrices = bidPrices;
-            _bidQtys = bidQtys;
-            _askPrices = askPrices;
-            _askQtys = askQtys;
+            lock (_sync)
+            {
+                _bidPrices = bidPrices;
+                _bidQtys = bidQtys;
+                _askPrices = askPrices;
+                _askQtys = askQtys;
 
-            DetectRenewable();
-            _lastBookUpdate = DateTime.UtcNow;
+                DetectRenewable();
+                _lastBookUpdate = DateTime.UtcNow;
+            }
         }
 
         /// <summary>
@@ -38,18 +44,20 @@ namespace MarketCore.FlowSense
         /// </summary>
         public double GetBidAskPressure()
         {
-            if (_bidQtys.Count == 0 || _askQtys.Count == 0)
-                return 0;
+            lock (_sync)
+            {
+                if (_bidQtys.Count == 0 || _askQtys.Count == 0)
+                    return 0;
 
-            double bidQty = _bidQtys[0]; // best bid qty
-            double askQty = _askQtys[0]; // best ask qty
-            double total = bidQty + askQty;
+                double bidQty = _bidQtys[0];
+                double askQty = _askQtys[0];
+                double total = bidQty + askQty;
 
-            if (total == 0)
-                return 0;
+                if (total == 0)
+                    return 0;
 
-            // Normaliza: se bid > ask, é comprador (+), se ask > bid, é vendedor (-)
-            return (bidQty - askQty) / total;
+                return (bidQty - askQty) / total;
+            }
         }
 
         /// <summary>
@@ -57,15 +65,18 @@ namespace MarketCore.FlowSense
         /// </summary>
         public double GetLevelImbalance()
         {
-            int levels = Math.Min(5, Math.Min(_bidQtys.Count, _askQtys.Count));
-            double bidSum = _bidQtys.Take(levels).Sum();
-            double askSum = _askQtys.Take(levels).Sum();
-            double total = bidSum + askSum;
+            lock (_sync)
+            {
+                int levels = Math.Min(5, Math.Min(_bidQtys.Count, _askQtys.Count));
+                double bidSum = _bidQtys.Take(levels).Sum();
+                double askSum = _askQtys.Take(levels).Sum();
+                double total = bidSum + askSum;
 
-            if (total == 0)
-                return 0;
+                if (total == 0)
+                    return 0;
 
-            return (bidSum - askSum) / total;
+                return (bidSum - askSum) / total;
+            }
         }
 
         /// <summary>
@@ -85,7 +96,7 @@ namespace MarketCore.FlowSense
 
         public bool IsRenewableActive()
         {
-            return _renewableDetected;
+            lock (_sync) return _renewableDetected;
         }
 
         /// <summary>
@@ -96,9 +107,7 @@ namespace MarketCore.FlowSense
         /// </summary>
         public double GetVWAPDistance()
         {
-            // Esta função precisa receber o VWAP e LastPrice de fora
-            // Aqui é um placeholder — será alimentado pelo DeltaEngine
-            return _vwapDistance;
+            lock (_sync) return _vwapDistance;
         }
 
         /// <summary>
@@ -106,10 +115,13 @@ namespace MarketCore.FlowSense
         /// </summary>
         public void SetVWAPDistance(double currentPrice, double sessionVWAP)
         {
-            if (sessionVWAP > 0)
+            lock (_sync)
             {
-                double distance = (currentPrice - sessionVWAP) / sessionVWAP; // percentual
-                _vwapDistance = Math.Max(-0.5, Math.Min(0.5, distance)); // clamp
+                if (sessionVWAP > 0)
+                {
+                    double distance = (currentPrice - sessionVWAP) / sessionVWAP;
+                    _vwapDistance = Math.Max(-0.5, Math.Min(0.5, distance));
+                }
             }
         }
 
@@ -118,12 +130,12 @@ namespace MarketCore.FlowSense
         /// </summary>
         public bool IsAbsorptionActive()
         {
-            // Simplificado: se bid qty está crescendo (mais buys entrando), é absorção
-            if (_bidQtys.Count > 1)
+            lock (_sync)
             {
-                return _bidQtys[0] > _bidQtys[1] * 1.2; // 20% maior que nível anterior
+                if (_bidQtys.Count > 1)
+                    return _bidQtys[0] > _bidQtys[1] * 1.2;
+                return false;
             }
-            return false;
         }
     }
 }

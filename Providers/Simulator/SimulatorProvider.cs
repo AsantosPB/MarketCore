@@ -12,6 +12,7 @@ public sealed class SimulatorProvider : IMarketDataProvider
 
     public event Action<TradeEvent>?             OnTrade;
     public event Action<BookLevel>?              OnBook;
+    public event Action<BookFullRefresh>?        OnBookFullRefresh;
     public event Action<QuoteEvent>?             OnQuote;
     public event Action<ConnectionChangedEvent>? OnConnectionChanged;
 

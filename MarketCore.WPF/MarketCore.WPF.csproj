@@ -12,6 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MarketCore.csproj" />
+    <ProjectReference Include="..\MarketCore.HistoricalImporter\MarketCore.HistoricalImporter.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
