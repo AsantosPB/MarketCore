@@ -28,7 +28,7 @@
                            VerticalAlignment="Center"/>
 
                 <!-- ═══════════════════════════════════════ -->
-                <!-- BOTÃO AGENT PANEL — robozinho           -->
+                <!-- BOTÃO AGENT PANEL - robozinho           -->
                 <!-- Abre a janela flutuante do agente de IA -->
                 <!-- ═══════════════════════════════════════ -->
                 <Button x:Name="BtnAgentPanel"
@@ -44,7 +44,7 @@
                         HorizontalAlignment="Right"
                         Click="BtnAgentPanel_Click">
                     <Button.Content>
-                        <!-- Robozinho SVG inline — mesmo visual do print -->
+                        <!-- Robozinho SVG inline - mesmo visual do print -->
                         <Viewbox Width="20" Height="20">
                             <Canvas Width="24" Height="24">
                                 <!-- Antena -->
@@ -129,7 +129,7 @@
                     </Button.Style>
                 </Button>
 
-                <!-- Botão Calibração — inalterado -->
+                <!-- Botão Calibração - inalterado -->
                 <Button x:Name="BtnConfig"
                         Grid.Column="2"
                         Content="⚙"
@@ -149,19 +149,19 @@
         </Border>
 
         <!-- ══════════════════════════════════════════════════════ -->
-        <!-- CORPO — 3 COLUNAS                                      -->
+        <!-- CORPO - 3 COLUNAS                                      -->
         <!-- Col1 (25%): FlowScore, Componentes, BrokerFlow        -->
         <!-- Col2 (25%): Contexto, Delta 3min                      -->
         <!-- Col3 (50%): ÁREA RESERVADA                            -->
         <!-- ══════════════════════════════════════════════════════ -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*"/>  <!-- 25% — Coluna 1 -->
-                <ColumnDefinition Width="1*"/>  <!-- 25% — Coluna 2 -->
-                <ColumnDefinition Width="2*"/>  <!-- 50% — Área Reservada -->
+                <ColumnDefinition Width="1*"/>  <!-- 25% - Coluna 1 -->
+                <ColumnDefinition Width="1*"/>  <!-- 25% - Coluna 2 -->
+                <ColumnDefinition Width="2*"/>  <!-- 50% - Área Reservada -->
             </Grid.ColumnDefinitions>
 
-            <!-- ══ COLUNA 1 — FlowScore + Componentes + BrokerFlow ══ -->
+            <!-- ══ COLUNA 1 - FlowScore + Componentes + BrokerFlow ══ -->
             <ScrollViewer Grid.Column="0"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
@@ -175,7 +175,7 @@
                                Margin="0,0,0,4"/>
                     <Border Background="#1A1A1A" CornerRadius="3" Padding="12,10" Margin="0,0,0,12">
                         <TextBlock x:Name="ScoreLabel"
-                                   Text="—"
+                                   Text="-"
                                    FontSize="38" FontWeight="Bold"
                                    Foreground="Gray"/>
                     </Border>
@@ -193,7 +193,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="BrokerFlow" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="BrokerFlowLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="BrokerFlowLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -202,7 +202,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Fluxo Direto" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="FluxoLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="FluxoLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -211,7 +211,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Book" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="BookLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="BookLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                             <Grid>
@@ -220,7 +220,7 @@
                                     <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Detectores" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="DetectoresLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="DetectoresLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12" FontWeight="Bold" TextAlignment="Right"/>
                             </Grid>
                         </StackPanel>
@@ -235,12 +235,12 @@
                         <StackPanel>
                             <TextBlock Text="Compradores ativos:"
                                        Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
-                            <TextBlock x:Name="BuyerActivityLabel" Text="—"
+                            <TextBlock x:Name="BuyerActivityLabel" Text="-"
                                        Foreground="#4CAF50" FontSize="11" FontWeight="SemiBold"
                                        TextWrapping="Wrap" Margin="0,0,0,8"/>
                             <TextBlock Text="Vendedores ativos:"
                                        Foreground="#888" FontSize="9" Margin="0,0,0,2"/>
-                            <TextBlock x:Name="TopSellerLabel" Text="—"
+                            <TextBlock x:Name="TopSellerLabel" Text="-"
                                        Foreground="#F44336" FontSize="11" FontWeight="SemiBold"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
@@ -249,7 +249,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- ══ COLUNA 2 — Contexto + Delta 3min ══ -->
+            <!-- ══ COLUNA 2 - Contexto + Delta 3min ══ -->
             <ScrollViewer Grid.Column="1"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled"
@@ -269,7 +269,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="RVOL" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="RVOLLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="RVOLLabel" Grid.Column="1" Text="-"
                                            Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -278,7 +278,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Fase da sessão" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="SessionLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="SessionLabel" Grid.Column="1" Text="-"
                                            Foreground="White" FontSize="12" FontWeight="Bold"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -287,7 +287,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="VWAP" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="VWAPLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="VWAPLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                             <Grid Margin="0,0,0,5">
@@ -296,7 +296,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="CVD Divergence" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="CVDLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="CVDLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                             <Grid>
@@ -305,7 +305,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="Stop Hunt" Foreground="#CCC" FontSize="12"/>
-                                <TextBlock x:Name="StopHuntLabel" Grid.Column="1" Text="—"
+                                <TextBlock x:Name="StopHuntLabel" Grid.Column="1" Text="-"
                                            Foreground="Gray" FontSize="12"/>
                             </Grid>
                         </StackPanel>
@@ -317,7 +317,7 @@
                                Foreground="#00BFFF"
                                Margin="0,0,0,4"/>
                     <Border Background="#1A1A1A" CornerRadius="3" Padding="10,12">
-                        <TextBlock x:Name="Delta3minLabel" Text="—"
+                        <TextBlock x:Name="Delta3minLabel" Text="-"
                                    FontSize="28" FontWeight="Bold"
                                    Foreground="Gray" TextAlignment="Center"/>
                     </Border>
@@ -325,7 +325,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- ══ COLUNA 3 — ÁREA RESERVADA (50% direita) ══ -->
+            <!-- ══ COLUNA 3 - ÁREA RESERVADA (50% direita) ══ -->
             <Border Grid.Column="2"
                     Background="#0A0A0A"
                     BorderBrush="#1A1A1A"

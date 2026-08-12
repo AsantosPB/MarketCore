@@ -8,7 +8,7 @@ namespace MarketCore.FlowSense
 {
     /// <summary>
     /// Armazena e persiste as credenciais do Profit de forma segura.
-    /// Usa DPAPI (Windows Data Protection API) — criptografia vinculada
+    /// Usa DPAPI (Windows Data Protection API) - criptografia vinculada
     /// ao usuário Windows atual, sem precisar de senha extra.
     /// Arquivo salvo em: %AppData%\MarketCore\profit_credentials.dat
     /// </summary>
@@ -59,7 +59,7 @@ namespace MarketCore.FlowSense
             string json       = JsonSerializer.Serialize(payload);
             byte[] plainBytes = Encoding.UTF8.GetBytes(json);
 
-            // DPAPI — criptografa vinculado ao usuário Windows atual
+            // DPAPI - criptografa vinculado ao usuário Windows atual
             byte[] encrypted = ProtectedData.Protect(
                 plainBytes,
                 null,
@@ -103,7 +103,7 @@ namespace MarketCore.FlowSense
             }
             catch
             {
-                // Arquivo corrompido ou de outro usuário — ignora
+                // Arquivo corrompido ou de outro usuário - ignora
                 return new ProfitCredentials();
             }
         }

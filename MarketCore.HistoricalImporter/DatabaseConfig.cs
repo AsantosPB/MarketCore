@@ -7,9 +7,9 @@ public sealed class DatabaseConfig
 {
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 5432;
-    public string Database { get; set; } = "win_history";
+    public string Database { get; set; } = "marketcore_historical";
     public string Username { get; set; } = "postgres";
-    public string Password { get; set; } = "";
+    public string Password { get; set; } = "postgres";
     /// <summary>Banco usado só para CREATE DATABASE (normalmente <c>postgres</c>).</summary>
     public string MaintenanceDatabase { get; set; } = "postgres";
 }
@@ -20,6 +20,49 @@ public sealed class StorageConfig
     /// <summary>Diretório no servidor PostgreSQL para tablespace customizado.</summary>
     public string DataPath { get; set; } = "";
     public string TablespaceName { get; set; } = "win_history_data";
+
+    /// <summary>Evita nomes inválidos (ex.: datas) em <c>CREATE DATABASE ... TABLESPACE</c>.</summary>
+    internal void Sanitize()
+    {
+        if (!UseCustomPath)
+        {
+            DataPath = "";
+            TablespaceName = "";
+            return;
+        }
+
+        DataPath = (DataPath ?? "").Trim();
+        TablespaceName = (TablespaceName ?? "").Trim();
+
+        if (DataPath.Length == 0 || !IsValidPostgresIdentifier(TablespaceName))
+        {
+            UseCustomPath = false;
+            DataPath = "";
+            TablespaceName = "";
+        }
+    }
+
+    private static bool IsValidPostgresIdentifier(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        string trimmed = value.Trim();
+        if (trimmed.Length > 63)
+            return false;
+
+        if (!char.IsLetter(trimmed[0]) && trimmed[0] != '_')
+            return false;
+
+        for (int i = 1; i < trimmed.Length; i++)
+        {
+            char c = trimmed[i];
+            if (!char.IsLetterOrDigit(c) && c != '_')
+                return false;
+        }
+
+        return true;
+    }
 }
 
 /// <summary>Credenciais Nelogica para <see cref="ProfitMarketInit"/> (DLL).</summary>
@@ -65,12 +108,14 @@ public sealed class AppConfig
 
         string json = File.ReadAllText(path);
         var cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+        cfg.Storage.Sanitize();
         return cfg;
     }
 
     public void Save(string? path = null)
     {
         path ??= GetDefaultConfigPath();
+        Storage.Sanitize();
         string dir = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(dir);
         File.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));

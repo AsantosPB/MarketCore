@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MarketCore.FlowSense
 {
     /// <summary>
-    /// DetectorAggregator — consolida sinais dos 4 detectores:
+    /// DetectorAggregator - consolida sinais dos 4 detectores:
     /// - Spoof: cancelamento total (oferta falsa no lado fraco)
     /// - Iceberg: ordens grandes disfarçadas em pequenos lotes
     /// - Renewable: reposição contínua de ordens (Renewable)
@@ -14,6 +14,8 @@ namespace MarketCore.FlowSense
     /// </summary>
     public class DetectorAggregator
     {
+        private readonly FlowScoreConfig? _flowScoreConfig;
+
         private bool _spoofDetected = false;
         private bool _icebergDetected = false;
         private bool _renewableDetected = false;
@@ -27,8 +29,9 @@ namespace MarketCore.FlowSense
         private const int ConfirmationThreshold = 2; // barras consecutivas para confirmar
         private readonly TimeSpan ExpirationWindow = TimeSpan.FromSeconds(60);
 
-        public DetectorAggregator()
+        public DetectorAggregator(FlowScoreConfig? flowScoreConfig = null)
         {
+            _flowScoreConfig = flowScoreConfig;
         }
 
         /// <summary>
@@ -44,9 +47,14 @@ namespace MarketCore.FlowSense
             List<double> askPrices,
             List<double> askQtys)
         {
-            DetectSpoof(bidQtys, askQtys, buyVolume, sellVolume);
-            DetectIceberg(buyVolume, sellVolume);
-            DetectRenewable(bidQtys, askQtys);
+            bool aggregated = _flowScoreConfig?.PreferAggregatedBookSignals == true;
+            if (!aggregated)
+            {
+                DetectSpoof(bidQtys, askQtys, buyVolume, sellVolume);
+                DetectIceberg(buyVolume, sellVolume);
+                DetectRenewable(bidQtys, askQtys);
+            }
+
             DetectExhaustion(price, buyVolume, sellVolume);
 
             // Expira detectores antigos
@@ -55,7 +63,7 @@ namespace MarketCore.FlowSense
 
         /// <summary>
         /// Spoof: muita quantidade no bid/ask mas com cancelamento total (sem matching)
-        /// Indica manipulação — oferta falsa para criar pressão psicológica
+        /// Indica manipulação - oferta falsa para criar pressão psicológica
         /// </summary>
         private void DetectSpoof(
             List<double> bidQtys,
@@ -113,17 +121,17 @@ namespace MarketCore.FlowSense
 
         /// <summary>
         /// Renewable: reposição contínua de ofertas ao mesmo preço
-        /// Indica posicionamento permanente — trader/MM querendo estar sempre presente
+        /// Indica posicionamento permanente - trader/MM querendo estar sempre presente
         /// </summary>
         private void DetectRenewable(List<double> bidQtys, List<double> askQtys)
         {
-            // Implementado no BookAnalyzer — aqui apenas ref
+            // Implementado no BookAnalyzer - aqui apenas ref
             _renewableDetected = (bidQtys.Count > 0 && askQtys.Count > 0);
         }
 
         /// <summary>
         /// Exhaustion Renko: grande movimento dentro de uma barra seguido de reversão
-        /// Indica gasto de força — possível reversão em próxima barra
+        /// Indica gasto de força - possível reversão em próxima barra
         /// </summary>
         private void DetectExhaustion(double price, double buyVolume, double sellVolume)
         {
@@ -162,13 +170,32 @@ namespace MarketCore.FlowSense
         /// </summary>
         public double GetAnomalyLevel()
         {
-            double level = 0;
-            if (_spoofDetected) level += 0.3;
-            if (_icebergDetected) level += 0.2;
-            if (_renewableDetected) level += 0.1;
-            if (_exhaustionDetected) level += 0.4;
+            if (_flowScoreConfig?.PreferAggregatedBookSignals == true)
+            {
+                double level = 0;
+                if (_exhaustionDetected) level += 0.4;
+                return Math.Min(1.0, level);
+            }
 
-            return Math.Min(1.0, level);
+            double levelFull = 0;
+            if (_spoofDetected) levelFull += 0.3;
+            if (_icebergDetected) levelFull += 0.2;
+            if (_renewableDetected) levelFull += 0.1;
+            if (_exhaustionDetected) levelFull += 0.4;
+
+            return Math.Min(1.0, levelFull);
+        }
+
+        public void ResetForNewInstrument()
+        {
+            _spoofDetected = false;
+            _icebergDetected = false;
+            _renewableDetected = false;
+            _exhaustionDetected = false;
+            _spoofConfirmationCount = 0;
+            _icebergConfirmationCount = 0;
+            _lastSpoofDetectionTime = DateTime.MinValue;
+            _lastIcebergDetectionTime = DateTime.MinValue;
         }
     }
 }

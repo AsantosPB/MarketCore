@@ -312,6 +312,7 @@ namespace MarketCore.FlowSense
                 }
             }
             _loading = false;
+            SyncAggregatedUiLocks();
             RefreshAllLabels();
         }
 
@@ -321,6 +322,8 @@ namespace MarketCore.FlowSense
 
         private void LoadValues()
         {
+            ChkPreferAggregatedBook.IsChecked = _config.PreferAggregatedBookSignals;
+
             SliderWeightBroker.Value = _config.WeightBrokerFlow;
             SliderWeightFluxo.Value  = _config.WeightFluxoDireto;
             SliderWeightBook.Value   = _config.WeightBook;
@@ -347,7 +350,26 @@ namespace MarketCore.FlowSense
             SliderCVDThreshold.Value      = _config.DetectorCVDThreshold;
             SliderCVDScore.Value          = _config.DetectorCVDScore;
 
+            _loading = false;
+            SyncAggregatedUiLocks();
             RefreshAllLabels();
+        }
+
+        private void ChkPreferAggregatedBook_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_loading) return;
+            SyncAggregatedUiLocks();
+        }
+
+        /// <summary>Oculta no layout os blocos irrelevantes para livro só agregado (mantidos ao desmarcar o modo).</summary>
+        private void SyncAggregatedUiLocks()
+        {
+            bool agg = ChkPreferAggregatedBook.IsChecked == true;
+
+            PanelWeightBrokerRow.Visibility = agg ? Visibility.Collapsed : Visibility.Visible;
+            PanelBrokerFlowSection.Visibility = agg ? Visibility.Collapsed : Visibility.Visible;
+            PanelBookRenewableRows.Visibility = agg ? Visibility.Collapsed : Visibility.Visible;
+            PanelDetectorsMicrostructure.Visibility = agg ? Visibility.Collapsed : Visibility.Visible;
         }
 
         // ══════════════════════════════════════════════════════════════════
@@ -403,10 +425,17 @@ namespace MarketCore.FlowSense
 
         private void BtnApply_Click(object sender, RoutedEventArgs e)
         {
+            _config.PreferAggregatedBookSignals = ChkPreferAggregatedBook.IsChecked == true;
+
             _config.WeightBrokerFlow  = SliderWeightBroker.Value;
             _config.WeightFluxoDireto = SliderWeightFluxo.Value;
             _config.WeightBook        = SliderWeightBook.Value;
             _config.WeightDetectores  = SliderWeightDetect.Value;
+            if (_config.PreferAggregatedBookSignals)
+            {
+                _config.WeightBrokerFlow = 0;
+            }
+
             _config.NormalizeWeights();
 
             _config.BrokerRvolMaxMultiplier = SliderRvolMax.Value;
@@ -419,16 +448,33 @@ namespace MarketCore.FlowSense
 
             _config.BookPressureWeight      = SliderBookPressure.Value;
             _config.BookImbalanceWeight     = SliderBookImbalance.Value;
-            _config.BookRenewableWeight     = SliderBookRenewable.Value;
             _config.BookVWAPWeight          = SliderBookVWAP.Value;
-            _config.BookRenewableScore      = SliderBookRenewableScore.Value;
+            if (_config.PreferAggregatedBookSignals)
+            {
+                _config.BookRenewableWeight = 0;
+                _config.BookRenewableScore = 0;
+            }
+            else
+            {
+                _config.BookRenewableWeight = SliderBookRenewable.Value;
+                _config.BookRenewableScore = SliderBookRenewableScore.Value;
+            }
 
-            _config.DetectorSpoofPenalty      = SliderSpoofPenalty.Value;
-            _config.DetectorIcebergBonus      = SliderIcebergBonus.Value;
             _config.DetectorExhaustionPenalty = SliderExhaustionPenalty.Value;
-            _config.DetectorStopHuntPenalty   = SliderStopHuntPenalty.Value;
             _config.DetectorCVDThreshold      = SliderCVDThreshold.Value;
             _config.DetectorCVDScore          = SliderCVDScore.Value;
+            if (_config.PreferAggregatedBookSignals)
+            {
+                _config.DetectorSpoofPenalty = 0;
+                _config.DetectorIcebergBonus = 0;
+                _config.DetectorStopHuntPenalty = 0;
+            }
+            else
+            {
+                _config.DetectorSpoofPenalty      = SliderSpoofPenalty.Value;
+                _config.DetectorIcebergBonus      = SliderIcebergBonus.Value;
+                _config.DetectorStopHuntPenalty   = SliderStopHuntPenalty.Value;
+            }
 
             DialogResult = true;
             Close();
@@ -444,6 +490,7 @@ namespace MarketCore.FlowSense
         {
             var defaults = new FlowScoreConfig();
             _loading = true;
+            ChkPreferAggregatedBook.IsChecked = defaults.PreferAggregatedBookSignals;
             SliderWeightBroker.Value       = defaults.WeightBrokerFlow;
             SliderWeightFluxo.Value        = defaults.WeightFluxoDireto;
             SliderWeightBook.Value         = defaults.WeightBook;
@@ -466,6 +513,7 @@ namespace MarketCore.FlowSense
             SliderCVDThreshold.Value       = defaults.DetectorCVDThreshold;
             SliderCVDScore.Value           = defaults.DetectorCVDScore;
             _loading = false;
+            SyncAggregatedUiLocks();
             RefreshAllLabels();
         }
     }

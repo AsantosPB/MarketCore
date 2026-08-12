@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Forms;
 using System.Windows.Threading;
 using MarketCore.FlowSense;
 using MarketCore.HistoricalImporter;
@@ -15,6 +14,7 @@ public partial class DownloadHistoryWindow : Window
     private readonly Func<bool> _isProfitDllSessionActive;
     private readonly ProfitCredentials _creds;
     private volatile bool _busy;
+    private volatile string _attemptStatusLine = "";
 
     public DownloadHistoryWindow(Window owner, Func<bool> isProfitDllSessionActive, ProfitCredentials creds)
     {
@@ -32,23 +32,8 @@ public partial class DownloadHistoryWindow : Window
             ? "WINFUT"
             : ui.HistoryDownloadTicker.Trim().ToUpperInvariant();
 
-        string def = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            "MarketCoreHistoricoWIN");
-        TxFolder.Text = def;
-    }
-
-    private void BtnBrowse_Click(object sender, RoutedEventArgs e)
-    {
-        using var d = new FolderBrowserDialog
-        {
-            Description = "Pasta onde guardar os ficheiros CSV",
-            SelectedPath = Directory.Exists(TxFolder.Text) ? TxFolder.Text : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-            ShowNewFolderButton = true
-        };
-
-        if (d.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            TxFolder.Text = d.SelectedPath;
+        var dbCfg = AppConfig.Load().Database;
+        TxFolder.Text = $"{dbCfg.Host}:{dbCfg.Port}/{dbCfg.Database}";
     }
 
     private void CkStartup_Changed(object sender, RoutedEventArgs e)
@@ -56,6 +41,32 @@ public partial class DownloadHistoryWindow : Window
         var s = FlowsenseUiSettings.Load();
         s.ShowHistoryDownloadOnStartup = CkStartup.IsChecked == true;
         s.Save();
+    }
+
+    private void SetProgressText(string text)
+    {
+        if (Dispatcher.CheckAccess())
+            TbProgress.Text = text;
+        else
+            Dispatcher.Invoke(() => TbProgress.Text = text);
+    }
+
+    private void RunOnUi(Action action)
+    {
+        if (Dispatcher.CheckAccess())
+            action();
+        else
+            Dispatcher.Invoke(action);
+    }
+
+    private void SetDownloadBusy(bool busy)
+    {
+        RunOnUi(() =>
+        {
+            _busy = busy;
+            BtnDownload.IsEnabled = !busy;
+            TxTicker.IsEnabled = !busy;
+        });
     }
 
     private async void BtnDownload_Click(object sender, RoutedEventArgs e)
@@ -89,22 +100,8 @@ public partial class DownloadHistoryWindow : Window
             uiSave.Save();
         }
 
-        string folder = TxFolder.Text.Trim();
-        if (string.IsNullOrEmpty(folder))
-        {
-            System.Windows.MessageBox.Show(this, "Escolha uma pasta para gravar os CSV.", "Histórico", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        try
-        {
-            Directory.CreateDirectory(folder);
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show(this, $"Não foi possível usar a pasta:\n{ex.Message}", "Histórico", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
+        var config = AppConfig.Load();
+        string dbTarget = $"{config.Database.Host}:{config.Database.Port}/{config.Database.Database}";
 
         var credsCfg = new ProfitCredentialsConfig
         {
@@ -113,107 +110,151 @@ public partial class DownloadHistoryWindow : Window
             Password = _creds.Password ?? ""
         };
 
-        BtnDownload.IsEnabled = BtnBrowse.IsEnabled = TxTicker.IsEnabled = false;
-        _busy = true;
-        TbProgress.Text = "A preparar…";
+        SetDownloadBusy(true);
+        SetProgressText("A preparar…");
+        App.AppendLifecycle("DownloadHistoryWindow.BtnDownload start");
+
+        MarketCore.HistoricalImporter.HistoricalImporter? sink = null;
+        DispatcherTimer? tickUi = null;
 
         try
         {
-            bool loginOk = await ProfitMarketInit.TryEnsureMarketForHistoryAsync(
-                credsCfg,
-                TimeSpan.FromSeconds(45),
-                sessionAlreadyConnected: _isProfitDllSessionActive());
-
-            if (!loginOk)
+            SetProgressText("A preparar PostgreSQL…");
+            try
             {
-                TbProgress.Text = "Sem sessão Profit. Faça login no início ou preencha credenciais válidas.";
+                var setup = new DatabaseSetup(config);
+                await setup.EnsureReadyForImportAsync().ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                SetProgressText(
+                    $"PostgreSQL indisponível.\n{ex.Message}\n\n" +
+                    $"Config: {AppConfig.GetDefaultConfigPath()}");
+                App.AppendCrashLog(nameof(DownloadHistoryWindow) + ".PostgreSQL", ex);
                 return;
             }
 
-            string sessionLabel = $"{futTicker}_{start:yyyyMMdd}_{end:yyyyMMdd}";
-            string folderCaptured = folder;
+            bool loginOk = await ProfitMarketInit.TryEnsureMarketForHistoryAsync(
+                credsCfg,
+                TimeSpan.FromSeconds(45),
+                sessionAlreadyConnected: _isProfitDllSessionActive()).ConfigureAwait(false);
 
-            // ===== ALTERAÇÃO: Gravar direto no PostgreSQL ao invés de CSV =====
-            var config = new AppConfig
+            if (!loginOk)
             {
-                Database = new DatabaseConfig
-                {
-                    Host = "127.0.0.1",
-                    Port = 5432,
-                    Database = "marketcore_historical",
-                    Username = "postgres",
-                    Password = "postgres"
-                }
-            };
-            var sink = new MarketCore.HistoricalImporter.HistoricalImporter(config);
+                SetProgressText("Sem sessão Profit. Faça login no início ou preencha credenciais válidas.");
+                return;
+            }
+
+            sink = new MarketCore.HistoricalImporter.HistoricalImporter(config);
             sink.SetCurrentContract(futTicker);
-            // ===== FIM DA ALTERAÇÃO =====
+
+            // Subscrever ao status detalhado das tentativas (ticker/bolsa/formato/observação)
+            Action<string, string, string, string> attemptHandler = (tk, bolsa, fmt, note) =>
+            {
+                _attemptStatusLine = $"[{bolsa}] {tk}  fmt={fmt}\n  {note}";
+            };
+            ProfitHistoryService.AttemptStatus += attemptHandler;
 
             var swDl = Stopwatch.StartNew();
-            var tickUi = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            tickUi = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             tickUi.Tick += (_, _) =>
             {
-                long buffered = sink.TotalBuffered;
-                long flushed = sink.TotalFlushed;
-                TbProgress.Text =
-                    $"{futTicker} {start:yyyy-MM-dd} → {end:yyyy-MM-dd}\n\n" +
-                    $"A descarregar… {(int)swDl.Elapsed.TotalSeconds}s\n" +
-                    $"Buffer: {buffered:N0} | Gravados: {flushed:N0}\n\n" +
-                    "Nota: a DLL pode ficar vários segundos bloqueada à espera da Nelogica antes de aparecer qualquer negócio.";
+                try
+                {
+                    if (!IsLoaded)
+                        return;
+
+                    string attempt = _attemptStatusLine;
+                    SetProgressText(
+                        $"{futTicker} {start:yyyy-MM-dd} → {end:yyyy-MM-dd}\n\n" +
+                        $"A descarregar… {(int)swDl.Elapsed.TotalSeconds}s\n" +
+                        $"Recebidos: {sink.TotalAccepted:N0} | Buffer: {sink.TotalBuffered:N0} | Gravados: {sink.TotalFlushed:N0}\n" +
+                        (sink.TotalRejected > 0 ? $"Rejeitados pelo factory: {sink.TotalRejected:N0}\n" : "") +
+                        (string.IsNullOrWhiteSpace(attempt) ? "" : $"\nTentativa atual:\n{attempt}\n") +
+                        "\nBolsa: F (BMF) para futuros; B (Bovespa) para ações no padrão XXXX#. Outros símbolos tentam F e depois B.");
+                }
+                catch
+                {
+                    /* timer UI - não propagar */
+                }
             };
 
-            TbProgress.Text =
-                $"{futTicker} {start:yyyy-MM-dd} → {end:yyyy-MM-dd}\nA descarregar…";
+            SetProgressText(
+                $"{futTicker} {start:yyyy-MM-dd} → {end:yyyy-MM-dd}\nA descarregar…");
 
-            using var dlCts = new CancellationTokenSource(TimeSpan.FromMinutes(45));
+            // 60 min de teto global - Progress=100 normalmente finaliza em <2 min por dia,
+            // este teto é só salvaguarda para casos patológicos (servidor preso).
+            using var dlCts = new CancellationTokenSource(TimeSpan.FromMinutes(60));
 
             tickUi.Start();
             try
             {
                 using var history = new ProfitHistoryService(sink);
 
-                int rc = await history.RequestHistoricalDataAsync(futTicker, start, end, dlCts.Token);
+                int rc = await history.RequestHistoricalDataAsync(futTicker, start, end, dlCts.Token)
+                    .ConfigureAwait(false);
 
-                sink.FlushPendingExports();
+                sink.WaitForPendingFlushes(TimeSpan.FromMinutes(2));
+                SafeFlush(sink);
                 string logPath = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                     "MarketCore",
                     "history_dll.log");
 
-                TbProgress.Text =
+                SetProgressText(
                     $"Concluído.\n{futTicker} {start:yyyy-MM-dd} → {end:yyyy-MM-dd}\n" +
-                    $"Total de negócios gravados no PostgreSQL: {sink.TotalFlushed:N0}" +
+                    $"Total de negócios gravados no PostgreSQL: {sink.TotalFlushed:N0}\n" +
+                    $"Recebidos da DLL: {sink.TotalAccepted:N0}" +
+                    (sink.TotalRejected > 0 ? $" | Rejeitados pelo factory: {sink.TotalRejected:N0}" : "") +
                     (rc != 0 ? $"\nDLL rc={rc} (ver manual Nelogica)" : "") +
-                    $"\n\nLog:\n{logPath}\n\nDados gravados em:\nPostgreSQL: marketcore_historical.trades";
+                    FormatFlushError(sink) +
+                    $"\n\nLog:\n{logPath}\n\nPostgreSQL:\n{dbTarget}.trades");
             }
             catch (OperationCanceledException)
             {
-                sink.FlushPendingExports();
-                TbProgress.Text =
-                    "Pedido terminou por tempo limite (45 min) ou sessão foi cancelada.\n" +
-                    $"Negócios gravados até aqui: {sink.TotalFlushed:N0}\n\n" +
-                    "Se ficou sempre em \"descarregar\" antes disto: a ProfitDLL pode estar bloqueada em GetHistoryTrades – vê:\n" +
+                sink.WaitForPendingFlushes(TimeSpan.FromMinutes(2));
+                SafeFlush(sink);
+                SetProgressText(
+                    "Pedido terminou por tempo limite (60 min) ou sessão foi cancelada.\n" +
+                    $"Negócios gravados até aqui: {sink.TotalFlushed:N0}" +
+                    FormatFlushError(sink) +
+                    "\n\nSe ficou sempre em \"descarregar\" antes disto: a ProfitDLL pode estar bloqueada em GetHistoryTrades – vê:\n" +
                     Path.Combine(
                         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                         "MarketCore",
-                        "history_dll.log");
+                        "history_dll.log"));
             }
             finally
             {
-                tickUi.Stop();
-                sink.FlushPendingExports();
+                var timer = tickUi;
+                RunOnUi(() => timer?.Stop());
+                ProfitHistoryService.AttemptStatus -= attemptHandler;
+                if (sink != null)
+                {
+                    sink.WaitForPendingFlushes(TimeSpan.FromMinutes(2));
+                    SafeFlush(sink);
+                }
             }
         }
         catch (Exception ex)
         {
-            TbProgress.Text = $"Erro: {ex.Message}";
+            SetProgressText($"Erro: {ex.Message}");
             if (ex is not OperationCanceledException)
+            {
                 App.AppendCrashLog(nameof(DownloadHistoryWindow) + ".BtnDownload", ex);
+                RunOnUi(() =>
+                    System.Windows.MessageBox.Show(
+                        this,
+                        $"O download falhou.\n\n{ex.Message}",
+                        "Histórico",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error));
+            }
         }
         finally
         {
-            BtnDownload.IsEnabled = BtnBrowse.IsEnabled = TxTicker.IsEnabled = true;
-            _busy = false;
+            RunOnUi(() => SetDownloadBusy(false));
+            App.AppendLifecycle("DownloadHistoryWindow.BtnDownload end");
         }
     }
 
@@ -221,4 +262,21 @@ public partial class DownloadHistoryWindow : Window
     {
         Close();
     }
+
+    private static void SafeFlush(MarketCore.HistoricalImporter.HistoricalImporter sink)
+    {
+        try
+        {
+            sink.FlushPendingExports();
+        }
+        catch (Exception ex)
+        {
+            App.AppendCrashLog(nameof(DownloadHistoryWindow) + ".PostgreSQL.FlushFinal", ex);
+        }
+    }
+
+    private static string FormatFlushError(MarketCore.HistoricalImporter.HistoricalImporter sink) =>
+        string.IsNullOrWhiteSpace(sink.LastFlushError)
+            ? ""
+            : $"\nÚltimo erro PostgreSQL: {sink.LastFlushError}";
 }

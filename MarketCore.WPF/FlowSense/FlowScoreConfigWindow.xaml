@@ -89,17 +89,26 @@
                        FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,4"/>
             <TextBlock Text="Ajuste os pesos e parâmetros de cada componente. Clique em Aplicar para confirmar."
                        Foreground="#777" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <CheckBox x:Name="ChkPreferAggregatedBook"
+                      Margin="0,0,0,8"
+                      Foreground="#CCCCCC"
+                      FontSize="11"
+                      Content="Modo livro agregado - desliga BrokerFlow, Renewable, Spoof, Iceberg e Stop Hunt (apenas quantidade por preço)"
+                      Checked="ChkPreferAggregatedBook_Changed"
+                      Unchecked="ChkPreferAggregatedBook_Changed"/>
             <Separator/>
 
             <!-- ── PESOS DOS COMPONENTES ─────────────────────────────── -->
             <TextBlock Text="PESOS DOS COMPONENTES  (serão normalizados para 100%)"
                        Style="{StaticResource SectionHeader}"/>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="BrokerFlow" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderWeightBroker" Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.01"/>
-                <TextBlock x:Name="LabelWeightBroker" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
+            <StackPanel x:Name="PanelWeightBrokerRow">
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="BrokerFlow" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderWeightBroker" Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.01"/>
+                    <TextBlock x:Name="LabelWeightBroker" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+            </StackPanel>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Fluxo Direto" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
@@ -121,33 +130,35 @@
             <TextBlock x:Name="WeightSumLabel" Foreground="#888" FontSize="11" Margin="0,4,0,0" TextAlignment="Right"/>
             <Separator/>
 
-            <!-- ── BROKERFLOW ────────────────────────────────────────── -->
-            <TextBlock Text="BROKERFLOW" Style="{StaticResource SectionHeader}"/>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="RVOL — Multiplicador máx." Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderRvolMax" Grid.Column="1" Minimum="1" Maximum="4" SmallChange="0.1"/>
-                <TextBlock x:Name="LabelRvolMax" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Fase Abertura — multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderPhaseAbertura" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
-                <TextBlock x:Name="LabelPhaseAbertura" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Fase Leilão — multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderPhaseLeilao" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
-                <TextBlock x:Name="LabelPhaseLeilao" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Fase Meio — multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderPhaseMeio" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
-                <TextBlock x:Name="LabelPhaseMeio" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Separator/>
+            <StackPanel x:Name="PanelBrokerFlowSection">
+                <!-- ── BROKERFLOW ────────────────────────────────────────── -->
+                <TextBlock Text="BROKERFLOW" Style="{StaticResource SectionHeader}"/>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="RVOL - Multiplicador máx." Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderRvolMax" Grid.Column="1" Minimum="1" Maximum="4" SmallChange="0.1"/>
+                    <TextBlock x:Name="LabelRvolMax" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Fase Abertura - multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderPhaseAbertura" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
+                    <TextBlock x:Name="LabelPhaseAbertura" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Fase Leilão - multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderPhaseLeilao" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
+                    <TextBlock x:Name="LabelPhaseLeilao" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Fase Meio - multiplicador" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderPhaseMeio" Grid.Column="1" Minimum="0.5" Maximum="3" SmallChange="0.05"/>
+                    <TextBlock x:Name="LabelPhaseMeio" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Separator/>
+            </StackPanel>
 
             <!-- ── FLUXO DIRETO ──────────────────────────────────────── -->
             <TextBlock Text="FLUXO DIRETO" Style="{StaticResource SectionHeader}"/>
@@ -181,49 +192,53 @@
             </Grid>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Peso Renewable" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderBookRenewable" Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.05"/>
-                <TextBlock x:Name="LabelBookRenewable" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Peso Distância VWAP" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
                 <Slider x:Name="SliderBookVWAP" Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.05"/>
                 <TextBlock x:Name="LabelBookVWAP" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
             </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Score Renewable ativo" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderBookRenewableScore" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
-                <TextBlock x:Name="LabelBookRenewableScore" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
+            <StackPanel x:Name="PanelBookRenewableRows">
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Peso Renewable" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderBookRenewable" Grid.Column="1" Minimum="0" Maximum="1" SmallChange="0.05"/>
+                    <TextBlock x:Name="LabelBookRenewable" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Score Renewable ativo" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderBookRenewableScore" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
+                    <TextBlock x:Name="LabelBookRenewableScore" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+            </StackPanel>
             <Separator/>
 
             <!-- ── DETECTORES ────────────────────────────────────────── -->
             <TextBlock Text="DETECTORES" Style="{StaticResource SectionHeader}"/>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Penalidade Spoof" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderSpoofPenalty" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
-                <TextBlock x:Name="LabelSpoofPenalty" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Bônus Iceberg" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderIcebergBonus" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
-                <TextBlock x:Name="LabelIcebergBonus" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
+            <StackPanel x:Name="PanelDetectorsMicrostructure">
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Penalidade Spoof" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderSpoofPenalty" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
+                    <TextBlock x:Name="LabelSpoofPenalty" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Bônus Iceberg" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderIcebergBonus" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
+                    <TextBlock x:Name="LabelIcebergBonus" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+                <Grid Margin="0,3,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Penalidade Stop Hunt" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
+                    <Slider x:Name="SliderStopHuntPenalty" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
+                    <TextBlock x:Name="LabelStopHuntPenalty" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
+                </Grid>
+            </StackPanel>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
                 <TextBlock Text="Penalidade Exaustão Renko" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
                 <Slider x:Name="SliderExhaustionPenalty" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
                 <TextBlock x:Name="LabelExhaustionPenalty" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
-            </Grid>
-            <Grid Margin="0,3,0,0">
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
-                <TextBlock Text="Penalidade Stop Hunt" Style="{StaticResource ParamLabel}" Grid.Column="0"/>
-                <Slider x:Name="SliderStopHuntPenalty" Grid.Column="1" Minimum="0" Maximum="100" SmallChange="5"/>
-                <TextBlock x:Name="LabelStopHuntPenalty" Style="{StaticResource ValueLabel}" Grid.Column="2"/>
             </Grid>
             <Grid Margin="0,3,0,0">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
@@ -415,7 +430,7 @@
                             <TextBlock x:Name="TxtResultJanelas"
                                        FontSize="9" Foreground="#666666"
                                        FontFamily="Consolas" TextWrapping="Wrap"/>
-                            <TextBlock Text="&#8593; Sliders atualizados — clique Aplicar para confirmar"
+                            <TextBlock Text="&#8593; Sliders atualizados - clique Aplicar para confirmar"
                                        FontSize="9" Foreground="#00C853"
                                        Margin="0,4,0,0" FontFamily="Consolas"/>
                         </StackPanel>

@@ -1,0 +1,383 @@
+<Window x:Class="MarketCore.WPF.AnaliseQuantitativa.AnaliseQuantitativaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MarketCore — Detecção de Players Coordenados"
+        Width="1300" Height="820"
+        MinWidth="1000" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="#0D0D0D"
+        Foreground="#E0E0E0"
+        FontFamily="Segoe UI"
+        FontSize="12">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="BgCard"      Color="#141414"/>
+        <SolidColorBrush x:Key="Border"      Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="TextSub"     Color="#AAAAAA"/>
+        <SolidColorBrush x:Key="Green"       Color="#00C853"/>
+        <SolidColorBrush x:Key="Red"         Color="#FF1744"/>
+        <SolidColorBrush x:Key="Yellow"      Color="#FFD600"/>
+        <SolidColorBrush x:Key="Blue"        Color="#1E88E5"/>
+        <SolidColorBrush x:Key="GreenDim"    Color="#1A3D1F"/>
+        <SolidColorBrush x:Key="RedDim"      Color="#3D1A1A"/>
+        <SolidColorBrush x:Key="NeutralDim"  Color="#1A1A1A"/>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background"      Value="{StaticResource BgCard}"/>
+            <Setter Property="BorderBrush"     Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius"    Value="6"/>
+            <Setter Property="Padding"         Value="14"/>
+        </Style>
+
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextSub}"/>
+            <Setter Property="FontSize"   Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin"     Value="0,0,0,8"/>
+        </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background"            Value="Transparent"/>
+            <Setter Property="BorderThickness"       Value="0"/>
+            <Setter Property="RowBackground"         Value="Transparent"/>
+            <Setter Property="AlternatingRowBackground" Value="#111111"/>
+            <Setter Property="Foreground"            Value="#E0E0E0"/>
+            <Setter Property="GridLinesVisibility"   Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#2A2A2A"/>
+            <Setter Property="ColumnHeaderHeight"    Value="28"/>
+            <Setter Property="RowHeight"             Value="26"/>
+            <Setter Property="IsReadOnly"            Value="True"/>
+            <Setter Property="AutoGenerateColumns"   Value="False"/>
+            <Setter Property="SelectionMode"         Value="Single"/>
+            <Setter Property="HeadersVisibility"     Value="Column"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background"  Value="#1A1A1A"/>
+            <Setter Property="Foreground"  Value="#AAAAAA"/>
+            <Setter Property="FontSize"    Value="10"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="Padding"     Value="8,0"/>
+            <Setter Property="BorderBrush" Value="#2A2A2A"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="8,0"/>
+            <Setter Property="Foreground"      Value="#E0E0E0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter VerticalAlignment="Center" Margin="8,0"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ActionBtn">
+            <Setter Property="Background"   Value="#1E88E5"/>
+            <Setter Property="Foreground"   Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"      Value="14,6"/>
+            <Setter Property="FontWeight"   Value="SemiBold"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#1565C0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- header -->
+            <RowDefinition Height="*"/>      <!-- conteúdo -->
+            <RowDefinition Height="Auto"/>   <!-- status bar -->
+        </Grid.RowDefinitions>
+
+        <!-- ═══ HEADER ════════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Background="#111111"
+                BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1"
+                Padding="16,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="DETECÇÃO DE PLAYERS COORDENADOS"
+                               FontSize="13" FontWeight="Bold" Foreground="#E0E0E0"
+                               VerticalAlignment="Center"/>
+                    <Border Background="#1E3A5F" CornerRadius="3" Padding="6,2" Margin="12,0,0,0">
+                        <TextBlock x:Name="TbSymbol" Text="WIN" FontSize="10" FontWeight="Bold"
+                                   Foreground="{StaticResource Blue}"/>
+                    </Border>
+                    <Border x:Name="LiveBadge" Background="#1A3D1F" CornerRadius="3" Padding="6,2" Margin="8,0,0,0">
+                        <TextBlock x:Name="TbLiveStatus" Text="● AO VIVO" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Green}"/>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="WR mín:" Foreground="{StaticResource TextSub}" FontSize="11"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBox x:Name="TxtMinWinRate" Text="51" Width="42" Height="26"
+                             FontSize="12" TextAlignment="Center"
+                             Background="#1A1A1A" Foreground="White" BorderBrush="#333"
+                             VerticalContentAlignment="Center"
+                             LostFocus="TxtMinWinRate_LostFocus"
+                             KeyDown="TxtMinWinRate_KeyDown"/>
+                    <TextBlock Text="%" Foreground="{StaticResource TextSub}" FontSize="11"
+                               VerticalAlignment="Center" Margin="4,0,14,0"/>
+                    <Button x:Name="BtnMineNow" Content="⟳  MINERAR AGORA" Style="{StaticResource ActionBtn}"
+                            Margin="0,0,10,0" Click="BtnMineNow_Click"/>
+                    <Button x:Name="BtnClearPatterns" Content="LIMPAR PADRÕES" Style="{StaticResource ActionBtn}"
+                            Background="#333333" Click="BtnClearPatterns_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ═══ CONTEÚDO PRINCIPAL ════════════════════════════════════ -->
+        <Grid Grid.Row="1" Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>   <!-- coluna esquerda: sinal + stats -->
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>     <!-- coluna direita: padrões + clusters -->
+            </Grid.ColumnDefinitions>
+
+            <!-- ── COLUNA ESQUERDA ──────────────────────────────────── -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- sinal grande -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>  <!-- confiança -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/>  <!-- brokers ativos -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="*"/>     <!-- stats -->
+                </Grid.RowDefinitions>
+
+                <!-- SINAL PRINCIPAL + BADGE DE RENOVAÇÃO -->
+                <StackPanel Grid.Row="0">
+                    <!-- Badge de renovação: aparece 5s quando o sinal é reconfirmado -->
+                    <Border x:Name="RenewalBadge" Visibility="Collapsed" CornerRadius="6"
+                            BorderThickness="1" BorderBrush="#2A2A2A"
+                            Background="#1A1A1A" Padding="10,4" Margin="0,0,0,6"
+                            HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="TbRenewalLabel" Text="↻ CONFIRMADO"
+                                       FontSize="14" FontWeight="Bold"
+                                       Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TbRenewalCountdown" Text="5s"
+                                       FontSize="11" Foreground="{StaticResource TextSub}"
+                                       Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <Border x:Name="SignalCard" CornerRadius="10"
+                            BorderThickness="2" BorderBrush="#2A2A2A"
+                            Background="{StaticResource NeutralDim}"
+                            Padding="0,28">
+                        <Grid>
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="TbSignalLabel" Text="AGUARDAR"
+                                           FontSize="48" FontWeight="Bold"
+                                           Foreground="#AAAAAA"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="TbSignalSub" Text="sem padrão detectado"
+                                           FontSize="11" Foreground="{StaticResource TextSub}"
+                                           HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                            </StackPanel>
+                            <!-- Contador regressivo flutuante no canto inferior direito -->
+                            <TextBlock x:Name="TbSignalCountdown" Text=""
+                                       FontSize="14" FontWeight="Bold"
+                                       Foreground="#DDDDDD" Opacity="0.85"
+                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                       Margin="0,0,12,8"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- BARRA DE CONFIANÇA -->
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="14,10">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="CONFIANÇA" Style="{StaticResource SectionLabel}" Margin="0"/>
+                            <TextBlock x:Name="TbConfPct" Text="—" FontWeight="Bold"
+                                       Foreground="#E0E0E0" HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                        <Border Background="#222222" CornerRadius="3" Height="8">
+                            <Border x:Name="ConfBar" Background="{StaticResource Blue}"
+                                    CornerRadius="3" HorizontalAlignment="Left" Width="0"/>
+                        </Border>
+                        <TextBlock x:Name="TbImpact" Text="" FontSize="10"
+                                   Foreground="{StaticResource TextSub}" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- BROKERS QUE ESTÃO ATUANDO AGORA -->
+                <Border Grid.Row="4" Style="{StaticResource Card}" Padding="14,10">
+                    <StackPanel>
+                        <TextBlock Text="ATUANDO AGORA (últimos 30s)" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock x:Name="TbActiveBrokers" Text="—"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="#E0E0E0" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="TbActiveTime" Text=""
+                                   FontSize="10" Foreground="{StaticResource TextSub}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- STATS -->
+                <Border Grid.Row="6" Style="{StaticResource Card}" Padding="14,10">
+                    <StackPanel>
+                        <TextBlock Text="MINERAÇÃO" Style="{StaticResource SectionLabel}"/>
+
+                        <Grid Margin="0,2">
+                            <TextBlock Text="Padrões aprendidos:" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbPatternCount" Text="0" HorizontalAlignment="Right"
+                                       FontWeight="Bold" FontSize="11"/>
+                        </Grid>
+                        <Grid Margin="0,2">
+                            <TextBlock Text="Último ciclo:" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbCycleDelta" Text="—" HorizontalAlignment="Right"
+                                       FontSize="11" Foreground="#FFC107"/>
+                        </Grid>
+                        <StackPanel Margin="0,4">
+                            <TextBlock Text="Trades no DB (sessão):" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbDbTrades" Text="0" TextWrapping="Wrap"
+                                       FontWeight="Bold" FontSize="11" Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Grid Margin="0,4">
+                            <TextBlock Text="Última mineração:" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbLastMine" Text="—" HorizontalAlignment="Right"
+                                       FontSize="11"/>
+                        </Grid>
+                        <Grid Margin="0,4">
+                            <TextBlock Text="Status mineração:" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbMineStatus" Text="aguardando" HorizontalAlignment="Right"
+                                       FontSize="11" Foreground="{StaticResource TextSub}"/>
+                        </Grid>
+                        <Grid Margin="0,4">
+                            <TextBlock Text="Trades ao vivo (fila):" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                            <TextBlock x:Name="TbLiveQueueCount" Text="0" HorizontalAlignment="Right"
+                                       FontSize="11"/>
+                        </Grid>
+                        <Grid Margin="0,4">
+                            <TextBlock Text="Última detecção:" Foreground="{StaticResource TextSub}" FontSize="11"/>
+                        </Grid>
+                        <TextBlock x:Name="TbDetectInfo" Text="aguardando..." TextWrapping="Wrap"
+                                   FontSize="10" Foreground="#FF8C00" Margin="0,0,0,4"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ── COLUNA DIREITA ────────────────────────────────────── -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>    <!-- padrões aprendidos -->
+                    <RowDefinition Height="12"/>
+                    <RowDefinition Height="Auto"/> <!-- clusters ativos -->
+                </Grid.RowDefinitions>
+
+                <!-- PADRÕES APRENDIDOS -->
+                <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,10">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <TextBlock Text="PADRÕES APRENDIDOS (top por score)"
+                                       Style="{StaticResource SectionLabel}" Margin="0"/>
+                            <TextBlock x:Name="TbPatternsSubtitle" Text="aguardando primeira mineração..."
+                                       FontSize="10" Foreground="{StaticResource TextSub}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <DataGrid x:Name="DgPatterns" Grid.Row="1"
+                                  CanUserResizeRows="False" CanUserReorderColumns="False"
+                                  CanUserSortColumns="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="CORRETORAS"   Binding="{Binding Corretoras}" Width="*" MinWidth="120"/>
+                                <DataGridTextColumn Header="LADO"         Binding="{Binding Lado}"       Width="60"/>
+                                <DataGridTextColumn Header="OBS"          Binding="{Binding Obs}"        Width="55"/>
+                                <DataGridTextColumn Header="WIN%"         Binding="{Binding WRFormatted}" Width="65"/>
+                                <DataGridTextColumn Header="IMPACTO"      Binding="{Binding ImpactoFormatted}" Width="80"/>
+                                <DataGridTextColumn Header="SCORE"        Binding="{Binding Score, StringFormat=N1}" Width="70"/>
+                                <DataGridTextColumn Header="ÚLTIMA VEZ"   Binding="{Binding UltimaVez}"  Width="80"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+
+                <!-- CLUSTERS ATIVOS (última varredura) -->
+                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="14,10" MaxHeight="200">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="CLUSTERS DETECTADOS AGORA"
+                                   Style="{StaticResource SectionLabel}" Margin="0,0,0,8"/>
+
+                        <DataGrid x:Name="DgClusters" Grid.Row="1" MaxHeight="140"
+                                  CanUserResizeRows="False" CanUserReorderColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="CORRETORAS"  Binding="{Binding Corretoras}" Width="*"/>
+                                <DataGridTextColumn Header="LADO"        Binding="{Binding Lado}"       Width="60"/>
+                                <DataGridTextColumn Header="CONTRATOS"   Binding="{Binding Contratos}"  Width="85"/>
+                                <DataGridTextColumn Header="CONFIANÇA"   Binding="{Binding ConfiancaFormatted}" Width="85"/>
+                                <DataGridTextColumn Header="STATUS"      Binding="{Binding Status}"     Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- ═══ STATUS BAR ════════════════════════════════════════════ -->
+        <Border Grid.Row="2" Background="#111111"
+                BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,0"
+                Padding="16,6">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="DbDot" Width="7" Height="7" Fill="{StaticResource Yellow}"
+                             VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock x:Name="TbDbStatus" Text="PostgreSQL —"
+                               FontSize="10" Foreground="{StaticResource TextSub}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text=" | " FontSize="10" Foreground="#444" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbLastUpdate" Text="" FontSize="10"
+                               Foreground="{StaticResource TextSub}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <TextBlock x:Name="TbSignalTime" Text="" FontSize="10"
+                           Foreground="{StaticResource TextSub}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

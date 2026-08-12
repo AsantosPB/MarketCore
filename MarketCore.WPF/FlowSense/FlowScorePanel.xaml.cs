@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using MarketCore.AgentPanel;
 using MarketCore.WPF;
 
 namespace MarketCore.FlowSense
@@ -22,10 +21,9 @@ namespace MarketCore.FlowSense
         private List<FlowScoreSnapshot>? _snapshots;
         private string? _diretorioGravacao;
 
-        // ── Agent Panel ───────────────────────────────────────────────────
-        private AgentViewModel?    _agentViewModel;
-        private AgentBridge?       _agentBridge;
-        private AgentPanelWindow?  _agentPanel;
+        /// <summary>Disparado quando o usuário clica no botão robozinho — o MainWindow decide o que abrir
+        /// (janela de Leitura de Fluxo, que substitui o antigo Agent Panel).</summary>
+        public event EventHandler? LeituraFluxoRequested;
 
         public FlowScorePanel()
         {
@@ -35,7 +33,7 @@ namespace MarketCore.FlowSense
         }
 
         // ═══════════════════════════════════════════════════════
-        // INITIALIZE — mesmo método existente + AgentPanel
+        // INITIALIZE - mesmo método existente + AgentPanel
         // ═══════════════════════════════════════════════════════
         public void Initialize(
             FlowScoreEngine         flowScoreEngine,
@@ -54,17 +52,7 @@ namespace MarketCore.FlowSense
             _snapshots         = snapshots;
             _diretorioGravacao = diretorioGravacao;
 
-            // Inicializa o AgentViewModel e o Bridge
-            _agentViewModel = new AgentViewModel();
-            _agentBridge    = new AgentBridge(
-                _agentViewModel,
-                flowScoreEngine,
-                brokerAccum,
-                deltaEngine,
-                bookAnalyzer,
-                detectors);
-
-            // Timer principal — 250ms (mesmo intervalo de antes)
+            // Timer principal - 250ms (mesmo intervalo de antes)
             _updateTimer = new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(250)
@@ -74,48 +62,13 @@ namespace MarketCore.FlowSense
         }
 
         // ═══════════════════════════════════════════════════════
-        // MÉTODO PARA ALIMENTAR CORRELAÇÕES (WIN/WDO/WSP)
-        // Chame este método do MarketEngine sempre que os
-        // preços do WDO e WSP forem atualizados
-        // ═══════════════════════════════════════════════════════
-        public void AtualizarCorrelacoes(
-            double precoAtual,
-            double wspPreco,    double wspVariacao,
-            double wdoPreco,    double wdoVariacao,
-            double winVariacao,
-            double correlWinWdo, double correlWinWsp,
-            int    lagWinWsp,    double gapWinWsp,
-            bool   wspLiderando,
-            double proximoSuporte,    double proximaResistencia,
-            string proximoEvento = null)
-        {
-            if (_agentBridge == null) return;
-
-            _agentBridge.PrecoAtual       = precoAtual;
-            _agentBridge.WSP_Preco        = wspPreco;
-            _agentBridge.WSP_Variacao     = wspVariacao;
-            _agentBridge.WDO_Preco        = wdoPreco;
-            _agentBridge.WDO_Variacao     = wdoVariacao;
-            _agentBridge.WIN_Variacao     = winVariacao;
-            _agentBridge.CorrelWinWdo     = correlWinWdo;
-            _agentBridge.CorrelWinWsp     = correlWinWsp;
-            _agentBridge.LagWinWsp        = lagWinWsp;
-            _agentBridge.GapWinWsp        = gapWinWsp;
-            _agentBridge.WSP_Liderando    = wspLiderando;
-            _agentBridge.ProximoSuporte   = proximoSuporte;
-            _agentBridge.ProximaResistencia = proximaResistencia;
-            _agentBridge.ProximoEvento    = proximoEvento;
-        }
-
-        // ═══════════════════════════════════════════════════════
-        // TICK PRINCIPAL — 250ms
+        // TICK PRINCIPAL - 250ms
         // ═══════════════════════════════════════════════════════
         private void OnTick(object sender, EventArgs e)
         {
             try
             {
                 UpdateDisplay();
-                _agentBridge?.Atualizar();
             }
             catch (Exception ex)
             {
@@ -124,33 +77,17 @@ namespace MarketCore.FlowSense
         }
 
         // ═══════════════════════════════════════════════════════
-        // BOTÃO ROBOZINHO — abre/foca a janela do agente
+        // BOTÃO ROBOZINHO - avisa o MainWindow para abrir a Leitura de Fluxo
+        // (a janela e o motor de captura vivem no MainWindow, que tem acesso
+        // direto ao fluxo de TradeEvent — este UserControl só repassa o clique)
         // ═══════════════════════════════════════════════════════
         private void BtnAgentPanel_Click(object sender, RoutedEventArgs e)
         {
-            if (_agentViewModel == null) return;
-
-            // Se já está aberta, traz para frente
-            if (_agentPanel != null && _agentPanel.IsLoaded)
-            {
-                _agentPanel.Activate();
-                return;
-            }
-
-            // Cria a janela flutuante
-            _agentPanel = new AgentPanelWindow();
-
-            // Conecta o ViewModel à janela
-            _agentViewModel.AttachWindow(_agentPanel);
-
-            // Inicia o agente
-            _agentViewModel.Start();
-
-            _agentPanel.Show();
+            LeituraFluxoRequested?.Invoke(this, EventArgs.Empty);
         }
 
         // ═══════════════════════════════════════════════════════
-        // BOTÃO CALIBRAÇÃO — comportamento original inalterado
+        // BOTÃO CALIBRAÇÃO - comportamento original inalterado
         // ═══════════════════════════════════════════════════════
         private void BtnConfig_Click(object sender, RoutedEventArgs e)
         {
@@ -167,11 +104,13 @@ namespace MarketCore.FlowSense
         }
 
         // ═══════════════════════════════════════════════════════
-        // UPDATE DISPLAY — comportamento original inalterado
+        // UPDATE DISPLAY - comportamento original inalterado
         // ═══════════════════════════════════════════════════════
         private void UpdateDisplay()
         {
             if (_flowScoreEngine == null) return;
+
+            bool aggregatedBook = _flowScoreEngine.Config.PreferAggregatedBookSignals;
 
             // Score principal
             ScoreLabel.Text       = $"{_flowScoreEngine.FlowScore:+0;-0;0}";
@@ -207,8 +146,8 @@ namespace MarketCore.FlowSense
                 SessionPhase.Meio      => "Meio",
                 SessionPhase.Leilao    => "Leilão",
                 SessionPhase.PosLeilao => "Pós-leilão",
-                _                      => "—"
-            } ?? "—";
+                _                      => "-"
+            } ?? "-";
             SessionLabel.Text        = phaseText;
             SessionContextLabel.Text = phaseText;
 
@@ -232,46 +171,57 @@ namespace MarketCore.FlowSense
                 CVDLabel.Foreground = Brushes.Gray;
             }
 
-            // Stop Hunt
-            if (_deltaEngine?.StopHuntDetected == true)
+            // Stop Hunt (penalidade só entra no score se PreferAggregatedBookSignals == false)
+            if (aggregatedBook)
+            {
+                StopHuntLabel.Text       = "-";
+                StopHuntLabel.Foreground = Brushes.Gray;
+            }
+            else if (_deltaEngine?.StopHuntDetected == true)
             {
                 StopHuntLabel.Text       = "detectado ⚠";
                 StopHuntLabel.Foreground = Brushes.DarkRed;
             }
             else
             {
-                StopHuntLabel.Text       = "—";
+                StopHuntLabel.Text       = "-";
                 StopHuntLabel.Foreground = Brushes.Gray;
             }
 
-            // BrokerFlow ativo — Compradores
-            var activeBuyers = _brokerAccum?.GetActiveBuyers60s();
-            if (activeBuyers != null && activeBuyers.Count > 0)
+            // BrokerFlow ativo - Compradores / Vendedores (desativado no modo livro agregado)
+            if (aggregatedBook)
             {
-                var lines = new System.Text.StringBuilder();
-                for (int i = 0; i < Math.Min(3, activeBuyers.Count); i++)
-                {
-                    if (i > 0) lines.Append('\n');
-                    lines.Append($"{activeBuyers[i].BrokerName} +{activeBuyers[i].ActiveBuyVol60s:F0}");
-                }
-                BuyerActivityLabel.Text = lines.ToString();
+                BuyerActivityLabel.Text = "-";
+                TopSellerLabel.Text = "-";
             }
-
-            // BrokerFlow ativo — Vendedores
-            var activeSellers = _brokerAccum?.GetActiveSellers60s();
-            if (activeSellers != null && activeSellers.Count > 0)
+            else
             {
-                var lines = new System.Text.StringBuilder();
-                for (int i = 0; i < Math.Min(3, activeSellers.Count); i++)
+                var activeBuyers = _brokerAccum?.GetActiveBuyers60s();
+                if (activeBuyers != null && activeBuyers.Count > 0)
                 {
-                    if (i > 0) lines.Append('\n');
-                    lines.Append($"{activeSellers[i].BrokerName} -{activeSellers[i].ActiveSellVol60s:F0}");
+                    var lines = new System.Text.StringBuilder();
+                    for (int i = 0; i < Math.Min(3, activeBuyers.Count); i++)
+                    {
+                        if (i > 0) lines.Append('\n');
+                        lines.Append($"{activeBuyers[i].BrokerName} +{activeBuyers[i].ActiveBuyVol60s:F0}");
+                    }
+                    BuyerActivityLabel.Text = lines.ToString();
                 }
-                TopSellerLabel.Text = lines.ToString();
+
+                var activeSellers = _brokerAccum?.GetActiveSellers60s();
+                if (activeSellers != null && activeSellers.Count > 0)
+                {
+                    var lines = new System.Text.StringBuilder();
+                    for (int i = 0; i < Math.Min(3, activeSellers.Count); i++)
+                    {
+                        if (i > 0) lines.Append('\n');
+                        lines.Append($"{activeSellers[i].BrokerName} -{activeSellers[i].ActiveSellVol60s:F0}");
+                    }
+                    TopSellerLabel.Text = lines.ToString();
+                }
             }
 
             // Delta 3min
-            Delta3minLabel.Text       = $"{_deltaEngine?.CurrentDelta3min:+0;-0;0}";
             Delta3minLabel.Foreground = GetColorForScore(_deltaEngine?.CurrentDelta3min ?? 0);
         }
 
@@ -287,7 +237,6 @@ namespace MarketCore.FlowSense
         public void Shutdown()
         {
             _updateTimer?.Stop();
-            _agentViewModel?.Stop();
         }
     }
 }

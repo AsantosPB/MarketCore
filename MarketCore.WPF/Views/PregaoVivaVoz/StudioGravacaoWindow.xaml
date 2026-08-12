@@ -1,0 +1,368 @@
+<Window x:Class="MarketCore.WPF.Views.PregaoVivaVoz.StudioGravacaoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MarketCore.WPF.Views.PregaoVivaVoz"
+        mc:Ignorable="d"
+        Title="Studio de Gravação - Pregão Viva Voz"
+        Height="800" Width="1250"
+        MinHeight="600" MinWidth="1000"
+        WindowStartupLocation="CenterOwner"
+        Background="#0d1117">
+    
+    <Window.Resources>
+        <SolidColorBrush x:Key="BgBase" Color="#0d1117"/>
+        <SolidColorBrush x:Key="BgCard" Color="#161b22"/>
+        <SolidColorBrush x:Key="BgInput" Color="#0d1117"/>
+        <SolidColorBrush x:Key="Border" Color="#30363d"/>
+        <SolidColorBrush x:Key="BorderLight" Color="#21262d"/>
+        <SolidColorBrush x:Key="Text" Color="#e6edf3"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#7d8590"/>
+        <SolidColorBrush x:Key="TextDim" Color="#6e7681"/>
+        <SolidColorBrush x:Key="Green" Color="#3fb950"/>
+        <SolidColorBrush x:Key="Blue" Color="#58a6ff"/>
+        <SolidColorBrush x:Key="Orange" Color="#d29922"/>
+        <SolidColorBrush x:Key="Red" Color="#ff4444"/>
+        <SolidColorBrush x:Key="RedBg" Color="#1a0a0a"/>
+        <SolidColorBrush x:Key="GreenBg" Color="#0a1a12"/>
+        <SolidColorBrush x:Key="BlueBg" Color="#0d1a2e"/>
+        
+        <!-- Estilos base -->
+        <Style x:Key="BtnBase" TargetType="Button">
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            <Setter Property="Background" Value="{StaticResource BgInput}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="0.5"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1c2128"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
+        <Style x:Key="BtnGravar" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="{StaticResource Red}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="14,8"/>
+        </Style>
+        
+        <Style x:Key="BtnOuvir" TargetType="Button" BasedOn="{StaticResource BtnBase}">
+            <Setter Property="Background" Value="{StaticResource Blue}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="12,8"/>
+        </Style>
+        
+        <Style x:Key="TableHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- CABEÇALHO -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="🎙️ Studio de Gravação" FontSize="18" FontWeight="Medium" Foreground="#ff7b72"/>
+                <TextBlock Text="Grave sua voz pra cada frase do Pregão Viva Voz" FontSize="11" Foreground="{StaticResource TextMuted}" Margin="0,2,0,0"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="🎤" FontSize="14" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox Width="260" ItemsSource="{Binding Dispositivos}" 
+                          SelectedIndex="{Binding DispositivoSelecionado}"
+                          Background="White"
+                          Foreground="Black"
+                          BorderBrush="{StaticResource Border}"
+                          FontSize="11"
+                          Padding="6,3"
+                          VerticalAlignment="Center"
+                          ToolTip="Escolha o microfone que você quer usar"/>
+                <Button Style="{StaticResource BtnBase}" 
+                        Content="🔄" 
+                        Command="{Binding AtualizarDispositivosCommand}"
+                        ToolTip="Recarregar lista de microfones"
+                        Margin="6,0,0,0"
+                        Padding="8,6"/>
+            </StackPanel>
+        </Grid>
+        
+        <!-- CONTEÚDO PRINCIPAL: 2 COLUNAS -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- COLUNA ESQUERDA: CATEGORIAS -->
+            <Border Grid.Column="0" Background="{StaticResource BgCard}" 
+                    BorderBrush="{StaticResource Border}" BorderThickness="0.5"
+                    CornerRadius="6" Padding="8" Margin="0,0,10,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="CATEGORIAS" FontSize="10" 
+                               Foreground="{StaticResource TextMuted}" Margin="4,4,4,8"/>
+                    
+                    <!-- Progresso geral no topo -->
+                    <Border DockPanel.Dock="Top" Background="{StaticResource BgInput}"
+                            BorderBrush="{StaticResource Border}" BorderThickness="0.5"
+                            CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="PROGRESSO GERAL" FontSize="9" Foreground="{StaticResource TextMuted}"/>
+                            <TextBlock Text="{Binding TextoProgressoGeral}" FontSize="12" 
+                                       Foreground="{StaticResource Green}" FontWeight="Medium" 
+                                       Margin="0,3,0,3"/>
+                            <ProgressBar Height="4" Value="{Binding PercentualGeral, Mode=OneWay}" Maximum="100" 
+                                         Background="#21262d" Foreground="{StaticResource Green}" 
+                                         BorderThickness="0"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Categorias}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource BtnBase}" 
+                                            Command="{Binding DataContext.SelecionarCategoriaCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            HorizontalContentAlignment="Stretch"
+                                            Margin="0,2"
+                                            Padding="8,6">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Titulo}" 
+                                                       FontSize="11" HorizontalAlignment="Left"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{StaticResource Text}"/>
+                                            <Border Grid.Column="1" 
+                                                    Background="#21262d" 
+                                                    CornerRadius="8"
+                                                    Padding="6,1">
+                                                <TextBlock Text="{Binding Contador}" FontSize="9" 
+                                                           Foreground="{StaticResource TextMuted}"/>
+                                            </Border>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+            
+            <!-- COLUNA DIREITA: LISTA DE FRASES DA CATEGORIA -->
+            <Border Grid.Column="1" Background="{StaticResource BgCard}"
+                    BorderBrush="{StaticResource Border}" BorderThickness="0.5"
+                    CornerRadius="6" Padding="14">
+                <DockPanel>
+                    <!-- Cabeçalho do painel -->
+                    <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding TituloPainel}" FontSize="16" 
+                                       FontWeight="Medium" Foreground="{StaticResource Text}"/>
+                            <TextBlock Text="{Binding SubtituloPainel}" FontSize="11" 
+                                       Foreground="{StaticResource TextMuted}" Margin="0,3,0,0"/>
+                        </StackPanel>
+                        
+                        <Button Grid.Column="1" Style="{StaticResource BtnBase}" 
+                                Content="🎧 Ouvir tudo" 
+                                Command="{Binding OuvirTudoCommand}"
+                                Padding="12,7"/>
+                    </Grid>
+                    
+                    <!-- VU Meter (barra de nível do microfone) -->
+                    <Border DockPanel.Dock="Top" Background="{StaticResource BgInput}"
+                            BorderBrush="{StaticResource Border}" BorderThickness="0.5"
+                            CornerRadius="4" Padding="10,6" Margin="0,0,0,10">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🎚️ Nível do mic:" FontSize="10" 
+                                           Foreground="{StaticResource TextMuted}" 
+                                           VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <ProgressBar Grid.Column="1" Height="8" 
+                                             Value="{Binding NivelAudioPercentual, Mode=OneWay}" Maximum="100"
+                                             Background="#21262d" Foreground="{StaticResource Green}" 
+                                             BorderThickness="0"/>
+                                <TextBlock Grid.Column="2" Text="{Binding NivelAudioPercentual, StringFormat={}{0}%}" 
+                                           FontSize="10" Foreground="{StaticResource TextMuted}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"
+                                           Width="35" TextAlignment="Right"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Cabeçalho da tabela -->
+                    <Border DockPanel.Dock="Top" Background="{StaticResource BgInput}"
+                            BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,0.5"
+                            CornerRadius="4,4,0,0" Padding="0,4">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="240"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="" Style="{StaticResource TableHeader}"/>
+                            <TextBlock Grid.Column="1" Text="FRASE PRA GRAVAR" Style="{StaticResource TableHeader}"/>
+                            <TextBlock Grid.Column="2" Text="ARQUIVO" Style="{StaticResource TableHeader}" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="DUR." Style="{StaticResource TableHeader}" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="4" Text="CONTROLES" Style="{StaticResource TableHeader}" HorizontalAlignment="Right"/>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Lista rolável de frases -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding FrasesDaCategoria}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{StaticResource BorderLight}" 
+                                            BorderThickness="0,0,0,0.5"
+                                            Padding="6,8"
+                                            Background="{Binding CorLinha}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="240"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <!-- Status ícone -->
+                                            <Border Grid.Column="0" Width="24" Height="24"
+                                                    CornerRadius="12" 
+                                                    Background="{Binding CorStatus}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding StatusIcone}" 
+                                                           Foreground="White" FontSize="12"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            
+                                            <!-- Texto da frase -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <TextBlock Text="{Binding TextoParaFalar}" 
+                                                           FontSize="14" FontWeight="Medium"
+                                                           Foreground="{StaticResource Text}"/>
+                                                <TextBlock Text="{Binding DicaContexto}" 
+                                                           FontSize="10" FontStyle="Italic"
+                                                           Foreground="{StaticResource Orange}"
+                                                           Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding MensagemErro}" 
+                                                           FontSize="10" FontStyle="Italic"
+                                                           Foreground="{StaticResource Red}"
+                                                           Margin="0,2,0,0" 
+                                                           Visibility="{Binding TemErro, Converter={x:Static local:BooleanToVisibilityConverterInstance.Instance}}"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Nome do arquivo -->
+                                            <TextBlock Grid.Column="2" Text="{Binding NomeArquivo}" 
+                                                       FontSize="9" FontFamily="Consolas"
+                                                       Foreground="{StaticResource TextDim}"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            
+                                            <!-- Duração -->
+                                            <TextBlock Grid.Column="3" Text="{Binding DuracaoTexto}" 
+                                                       FontSize="11" Foreground="{StaticResource Green}"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            
+                                            <!-- Botões Ouvir + Gravar -->
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal" 
+                                                        HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource BtnOuvir}" 
+                                                        Content="🎧 Ouvir"
+                                                        Command="{Binding DataContext.OuvirFraseCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding BotaoOuvirHabilitado}"
+                                                        Margin="0,0,6,0"/>
+                                                
+                                                <Button Content="{Binding TextoBotaoGravar}"
+                                                        Command="{Binding DataContext.ToggleGravacaoCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        Margin="0,0,6,0">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource BtnGravar}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Gravando}" Value="True">
+                                                                    <Setter Property="Background" Value="#cc0000"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                                
+                                                <Button Style="{StaticResource BtnBase}" 
+                                                        Content="🗑"
+                                                        Command="{Binding DataContext.DeletarFraseCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        IsEnabled="{Binding Gravado}"
+                                                        Padding="8,7"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+        
+        <!-- BARRA DE STATUS -->
+        <Border Grid.Row="2" Background="{StaticResource BgCard}" 
+                BorderBrush="{StaticResource Border}" BorderThickness="0,0.5,0,0"
+                Padding="10,6" Margin="0,8,0,0">
+            <TextBlock x:Name="StatusText" 
+                       Text="Studio de Gravação carregado. Selecione uma categoria à esquerda."
+                       FontSize="10" Foreground="{StaticResource TextMuted}"/>
+        </Border>
+    </Grid>
+</Window>

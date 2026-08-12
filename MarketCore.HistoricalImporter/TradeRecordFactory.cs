@@ -44,11 +44,12 @@ internal static class TradeRecordFactory
         }
     }
 
+    /// <summary>Nelogica DLL: 2=compra agressão 3=venda agressão (cf. Manual TNewTradeCallback).</summary>
     private static char MapAggressor(int aggressor) =>
         aggressor switch
         {
-            1 => 'C',
-            2 => 'V',
+            2 => 'C',
+            3 => 'V',
             _ => 'U'
         };
 

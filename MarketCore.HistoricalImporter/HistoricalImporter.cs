@@ -1,3 +1,4 @@
+using System.Threading;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -12,6 +13,9 @@ public sealed class HistoricalImporter : IProfitHistoryTradeSink
     private readonly object _sync = new();
     private readonly AppConfig _cfg;
     private string _contractSymbol = "";
+    private int _flushScheduled;
+    private long _totalAccepted;
+    private long _totalRejected;
 
     public HistoricalImporter(AppConfig cfg) => _cfg = cfg;
 
@@ -28,6 +32,15 @@ public sealed class HistoricalImporter : IProfitHistoryTradeSink
 
     /// <summary>Total de registros já gravados no PostgreSQL (após flush).</summary>
     public long TotalFlushed { get; private set; }
+
+    /// <summary>Total de callbacks recebidos que produziram um <see cref="TradeRecord"/> válido.</summary>
+    public long TotalAccepted => Interlocked.Read(ref _totalAccepted);
+
+    /// <summary>Total de callbacks rejeitados pelo factory (qty/preço/datas inválidos).</summary>
+    public long TotalRejected => Interlocked.Read(ref _totalRejected);
+
+    /// <summary>Último erro de gravação (se houver) — evita propagar exceção em callbacks nativos.</summary>
+    public string? LastFlushError { get; private set; }
 
     /// <summary>Callback compatível com a DLL — alimenta o buffer e dispara flush em 10k.</summary>
     public void OnHistoricalTrade(
@@ -47,14 +60,22 @@ public sealed class HistoricalImporter : IProfitHistoryTradeSink
         if (!TradeRecordFactory.TryCreate(
                 _contractSymbol, symbol, date, time, price, qty,
                 buyBroker, sellBroker, aggressor, out TradeRecord rec))
+        {
+            Interlocked.Increment(ref _totalRejected);
             return;
+        }
 
+        Interlocked.Increment(ref _totalAccepted);
+
+        bool scheduleFlush;
         lock (_sync)
         {
             _buffer.Add(rec);
-            if (_buffer.Count >= BufferCapacity)
-                FlushToDatabaseCore();
+            scheduleFlush = _buffer.Count >= BufferCapacity;
         }
+
+        if (scheduleFlush)
+            ScheduleFlush();
     }
 
     /// <summary>Força COPY BINARY do buffer atual.</summary>
@@ -62,21 +83,100 @@ public sealed class HistoricalImporter : IProfitHistoryTradeSink
 
     public void FlushPendingExports()
     {
+        List<TradeRecord> batch;
         lock (_sync)
         {
-            FlushToDatabaseCore();
+            if (_buffer.Count == 0)
+                return;
+
+            batch = _buffer.ToList();
+            _buffer.Clear();
+        }
+
+        WriteBatch(batch);
+    }
+
+    /// <summary>Espera flushes em background terminarem (não devolve até <c>_flushScheduled</c> ficar a 0).</summary>
+    public void WaitForPendingFlushes(TimeSpan timeout)
+    {
+        DateTime deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (Volatile.Read(ref _flushScheduled) == 0)
+                return;
+
+            Thread.Sleep(50);
         }
     }
 
-    /// <summary>Esvazia buffer sem lock externo — chamar apenas com <c>lock (_sync)</c>.</summary>
-    private void FlushToDatabaseCore()
+    private void ScheduleFlush()
     {
-        if (_buffer.Count == 0)
+        if (Interlocked.CompareExchange(ref _flushScheduled, 1, 0) != 0)
             return;
 
-        var batch = _buffer.ToList();
-        _buffer.Clear();
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            try
+            {
+                while (true)
+                {
+                    FlushPendingExports();
 
+                    lock (_sync)
+                    {
+                        if (_buffer.Count < BufferCapacity)
+                            break;
+                    }
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _flushScheduled, 0);
+
+                lock (_sync)
+                {
+                    if (_buffer.Count >= BufferCapacity)
+                        ScheduleFlush();
+                }
+            }
+        });
+    }
+
+    private void WriteBatch(List<TradeRecord> batch)
+    {
+        if (batch.Count == 0)
+            return;
+
+        bool retriedDatabase = false;
+        while (true)
+        {
+            try
+            {
+                WriteBatchCore(batch);
+                return;
+            }
+            catch (PostgresException ex) when (!retriedDatabase && ex.SqlState == "3D000")
+            {
+                retriedDatabase = true;
+                new DatabaseSetup(_cfg).EnsureReadyForImportAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                LastFlushError = ex.Message;
+                ProfitDllDiag.Append($"[PostgreSQL] flush falhou ({batch.Count} linhas): {ex.GetType().Name}: {ex.Message}");
+
+                lock (_sync)
+                {
+                    _buffer.InsertRange(0, batch);
+                }
+
+                return;
+            }
+        }
+    }
+
+    private void WriteBatchCore(List<TradeRecord> batch)
+    {
         using var conn = new NpgsqlConnection(_cfg.GetConnectionString());
         conn.Open();
 
@@ -103,6 +203,7 @@ public sealed class HistoricalImporter : IProfitHistoryTradeSink
         }
 
         TotalFlushed += batch.Count;
+        LastFlushError = null;
     }
 
     private static void WriteNullableVarchar(NpgsqlBinaryImporter writer, string? value)

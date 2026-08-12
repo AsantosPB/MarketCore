@@ -1,23 +1,23 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace MarketCore.FlowSense
 {
     /// <summary>
-    /// Modelo de dados por corretora â€” acumula volume comprador/vendedor no dia
-    /// e mantÃ©m janela deslizante de 60 segundos para detectar atividade em tempo real
+    /// Modelo de dados por corretora - acumula volume comprador/vendedor no dia
+    /// e mant-m janela deslizante de 60 segundos para detectar atividade em tempo real
     /// </summary>
     public class BrokerStats
     {
         public string BrokerName { get; set; }
 
-        // â•â•â•â• Acumulado no dia â•â•â•â•
+        // - Acumulado no dia -
         public double BuyVolume { get; private set; }      // volume total comprador acumulado
         public double SellVolume { get; private set; }     // volume total vendedor acumulado
         public double NetDelta { get; private set; }       // BuyVolume - SellVolume
 
-        // â•â•â•â• Janela deslizante 60 segundos â•â•â•â•
+        // - Janela deslizante 60 segundos -
         private Queue<TradeEventRecord> _recentEvents;     // eventos dos ultimos 60s
         private readonly int _windowSeconds = 60;
         private DateTime _lastCleanup = DateTime.UtcNow;
@@ -39,7 +39,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Registra um trade nesta corretora â€” atualiza acumulado do dia e janela 60s
+        /// Registra um trade nesta corretora - atualiza acumulado do dia e janela 60s
         /// </summary>
         public void RecordTrade(double volume, bool isBuyAggressor, DateTime timestamp)
         {
@@ -71,7 +71,7 @@ namespace MarketCore.FlowSense
 
         private void CleanupExpiredEvents(DateTime now)
         {
-            // Para evitar cleanup em cada trade, sÃ³ faz a cada 5 segundos
+            // Para evitar cleanup em cada trade, s- faz a cada 5 segundos
             if ((now - _lastCleanup).TotalSeconds < 5)
                 return;
 
@@ -100,14 +100,14 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Reset Ã  meia-noite â€” chamado pelo DispatcherTimer do BrokerAccumulator
+        /// Reset - meia-noite - chamado pelo DispatcherTimer do BrokerAccumulator
         /// </summary>
         public void ResetDaily()
         {
             BuyVolume = 0;
             SellVolume = 0;
             NetDelta = 0;
-            // MantÃ©m os eventos recentes (nao limpa a janela 60s)
+            // Mant-m os eventos recentes (nao limpa a janela 60s)
         }
 
         private class TradeEventRecord

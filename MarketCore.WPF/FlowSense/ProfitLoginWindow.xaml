@@ -1,7 +1,7 @@
 <Window x:Class="MarketCore.FlowSense.ProfitLoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MarketCore — Conexão Profit"
+        Title="MarketCore - Conexão Profit"
         Width="420" SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
@@ -130,7 +130,7 @@
             </Setter>
         </Style>
 
-        <!-- Botão de modo (Real / Simulador) — toggle style -->
+        <!-- Botão de modo (Real / Simulador) - toggle style -->
         <Style x:Key="BtnModeActive" TargetType="Button">
             <Setter Property="Background" Value="#00BFFF"/>
             <Setter Property="Foreground" Value="#0D0D0D"/>
@@ -235,7 +235,7 @@
         <!-- PAINEL DE CREDENCIAIS (visível só no modo Real) -->
         <StackPanel x:Name="PanelCredentials">
 
-            <TextBlock Text="CREDENCIAIS PROFIT — DATA SOLUTION"
+            <TextBlock Text="CREDENCIAIS PROFIT - DATA SOLUTION"
                        FontSize="10" FontWeight="SemiBold"
                        Foreground="#00BFFF"
                        Margin="0,0,0,10"/>

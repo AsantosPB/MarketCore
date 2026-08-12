@@ -10,21 +10,23 @@ namespace MarketCore.Engine
     /// </summary>
     public class ContractManager
     {
-        // Vencimentos WIN 2026-2027 — quarta-feira mais próxima do dia 15, meses pares
+        // Vencimentos WIN 2026-2027 — quarta-feira mais próxima do dia 15, meses pares.
+        // Letra = código padrão B3/CME do mês de vencimento: G=fev, J=abr, M=jun, Q=ago, V=out, Z=dez.
+        // (Tabela anterior estava com as letras deslocadas uma posição — ex. tratava M26 como abril, mas M é junho.)
         private static readonly Dictionary<DateOnly, string> VencimentosWIN = new()
         {
-            { new DateOnly(2026, 02, 11), "WINJ26" },
-            { new DateOnly(2026, 04, 15), "WINM26" },
-            { new DateOnly(2026, 06, 17), "WINQ26" },
-            { new DateOnly(2026, 08, 19), "WINV26" },
-            { new DateOnly(2026, 10, 14), "WINZ26" },
-            { new DateOnly(2026, 12, 16), "WING27" },
-            { new DateOnly(2027, 02, 10), "WINJ27" },
-            { new DateOnly(2027, 04, 14), "WINM27" },
-            { new DateOnly(2027, 06, 16), "WINQ27" },
-            { new DateOnly(2027, 08, 18), "WINV27" },
-            { new DateOnly(2027, 10, 13), "WINZ27" },
-            { new DateOnly(2027, 12, 15), "WING28" }
+            { new DateOnly(2026, 02, 11), "WING26" },
+            { new DateOnly(2026, 04, 15), "WINJ26" },
+            { new DateOnly(2026, 06, 17), "WINM26" },
+            { new DateOnly(2026, 08, 19), "WINQ26" },
+            { new DateOnly(2026, 10, 14), "WINV26" },
+            { new DateOnly(2026, 12, 16), "WINZ26" },
+            { new DateOnly(2027, 02, 10), "WING27" },
+            { new DateOnly(2027, 04, 14), "WINJ27" },
+            { new DateOnly(2027, 06, 16), "WINM27" },
+            { new DateOnly(2027, 08, 18), "WINQ27" },
+            { new DateOnly(2027, 10, 13), "WINV27" },
+            { new DateOnly(2027, 12, 15), "WINZ27" }
         };
 
         // Vencimentos WDO 2026-2027 — primeiro dia útil de cada mês

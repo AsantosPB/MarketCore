@@ -15,7 +15,7 @@ namespace MarketCore.FlowSense
     public class DeltaEngine
     {
         /// <summary>
-        /// Trades chegam na thread do provider; FlowScore/Agent lêem na UI —
+        /// Trades chegam na thread do provider; FlowScore/Agent lêem na UI -
         /// sem lock há exceção ao enumerar/modificar listas e valores incoerentes.
         /// </summary>
         private readonly object _sync = new();
@@ -46,7 +46,7 @@ namespace MarketCore.FlowSense
         private Queue<double> _volumeHistory = new Queue<double>(100);
         private readonly int _rvolWindowSize = 20; // últimas 20 barras
 
-        // Campos espelhados — escritos só dentro de lock (_sync) em OnTrade
+        // Campos espelhados - escritos só dentro de lock (_sync) em OnTrade
         private double _currentDelta1min;
         private double _currentDelta3min;
         private double _cvdDivergence;
@@ -55,7 +55,7 @@ namespace MarketCore.FlowSense
         private bool _stopHuntDetected;
         private SessionPhase _currentSessionPhase = SessionPhase.Meio;
 
-        /// <summary>Lidas pelo FlowScoreEngine / Agent — thread-safe.</summary>
+        /// <summary>Lidas pelo FlowScoreEngine / Agent - thread-safe.</summary>
         public long CumulativeDelta           { get { lock (_sync) return _cumulativeDelta; } }
         public double CurrentDelta1min           { get { lock (_sync) return _currentDelta1min; } }
         public double CurrentDelta3min           { get { lock (_sync) return _currentDelta3min; } }
@@ -71,7 +71,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Processa um trade — atualiza delta, VWAP, janelas e detectores
+        /// Processa um trade - atualiza delta, VWAP, janelas e detectores
         /// </summary>
         public void OnTrade(double price, double buyVolume, double sellVolume, DateTime timestamp)
         {
@@ -173,7 +173,7 @@ namespace MarketCore.FlowSense
 
         private void UpdateTimeWindows(DateTime timestamp)
         {
-            // Delta 1min — reseta a cada minuto
+            // Delta 1min - reseta a cada minuto
             if ((timestamp - _last1minReset).TotalSeconds >= 60)
             {
                 _delta1min.Clear();
@@ -182,7 +182,7 @@ namespace MarketCore.FlowSense
             _delta1min.Add(_cumulativeDelta);
             _currentDelta1min = _delta1min.Count > 0 ? _delta1min.Last() : 0;
 
-            // Delta 3min — reseta a cada 3 minutos
+            // Delta 3min - reseta a cada 3 minutos
             if ((timestamp - _last3minReset).TotalSeconds >= 180)
             {
                 _delta3min.Clear();
@@ -240,6 +240,9 @@ namespace MarketCore.FlowSense
                 _currentSessionPhase = SessionPhase.PosLeilao;
         }
 
+        /// <summary>Zera VWAP, delta e janelas ao trocar o ativo monitorizado.</summary>
+        public void ClearSessionState() => ResetSession();
+
         private void ResetSession()
         {
             lock (_sync)
@@ -288,9 +291,9 @@ namespace MarketCore.FlowSense
     public enum SessionPhase
     {
         PreMercado,
-        Abertura,    // 9h-10h — maior volatilidade, peso x1.5 no FlowScore
-        Meio,        // 10h-16h — normal
-        Leilao,      // 16h-16h30 — fechamento, peso x1.2
+        Abertura,    // 9h-10h - maior volatilidade, peso x1.5 no FlowScore
+        Meio,        // 10h-16h - normal
+        Leilao,      // 16h-16h30 - fechamento, peso x1.2
         PosLeilao
     }
 }

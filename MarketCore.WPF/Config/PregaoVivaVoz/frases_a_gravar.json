@@ -1,0 +1,4382 @@
+{
+  "versao": "1.0.0",
+  "atualizado_em": "2026-08-10",
+  "descricao": "Lista completa de frases que precisam ser gravadas no Studio.",
+  "resumo": {
+    "total": 485,
+    "numeros": 45,
+    "niveis": 4,
+    "complementos": 6,
+    "alertas": 10,
+    "player_book": 120,
+    "player_agressao": 60,
+    "player_rajada": 240
+  },
+  "frases": [
+    {
+      "id": "num_100",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "cem",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "100.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_200",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "duzentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "200.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_300",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "trezentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "300.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_400",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quatrocentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "400.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quinhentos",
+      "dicaContexto": "número muito comum, capriche",
+      "nomeArquivo": "500.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_600",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "seiscentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "600.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_700",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "setecentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "700.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_800",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "oitocentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "800.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_900",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "novecentos",
+      "dicaContexto": "tom aberto no final",
+      "nomeArquivo": "900.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil",
+      "dicaContexto": "muito comum, capriche",
+      "nomeArquivo": "1000.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_1100",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e cem",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1100.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1200",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e duzentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1200.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1300",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e trezentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1300.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1400",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e quatrocentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1400.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e quinhentos",
+      "dicaContexto": "muito comum",
+      "nomeArquivo": "1500.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_1600",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e seiscentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1600.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1700",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e setecentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1700.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1800",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e oitocentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1800.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_1900",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "mil e novecentos",
+      "dicaContexto": "falar tudo emendado",
+      "nomeArquivo": "1900.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_2000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "dois mil",
+      "dicaContexto": "alerta de Big Player",
+      "nomeArquivo": "2000.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_2500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "dois mil e quinhentos",
+      "dicaContexto": "raro mas importante",
+      "nomeArquivo": "2500.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_3000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "três mil",
+      "dicaContexto": "alerta institucional pesado",
+      "nomeArquivo": "3000.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_3500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "três mil e quinhentos",
+      "dicaContexto": "raro",
+      "nomeArquivo": "3500.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_4000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quatro mil",
+      "dicaContexto": "raro, institucional forte",
+      "nomeArquivo": "4000.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_4500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quatro mil e quinhentos",
+      "dicaContexto": "raro",
+      "nomeArquivo": "4500.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_5000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "cinco mil",
+      "dicaContexto": "evento raro",
+      "nomeArquivo": "5000.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_6000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "seis mil",
+      "dicaContexto": "muito raro",
+      "nomeArquivo": "6000.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_7500",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "sete mil e quinhentos",
+      "dicaContexto": "muito raro",
+      "nomeArquivo": "7500.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_10000",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "dez mil",
+      "dicaContexto": "evento histórico",
+      "nomeArquivo": "10000.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "num_10",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "dez",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "10.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_20",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "vinte",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "20.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_30",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "trinta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "30.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_40",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quarenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "40.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_50",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "cinquenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "50.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_60",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "sessenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "60.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_70",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "setenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "70.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_80",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "oitenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "80.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_90",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "noventa",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "90.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_15",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quinze",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "15.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_25",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "vinte e cinco",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "25.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_35",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "trinta e cinco",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "35.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_45",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "quarenta e cinco",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "45.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_55",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "cinquenta e cinco",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "55.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_75",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "setenta e cinco",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "75.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "num_150",
+      "categoria": "Numero",
+      "playerChave": "",
+      "textoParaFalar": "cento e cinquenta",
+      "dicaContexto": "tom natural",
+      "nomeArquivo": "150.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nivel_dois",
+      "categoria": "Nivel",
+      "playerChave": "",
+      "textoParaFalar": "dois",
+      "dicaContexto": "usado em 'no dois'",
+      "nomeArquivo": "nivel_dois.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nivel_tres",
+      "categoria": "Nivel",
+      "playerChave": "",
+      "textoParaFalar": "tres",
+      "dicaContexto": "usado em 'no três'",
+      "nomeArquivo": "nivel_tres.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nivel_quatro",
+      "categoria": "Nivel",
+      "playerChave": "",
+      "textoParaFalar": "quatro",
+      "dicaContexto": "usado em 'no quatro'",
+      "nomeArquivo": "nivel_quatro.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nivel_cinco",
+      "categoria": "Nivel",
+      "playerChave": "",
+      "textoParaFalar": "cinco",
+      "dicaContexto": "usado em 'no cinco'",
+      "nomeArquivo": "nivel_cinco.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_na_boca",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "na boca",
+      "dicaContexto": "para nível 1 do book",
+      "nomeArquivo": "comp_na_boca.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_no",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "no",
+      "dicaContexto": "conector para 'no dois/três'",
+      "nomeArquivo": "comp_no.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_e",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "e",
+      "dicaContexto": "conector 'mil e quinhentos'",
+      "nomeArquivo": "comp_e.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_de",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "de",
+      "dicaContexto": "conector opcional",
+      "nomeArquivo": "comp_de.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_contratos",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "contratos",
+      "dicaContexto": "usar após números altos",
+      "nomeArquivo": "comp_contratos.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "comp_na_ponta",
+      "categoria": "Complemento",
+      "playerChave": "",
+      "textoParaFalar": "na ponta",
+      "dicaContexto": "alternativa a 'na boca'",
+      "nomeArquivo": "comp_na_ponta.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_vendedor_pesado",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "vendedor pesado",
+      "dicaContexto": "alerta genérico, tom urgente",
+      "nomeArquivo": "alerta_vendedor_pesado.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_comprador_pesado",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "comprador pesado",
+      "dicaContexto": "alerta genérico, tom urgente",
+      "nomeArquivo": "alerta_comprador_pesado.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_distribuindo",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "distribuindo",
+      "dicaContexto": "várias corretoras vendendo",
+      "nomeArquivo": "alerta_distribuindo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_acumulando",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "acumulando",
+      "dicaContexto": "várias corretoras comprando",
+      "nomeArquivo": "alerta_acumulando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_agressao_forte",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "agressão forte",
+      "dicaContexto": "alerta genérico",
+      "nomeArquivo": "alerta_agressao_forte.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_volume_pesado",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "volume pesado",
+      "dicaContexto": "após rajada",
+      "nomeArquivo": "alerta_volume_pesado.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_mercado_derretendo",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "mercado derretendo",
+      "dicaContexto": "queda com rajada",
+      "nomeArquivo": "alerta_mercado_derretendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_mercado_subindo_forte",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "mercado subindo forte",
+      "dicaContexto": "alta com rajada",
+      "nomeArquivo": "alerta_mercado_subindo_forte.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_atencao",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "atenção",
+      "dicaContexto": "prefixo antes de alertas críticos",
+      "nomeArquivo": "alerta_atencao.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "alerta_virada",
+      "categoria": "AlertaRajada",
+      "playerChave": "",
+      "textoParaFalar": "virada",
+      "dicaContexto": "quando o lado da rajada muda",
+      "nomeArquivo": "alerta_virada.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gs_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "gs_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "gs_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "gs_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "gs_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "gs_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "gs_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "gs_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "gs_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "gs_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "gs_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "jpm_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "jpm_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "jpm_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "jpm_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "jpm_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "jpm_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "jpm_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "jpm_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "jpm_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "jpm_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "ms_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "ms_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "ms_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "ms_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "ms_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "ms_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "ms_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "ms_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "ms_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "ms_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "ml_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "ml_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "ml_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "ml_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "ml_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "ml_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "ml_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "ml_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "ml_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "ml_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "citi_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "citi_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "citi_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "citi_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "citi_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "citi_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "citi_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "citi_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "citi_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "citi_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ubs_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "ubs_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "ubs_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "ubs_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "ubs_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "ubs_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "ubs_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "ubs_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "ubs_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "ubs_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ubs_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "ubs_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "btg_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "btg_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "btg_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "btg_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "btg_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "btg_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "btg_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "btg_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "btg_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "btg_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "btg_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "itau_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "itau_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "itau_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "itau_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "itau_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "itau_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "itau_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "itau_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "itau_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "itau_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "itau_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "san_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "san_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "san_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "san_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "san_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "san_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "san_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "san_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "san_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "san_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "san_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "toro_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "toro_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "toro_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "toro_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "toro_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "toro_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "toro_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "toro_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "toro_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "toro_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "toro_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "saf_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "saf_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "saf_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "saf_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "saf_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "saf_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "saf_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "saf_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "saf_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "saf_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "saf_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "int_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "int_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "int_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "int_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "int_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "int_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "int_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "int_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "int_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "int_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "int_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "abn_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "abn_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "abn_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "abn_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "abn_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "abn_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "abn_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "abn_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "abn_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "abn_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "abn_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "tp_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "tp_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "tp_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "tp_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "tp_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "tp_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "tp_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "tp_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "tp_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "tp_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "tp_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "bgc_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "bgc_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "bgc_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "bgc_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "bgc_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "bgc_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "bgc_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "bgc_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "bgc_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "bgc_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "bgc_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "stx_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "stx_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "stx_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "stx_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "stx_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "stx_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "stx_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "stx_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "stx_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "stx_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "stx_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "mre_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "mre_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "mre_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "mre_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "mre_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "mre_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "mre_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "mre_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "mre_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "mre_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "mre_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "gen_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "gen_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "gen_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "gen_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "gen_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "gen_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "gen_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "gen_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "gen_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "gen_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "gen_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "agr_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "agr_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "agr_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "agr_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "agr_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "agr_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "agr_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "agr_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "agr_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "agr_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "agr_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "nec_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "nec_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "nec_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "nec_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "nec_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "nec_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "nec_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "nec_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "nec_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nec_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "nec_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "nf_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "nf_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "nf_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "nf_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "nf_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "nf_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "nf_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "nf_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "nf_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "nf_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "nf_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "atv_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "atv_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "atv_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "atv_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "atv_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "atv_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "atv_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "atv_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "atv_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "atv_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "atv_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "cmc_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "cmc_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "cmc_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "cmc_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "cmc_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "cmc_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "cmc_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "cmc_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "cmc_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "cmc_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "cmc_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "c6_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "c6_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "c6_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "c6_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "c6_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "c6_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "c6_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "c6_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "c6_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "c6_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "c6_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "ter_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "ter_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "ter_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "ter_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "ter_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "ter_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "ter_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "ter_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "ter_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ter_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "ter_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "elt_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "elt_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "elt_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "elt_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "elt_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "elt_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "elt_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "elt_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "elt_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "elt_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "elt_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "day_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "day_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "day_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "day_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "day_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "day_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "day_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "day_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "day_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "day_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "day_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "lev_compra.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "lev_vende.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "lev_comprou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "lev_vendeu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "lev_tomou.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "lev_bateu.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "lev_comprando.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "lev_vendendo.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "lev_parou_comprar.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "lev_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "lev_parou_vender.wav",
+      "prioritaria": false
+    },
+    {
+      "id": "ideal_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "ideal_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "ideal_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal comprou",
+      "dicaContexto": "colocou ordem no bid",
+      "nomeArquivo": "ideal_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal vendeu",
+      "dicaContexto": "colocou ordem no ask",
+      "nomeArquivo": "ideal_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal tomou",
+      "dicaContexto": "agressão de compra (tomou o ask)",
+      "nomeArquivo": "ideal_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal bateu",
+      "dicaContexto": "agressão de venda (bateu no bid)",
+      "nomeArquivo": "ideal_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal comprando",
+      "dicaContexto": "rajada de compras - empolgado",
+      "nomeArquivo": "ideal_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal vendendo",
+      "dicaContexto": "rajada de vendas - empolgado",
+      "nomeArquivo": "ideal_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal parou de comprar",
+      "dicaContexto": "fim de rajada - alerta",
+      "nomeArquivo": "ideal_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal parou de vender",
+      "dicaContexto": "fim de rajada - alerta",
+      "nomeArquivo": "ideal_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_compra",
+      "categoria": "PlayerBook",
+      "playerChave": "xp",
+      "textoParaFalar": "XP compra",
+      "dicaContexto": "ordem passiva de compra",
+      "nomeArquivo": "xp_compra.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_vende",
+      "categoria": "PlayerBook",
+      "playerChave": "xp",
+      "textoParaFalar": "XP vende",
+      "dicaContexto": "ordem passiva de venda",
+      "nomeArquivo": "xp_vende.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_comprou",
+      "categoria": "PlayerBook",
+      "playerChave": "xp",
+      "textoParaFalar": "XP comprou",
+      "dicaContexto": "trade passivo executado (compra)",
+      "nomeArquivo": "xp_comprou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_vendeu",
+      "categoria": "PlayerBook",
+      "playerChave": "xp",
+      "textoParaFalar": "XP vendeu",
+      "dicaContexto": "trade passivo executado (venda)",
+      "nomeArquivo": "xp_vendeu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_tomou",
+      "categoria": "PlayerAgressao",
+      "playerChave": "xp",
+      "textoParaFalar": "XP tomou",
+      "dicaContexto": "agressão de compra",
+      "nomeArquivo": "xp_tomou.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_bateu",
+      "categoria": "PlayerAgressao",
+      "playerChave": "xp",
+      "textoParaFalar": "XP bateu",
+      "dicaContexto": "agressão de venda",
+      "nomeArquivo": "xp_bateu.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_comprando",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP comprando",
+      "dicaContexto": "início de rajada compradora - com energia!",
+      "nomeArquivo": "xp_comprando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_vendendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP vendendo",
+      "dicaContexto": "início de rajada vendedora - com energia!",
+      "nomeArquivo": "xp_vendendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_parou_comprar",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP parou de comprar",
+      "dicaContexto": "fim da rajada compradora - MUITO valioso",
+      "nomeArquivo": "xp_parou_comprar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_parou_vender",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP parou de vender",
+      "dicaContexto": "fim da rajada vendedora - MUITO valioso",
+      "nomeArquivo": "xp_parou_vender.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "gs_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "gs_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "gs_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gs_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "goldman",
+      "textoParaFalar": "Goldman parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "gs_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "jpm_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "jpm_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "jpm_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "jpm_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "jpm",
+      "textoParaFalar": "JPM parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "jpm_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "ms_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "ms_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "ms_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ms_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "morgan",
+      "textoParaFalar": "Morgan parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "ms_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "ml_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "ml_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "ml_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ml_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "merrill",
+      "textoParaFalar": "Merrill parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "ml_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "citi_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "citi_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "citi_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "citi_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "citi",
+      "textoParaFalar": "Citi parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "citi_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ubs_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "ubs_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ubs_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "ubs_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ubs_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "ubs_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ubs_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "ubs",
+      "textoParaFalar": "UBS parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "ubs_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "btg_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "btg_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "btg_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "btg_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "btg_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "btg_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "btg_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "btg",
+      "textoParaFalar": "BTG parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "btg_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "itau_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "itau_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "itau_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "itau_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "itau_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "itau_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "itau_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "itau",
+      "textoParaFalar": "Itaú parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "itau_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "san_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "san_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "san_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "san_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "san_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "san_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "san_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "santinst",
+      "textoParaFalar": "Sant Inst parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "san_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "toro_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "toro_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "toro_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "toro_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "toro_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "toro_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "toro_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "toro",
+      "textoParaFalar": "Santander Toro parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "toro_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "saf_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "saf_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "saf_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "saf_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "saf_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "saf_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "saf_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "safra",
+      "textoParaFalar": "Safra parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "saf_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "int_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "int_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "int_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "int_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "int_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "int_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "int_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "inter",
+      "textoParaFalar": "Inter parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "int_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "abn_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "abn_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "abn_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "abn_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "abn_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "abn_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "abn_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "abn",
+      "textoParaFalar": "ABN parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "abn_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "tp_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "tp_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "tp_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "tp_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "tp_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "tp_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "tp_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "tullett",
+      "textoParaFalar": "Tullett parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "tp_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "bgc_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "bgc_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "bgc_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "bgc_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "bgc_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "bgc_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "bgc_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "bgc",
+      "textoParaFalar": "BGC parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "bgc_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "stx_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "stx_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "stx_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "stx_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "stx_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "stx_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "stx_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "stonex",
+      "textoParaFalar": "Stonex parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "stx_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "mre_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "mre_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "mre_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "mre_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "mre_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "mre_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "mre_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "mirae",
+      "textoParaFalar": "Mirae parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "mre_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gen_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "gen_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gen_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "gen_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gen_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "gen_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "gen_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "genial",
+      "textoParaFalar": "Genial parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "gen_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "agr_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "agr_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "agr_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "agr_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "agr_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "agr_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "agr_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "agora",
+      "textoParaFalar": "Ágora parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "agr_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nec_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "nec_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nec_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "nec_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nec_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "nec_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nec_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "necton",
+      "textoParaFalar": "Necton parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "nec_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nf_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "nf_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nf_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "nf_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nf_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "nf_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "nf_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "novafutura",
+      "textoParaFalar": "Nova Futura parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "nf_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "atv_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "atv_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "atv_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "atv_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "atv_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "atv_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "atv_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "ativa",
+      "textoParaFalar": "Ativa parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "atv_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "cmc_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "cmc_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "cmc_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "cmc_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "cmc_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "cmc_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "cmc_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "cmcapital",
+      "textoParaFalar": "CM Capital parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "cmc_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "c6_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "c6_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "c6_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "c6_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "c6_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "c6_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "c6_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "c6",
+      "textoParaFalar": "C6 parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "c6_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ter_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "ter_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ter_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "ter_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ter_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "ter_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ter_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "terra",
+      "textoParaFalar": "Terra parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "ter_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "elt_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "elt_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "elt_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "elt_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "elt_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "elt_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "elt_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "elliot",
+      "textoParaFalar": "Elliot parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "elt_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "day_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "day_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "day_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "day_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "day_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "day_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "day_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "daycoval",
+      "textoParaFalar": "Daycoval parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "day_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "lev_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "lev_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "lev_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "lev_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "lev_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "lev_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "lev_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "lev",
+      "textoParaFalar": "LEV parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "lev_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "ideal_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "ideal_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "ideal_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "ideal_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "ideal",
+      "textoParaFalar": "Ideal parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "ideal_parou_bater.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_tomando",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP tomando",
+      "dicaContexto": "rajada de agressão compradora sustentada (segundos diferentes)",
+      "nomeArquivo": "xp_tomando.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_batendo",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP batendo",
+      "dicaContexto": "rajada de agressão vendedora sustentada (segundos diferentes)",
+      "nomeArquivo": "xp_batendo.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_parou_tomar",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP parou de tomar",
+      "dicaContexto": "fim da rajada de agressão compradora - MUITO valioso",
+      "nomeArquivo": "xp_parou_tomar.wav",
+      "prioritaria": true
+    },
+    {
+      "id": "xp_parou_bater",
+      "categoria": "PlayerRajada",
+      "playerChave": "xp",
+      "textoParaFalar": "XP parou de bater",
+      "dicaContexto": "fim da rajada de agressão vendedora - MUITO valioso",
+      "nomeArquivo": "xp_parou_bater.wav",
+      "prioritaria": true
+    }
+  ]
+}

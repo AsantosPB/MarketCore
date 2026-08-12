@@ -38,6 +38,35 @@ public sealed class DatabaseSetup
         }
     }
 
+    /// <summary>Garante banco + schema para importação (sem exigir tablespace customizado).</summary>
+    public async Task EnsureReadyForImportAsync(CancellationToken ct = default)
+    {
+        if (await CanOpenTargetDatabaseAsync(ct))
+        {
+            await CreateSchemaAsync(ct);
+            return;
+        }
+
+        if (!await TargetDatabaseExistsAsync(ct))
+            await CreateDatabaseAsync(ct);
+
+        await CreateSchemaAsync(ct);
+    }
+
+    private async Task<bool> CanOpenTargetDatabaseAsync(CancellationToken ct)
+    {
+        try
+        {
+            await using var conn = new NpgsqlConnection(_cfg.GetConnectionString());
+            await conn.OpenAsync(ct);
+            return true;
+        }
+        catch (PostgresException ex) when (ex.SqlState == "3D000")
+        {
+            return false;
+        }
+    }
+
     /// <summary>Cria o banco de dados configurado (se não existir).</summary>
     public async Task CreateDatabaseAsync(CancellationToken ct = default)
     {
@@ -54,17 +83,89 @@ public sealed class DatabaseSetup
                 return;
         }
 
-        string tablespaceClause = "";
-        if (_cfg.Storage.UseCustomPath && !string.IsNullOrWhiteSpace(_cfg.Storage.TablespaceName))
-        {
-            string tsIdent = _cfg.Storage.TablespaceName.Replace("\"", "\"\"");
-            tablespaceClause = $" TABLESPACE \"{tsIdent}\"";
-        }
+        string tablespaceClause = await BuildTablespaceClauseAsync(conn, ct);
 
+        try
+        {
+            await ExecuteCreateDatabaseAsync(conn, dbIdent, tablespaceClause, ct);
+        }
+        catch (PostgresException ex) when (ex.SqlState == "42704" && tablespaceClause.Length > 0)
+        {
+            await ExecuteCreateDatabaseAsync(conn, dbIdent, "", ct);
+        }
+    }
+
+    private static async Task ExecuteCreateDatabaseAsync(
+        NpgsqlConnection conn,
+        string dbIdent,
+        string tablespaceClause,
+        CancellationToken ct)
+    {
         await using var create = new NpgsqlCommand(
             $"CREATE DATABASE \"{dbIdent}\"{tablespaceClause}",
             conn);
         await create.ExecuteNonQueryAsync(ct);
+    }
+
+    private async Task<bool> TargetDatabaseExistsAsync(CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(_cfg.GetMaintenanceConnectionString());
+        await conn.OpenAsync(ct);
+
+        await using var cmd = new NpgsqlCommand(
+            "SELECT 1 FROM pg_database WHERE datname = @name",
+            conn);
+        cmd.Parameters.AddWithValue("name", _cfg.Database.Database);
+        return await cmd.ExecuteScalarAsync(ct) != null;
+    }
+
+    private async Task<string> BuildTablespaceClauseAsync(NpgsqlConnection maintenanceConn, CancellationToken ct)
+    {
+        if (!_cfg.Storage.UseCustomPath || string.IsNullOrWhiteSpace(_cfg.Storage.TablespaceName))
+            return "";
+
+        if (!IsValidTablespaceName(_cfg.Storage.TablespaceName))
+            return "";
+
+        if (!await TablespaceExistsAsync(maintenanceConn, _cfg.Storage.TablespaceName, ct))
+            return "";
+
+        string tsIdent = _cfg.Storage.TablespaceName.Replace("\"", "\"\"");
+        return $" TABLESPACE \"{tsIdent}\"";
+    }
+
+    private static bool IsValidTablespaceName(string tablespaceName)
+    {
+        if (string.IsNullOrWhiteSpace(tablespaceName))
+            return false;
+
+        string trimmed = tablespaceName.Trim();
+        if (trimmed.Length > 63)
+            return false;
+
+        if (!char.IsLetter(trimmed[0]) && trimmed[0] != '_')
+            return false;
+
+        for (int i = 1; i < trimmed.Length; i++)
+        {
+            char c = trimmed[i];
+            if (!char.IsLetterOrDigit(c) && c != '_')
+                return false;
+        }
+
+        return true;
+    }
+
+    private static async Task<bool> TablespaceExistsAsync(
+        NpgsqlConnection maintenanceConn,
+        string tablespaceName,
+        CancellationToken ct)
+    {
+        await using var cmd = new NpgsqlCommand(
+            "SELECT 1 FROM pg_tablespace WHERE spcname = @name",
+            maintenanceConn);
+        cmd.Parameters.AddWithValue("name", tablespaceName);
+        return await cmd.ExecuteScalarAsync(ct) != null;
     }
 
     /// <summary>Cria tabelas e índices do schema de histórico.</summary>

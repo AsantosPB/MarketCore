@@ -1,0 +1,727 @@
+{
+  "versao": "1.0.0",
+  "atualizado_em": "2026-08-10",
+  "descricao": "Catálogo das 30 corretoras monitoradas no Pregão Viva Voz do MarketCore FlowSense",
+  "players": [
+    {
+      "chave": "goldman",
+      "nome": "Goldman",
+      "codigo": "GS",
+      "pronuncia": "GÓLD-man",
+      "bandeira": "🇺🇸",
+      "tier": "S",
+      "perfil": "Big Player",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 50,
+        "bateuMinimo": 50
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "jpm",
+      "nome": "JPM",
+      "codigo": "JPM",
+      "pronuncia": "JÊ-PÊ-ÊME",
+      "bandeira": "🇺🇸",
+      "tier": "S",
+      "perfil": "Big Player",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "morgan",
+      "nome": "Morgan",
+      "codigo": "MS",
+      "pronuncia": "MÔR-gan",
+      "bandeira": "🇺🇸",
+      "tier": "S",
+      "perfil": "Big Player",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 150,
+        "bateuMinimo": 150
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "merrill",
+      "nome": "Merrill",
+      "codigo": "ML",
+      "pronuncia": "MÊR-ril",
+      "bandeira": "🇺🇸",
+      "tier": "S",
+      "perfil": "Big Player",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 50,
+        "bateuMinimo": 50
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "citi",
+      "nome": "Citi",
+      "codigo": "CITI",
+      "pronuncia": "CÍ-ti",
+      "bandeira": "🇺🇸",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 50,
+        "bateuMinimo": 50
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "ubs",
+      "nome": "UBS",
+      "codigo": "UBS",
+      "pronuncia": "Ú-BÊ-ÉSSE",
+      "bandeira": "🇨🇭",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "btg",
+      "nome": "BTG",
+      "codigo": "BTG",
+      "pronuncia": "BÊ-TÊ-GÊ",
+      "bandeira": "🇧🇷",
+      "tier": "S",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 500,
+        "vendaMinima": 500
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 200,
+        "bateuMinimo": 200
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "itau",
+      "nome": "Itaú",
+      "codigo": "ITAU",
+      "pronuncia": "I-TA-Ú",
+      "bandeira": "🇧🇷",
+      "tier": "S",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 300,
+        "vendaMinima": 300
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 150,
+        "bateuMinimo": 150
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "santinst",
+      "nome": "Sant Inst",
+      "codigo": "SAN",
+      "pronuncia": "san-tan-DÊR",
+      "bandeira": "🇧🇷",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 300,
+        "vendaMinima": 300
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 150,
+        "bateuMinimo": 150
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "toro",
+      "nome": "Santander Toro",
+      "codigo": "TORO",
+      "pronuncia": "TÔ-ro",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "safra",
+      "nome": "Safra",
+      "codigo": "SAF",
+      "pronuncia": "SÁ-fra",
+      "bandeira": "🇧🇷",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "inter",
+      "nome": "Inter",
+      "codigo": "INT",
+      "pronuncia": "ÍN-ter",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "abn",
+      "nome": "ABN",
+      "codigo": "ABN",
+      "pronuncia": "Á-BÊ-ENE",
+      "bandeira": "🇳🇱",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "tullett",
+      "nome": "Tullett",
+      "codigo": "TP",
+      "pronuncia": "TU-lét",
+      "bandeira": "🇬🇧",
+      "tier": "A",
+      "perfil": "Interdealer",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "bgc",
+      "nome": "BGC",
+      "codigo": "BGC",
+      "pronuncia": "BÊ-GÊ-CÊ",
+      "bandeira": "🇺🇸",
+      "tier": "A",
+      "perfil": "Interdealer",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "stonex",
+      "nome": "Stonex",
+      "codigo": "STX",
+      "pronuncia": "STÔ-nex",
+      "bandeira": "🇺🇸",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "mirae",
+      "nome": "Mirae",
+      "codigo": "MRE",
+      "pronuncia": "mi-RA-ê",
+      "bandeira": "🇰🇷",
+      "tier": "B",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "genial",
+      "nome": "Genial",
+      "codigo": "GEN",
+      "pronuncia": "ge-ni-ÁU",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 300,
+        "vendaMinima": 300
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 200,
+        "bateuMinimo": 200
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "agora",
+      "nome": "Ágora",
+      "codigo": "AGR",
+      "pronuncia": "Á-go-ra",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "necton",
+      "nome": "Necton",
+      "codigo": "NEC",
+      "pronuncia": "NÉC-ton",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "novafutura",
+      "nome": "Nova Futura",
+      "codigo": "NF",
+      "pronuncia": "NÔ-va FU-tu-ra",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "ativa",
+      "nome": "Ativa",
+      "codigo": "ATV",
+      "pronuncia": "a-TÍ-va",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 200,
+        "vendaMinima": 200
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "cmcapital",
+      "nome": "CM Capital",
+      "codigo": "CMC",
+      "pronuncia": "CÊ-ÊME CA-pi-tau",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "c6",
+      "nome": "C6",
+      "codigo": "C6",
+      "pronuncia": "CÊ-SEIS",
+      "bandeira": "🇧🇷",
+      "tier": "B",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "terra",
+      "nome": "Terra",
+      "codigo": "TER",
+      "pronuncia": "TÉR-ra",
+      "bandeira": "🇧🇷",
+      "tier": "C",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 150,
+        "vendaMinima": 150
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 100,
+        "bateuMinimo": 100
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "elliot",
+      "nome": "Elliot",
+      "codigo": "ELT",
+      "pronuncia": "É-li-ot",
+      "bandeira": "🇧🇷",
+      "tier": "C",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 80,
+        "bateuMinimo": 80
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "daycoval",
+      "nome": "Daycoval",
+      "codigo": "DAY",
+      "pronuncia": "dei-CO-vau",
+      "bandeira": "🇧🇷",
+      "tier": "C",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 80,
+        "bateuMinimo": 80
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "lev",
+      "nome": "LEV",
+      "codigo": "LEV",
+      "pronuncia": "LÉV",
+      "bandeira": "🇧🇷",
+      "tier": "C",
+      "perfil": "Varejo",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 80,
+        "bateuMinimo": 80
+      },
+      "rajada": {
+        "participa": false
+      }
+    },
+    {
+      "chave": "ideal",
+      "nome": "Ideal",
+      "codigo": "IDL",
+      "pronuncia": "IDEAL",
+      "bandeira": "🇧🇷",
+      "tier": "A",
+      "perfil": "Institucional",
+      "ativoHoje": true,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 100,
+        "vendaMinima": 100
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 50,
+        "bateuMinimo": 50
+      },
+      "rajada": {
+        "participa": true
+      }
+    },
+    {
+      "chave": "xp",
+      "nome": "XP",
+      "codigo": "XP",
+      "pronuncia": "XÍS-PÊ",
+      "bandeira": "🇧🇷",
+      "tier": "S",
+      "perfil": "Institucional",
+      "ativoHoje": false,
+      "audiosGravados": false,
+      "book": {
+        "ativo": true,
+        "compraMinima": 300,
+        "vendaMinima": 300
+      },
+      "agressao": {
+        "ativo": true,
+        "tomouMinimo": 150,
+        "bateuMinimo": 150
+      },
+      "rajada": {
+        "participa": true
+      }
+    }
+  ]
+}

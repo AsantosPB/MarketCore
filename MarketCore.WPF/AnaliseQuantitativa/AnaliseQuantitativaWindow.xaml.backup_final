@@ -1,0 +1,1396 @@
+<Window x:Class="MarketCore.WPF.AnaliseQuantitativa.AnaliseQuantitativaWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="MarketCore â€” Aná¡lise Quantitativa"
+        Width="1400" Height="860"
+        MinWidth="1100" MinHeight="650"
+        WindowStartupLocation="CenterScreen"
+        Background="#0D0D0D"
+        Foreground="#E0E0E0"
+        FontFamily="Segoe UI"
+        FontSize="12">
+
+    <Window.Resources>
+
+        <!-- CORES BASE -->
+        <SolidColorBrush x:Key="BgPrimary"     Color="#0D0D0D"/>
+        <SolidColorBrush x:Key="BgPanel"       Color="#141414"/>
+        <SolidColorBrush x:Key="BgCard"        Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="BgCardHover"   Color="#222222"/>
+        <SolidColorBrush x:Key="BorderColor"   Color="#2A2A2A"/>
+        <SolidColorBrush x:Key="AccentBlue"    Color="#1565C0"/>
+        <SolidColorBrush x:Key="AccentGreen"   Color="#00C853"/>
+        <SolidColorBrush x:Key="AccentRed"     Color="#FF1744"/>
+        <SolidColorBrush x:Key="AccentYellow"  Color="#FFD600"/>
+        <SolidColorBrush x:Key="AccentCyan"    Color="#00BCD4"/>
+        <SolidColorBrush x:Key="TextPrimary"   Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#AAAAAA"/>
+        <SolidColorBrush x:Key="TextMuted"     Color="#9E9E9E"/>
+
+        <!-- STYLE: PAINEL -->
+        <Style x:Key="PanelCard" TargetType="Border">
+            <Setter Property="Background"       Value="{StaticResource BgCard}"/>
+            <Setter Property="BorderBrush"      Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness"  Value="1"/>
+            <Setter Property="CornerRadius"     Value="4"/>
+        </Style>
+
+        <!-- STYLE: LABEL CABEá‡ALHO SEá‡áƒO -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground"  Value="{StaticResource TextSecondary}"/>
+            <Setter Property="FontSize"    Value="10"/>
+            <Setter Property="FontWeight"  Value="SemiBold"/>
+            <Setter Property="Margin"      Value="0,0,0,6"/>
+        </Style>
+
+        <!-- STYLE: VALOR Má‰TRICA GRANDE -->
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="22"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        </Style>
+
+        <!-- STYLE: LABEL Má‰TRICA PEQUENA -->
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="FontSize"   Value="10"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Margin"     Value="0,2,0,0"/>
+        </Style>
+
+        <!-- STYLE: BOTáƒO TOOLBAR -->
+        <Style x:Key="ToolbarBtn" TargetType="Button">
+            <Setter Property="Background"   Value="Transparent"/>
+            <Setter Property="Foreground"   Value="{StaticResource TextSecondary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"      Value="10,5"/>
+            <Setter Property="FontSize"     Value="11"/>
+            <Setter Property="Cursor"       Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#222222"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2A2A2A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- STYLE: BOTáƒO ATIVO (tab selecionada) -->
+        <Style x:Key="ToolbarBtnActive" TargetType="Button" BasedOn="{StaticResource ToolbarBtn}">
+            <Setter Property="Foreground" Value="{StaticResource AccentCyan}"/>
+            <Setter Property="Background" Value="#0D2A35"/>
+        </Style>
+
+        <!-- STYLE: BADGE STATUS -->
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius"    Value="2"/>
+            <Setter Property="Padding"         Value="5,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- STYLE: LISTVIEW SEM SCROLL HORIZONTAL -->
+        <Style x:Key="AlertListView" TargetType="ListView">
+            <Setter Property="Background"       Value="Transparent"/>
+            <Setter Property="BorderThickness"  Value="0"/>
+            <Setter Property="Foreground"       Value="{StaticResource TextPrimary}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+
+        <!-- STYLE: ITEM ALERTA -->
+        <Style x:Key="AlertItem" TargetType="ListViewItem">
+            <Setter Property="Background"    Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"       Value="0"/>
+            <Setter Property="Margin"        Value="0,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                Padding="0">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1E1E1E"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1A2A35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- STYLE: SCROLLBAR DARK -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="#141414"/>
+            <Setter Property="Width"      Value="6"/>
+        </Style>
+
+        <!-- STYLE: COMBOBOX DARK GLOBAL -->
+        <Style TargetType="ComboBox">
+            <Setter Property="Background"      Value="#222222"/>
+            <Setter Property="Foreground"      Value="#E0E0E0"/>
+            <Setter Property="BorderBrush"     Value="#2A2A2A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="6,3"/>
+            <Setter Property="FontFamily"      Value="Segoe UI"/>
+            <Setter Property="FontSize"        Value="11"/>
+        </Style>
+
+        <!-- STYLE: COMBOBOXITEM DARK GLOBAL -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#222222"/>
+            <Setter Property="Foreground" Value="#E0E0E0"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize"   Value="11"/>
+            <Setter Property="Padding"    Value="8,4"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2A2A2A"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#0D2A35"/>
+                    <Setter Property="Foreground" Value="#00BCD4"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- STYLE: DATEPICKER DARK GLOBAL -->
+        <Style TargetType="DatePicker">
+            <Setter Property="Background"      Value="#222222"/>
+            <Setter Property="Foreground"      Value="#E0E0E0"/>
+            <Setter Property="BorderBrush"     Value="#2A2A2A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily"      Value="Segoe UI"/>
+            <Setter Property="FontSize"        Value="11"/>
+        </Style>
+        <Style TargetType="DatePickerTextBox">
+            <Setter Property="Background"      Value="#222222"/>
+            <Setter Property="Foreground"      Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="SelectionBrush"  Value="#00BCD4"/>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>   <!-- Toolbar -->
+            <RowDefinition Height="*"/>    <!-- Conteáºdo principal -->
+            <RowDefinition Height="24"/>   <!-- Status bar -->
+        </Grid.RowDefinitions>
+
+        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+             TOOLBAR
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <Border Grid.Row="0"
+                Background="#111111"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>  <!-- Logo/tá­tulo -->
+                    <ColumnDefinition Width="*"/>     <!-- Tabs -->
+                    <ColumnDefinition Width="Auto"/>  <!-- Controles dir -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Tá­tulo -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="12,0">
+                    <TextBlock Text="ðŸ“Š" FontSize="14" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock Text="ANáLISE QUANTITATIVA"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentCyan}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text=" â€” WIN" FontSize="11"
+                               Foreground="{StaticResource TextSecondary}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Tabs de navegaçá£o -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="20,0">
+                    <Button x:Name="BtnTabDashboard"
+                            Content="DASHBOARD"
+                            Style="{StaticResource ToolbarBtnActive}"
+                            Click="BtnTabDashboard_Click"/>
+                    <Button x:Name="BtnTabDetectores"
+                            Content="DETECTORES"
+                            Style="{StaticResource ToolbarBtn}"
+                            Click="BtnTabDetectores_Click"
+                            Margin="2,0"/>
+                    <Button x:Name="BtnTabAlertas"
+                            Content="ALERTAS"
+                            Style="{StaticResource ToolbarBtn}"
+                            Click="BtnTabAlertas_Click"
+                            Margin="2,0"/>
+                    <Button x:Name="BtnTabBacktest"
+                            Content="BACKTEST"
+                            Style="{StaticResource ToolbarBtn}"
+                            Click="BtnTabBacktest_Click"
+                            Margin="2,0"/>
+                    <Button x:Name="BtnTabEditor"
+                            Content="EDITOR"
+                            Style="{StaticResource ToolbarBtn}"
+                            Click="BtnTabEditor_Click"
+                            Margin="2,0"/>
+                </StackPanel>
+
+                <!-- Controles direita -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="12,0">
+
+                    <!-- Indicador conexá£o PostgreSQL -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Ellipse x:Name="DbStatusDot" Width="7" Height="7"
+                                 Fill="{StaticResource AccentGreen}"
+                                 VerticalAlignment="Center" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="DbStatusText" Text="PostgreSQL"
+                                   FontSize="10" Foreground="{StaticResource TextSecondary}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- Botá£o atualizar -->
+                    <Button Content="â†»  ATUALIZAR"
+                            Style="{StaticResource ToolbarBtn}"
+                            Click="BtnRefresh_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+             CONTEášDO PRINCIPAL (TabControl customizado)
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <Grid Grid.Row="1">
+
+            <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TAB: DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+            <Grid x:Name="TabDashboard" Visibility="Visible">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="220"/>   <!-- Painel esquerdo: métricas rá¡pidas -->
+                    <ColumnDefinition Width="*"/>     <!-- Centro: CVD + price -->
+                    <ColumnDefinition Width="300"/>   <!-- Direita: alertas live -->
+                </Grid.ColumnDefinitions>
+
+                <!-- â”€â”€ COLUNA ESQUERDA: Má‰TRICAS â”€â”€ -->
+                <Border Grid.Column="0"
+                        Background="{StaticResource BgPanel}"
+                        BorderBrush="{StaticResource BorderColor}"
+                        BorderThickness="0,0,1,0"
+                        Padding="12">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+
+                            <!-- Tá­tulo seçá£o -->
+                            <TextBlock Text="ORDER FLOW" Style="{StaticResource SectionHeader}"/>
+
+                            <!-- Card: Delta acumulado -->
+                            <Border Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="DELTA ACUMULADO" Style="{StaticResource MetricLabel}"/>
+                                    <TextBlock x:Name="TxtDelta" Text="+0"
+                                               Style="{StaticResource MetricValue}"
+                                               Foreground="{StaticResource AccentGreen}"/>
+                                    <TextBlock x:Name="TxtDeltaLabel" Text="CVD áºltimos 5min"
+                                               Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card: Agressá£o -->
+                            <Border Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="AGRESSáƒO" Style="{StaticResource MetricLabel}"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock x:Name="TxtAgBuy" Text="0%"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentGreen}"/>
+                                            <TextBlock Text="COMPRA" Style="{StaticResource MetricLabel}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock x:Name="TxtAgSell" Text="0%"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentRed}"/>
+                                            <TextBlock Text="VENDA" Style="{StaticResource MetricLabel}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <!-- Barra visual buy/sell -->
+                                    <Grid Margin="0,6,0,0" Height="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition x:Name="ColBuyBar" Width="*"/>
+                                            <ColumnDefinition x:Name="ColSellBar" Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Rectangle Grid.Column="0" Fill="{StaticResource AccentGreen}" RadiusX="2" RadiusY="2"/>
+                                        <Rectangle Grid.Column="1" Fill="{StaticResource AccentRed}" RadiusX="2" RadiusY="2"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card: Volume -->
+                            <Border Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="VOLUME" Style="{StaticResource MetricLabel}"/>
+                                    <TextBlock x:Name="TxtVolumeAtual" Text="0"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock x:Name="TxtVolumeLabel" Text="contratos / 1min"
+                                               Style="{StaticResource MetricLabel}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="Z-Score: " Style="{StaticResource MetricLabel}"/>
+                                        <TextBlock x:Name="TxtVolumeZScore" Text="0.0"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentYellow}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Card: Velocidade tape -->
+                            <Border Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <TextBlock Text="VELOCIDADE TAPE" Style="{StaticResource MetricLabel}"/>
+                                    <TextBlock x:Name="TxtTapeSpeed" Text="0"
+                                               Style="{StaticResource MetricValue}"/>
+                                    <TextBlock Text="trades / segundo" Style="{StaticResource MetricLabel}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Separador -->
+                            <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8"/>
+                            <TextBlock Text="CORRELAá‡áƒO MULTI-ATIVO" Style="{StaticResource SectionHeader}"/>
+
+                            <!-- Card: WIN/WDO -->
+                            <Border Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,0,6">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="WIN" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtWinChange" Text="+0"
+                                                       FontSize="16" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="WDO" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtWdoChange" Text="+0"
+                                                       FontSize="16" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                        <TextBlock Text="Correlaçá£o: " Style="{StaticResource MetricLabel}"/>
+                                        <TextBlock x:Name="TxtCorrelacao" Text="-0.90"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentGreen}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Border x:Name="DivergenciaAlert" Visibility="Collapsed"
+                                            Background="#3D1A00" BorderBrush="#FF6D00"
+                                            BorderThickness="1" CornerRadius="2" Padding="5,3" Margin="0,5,0,0">
+                                        <TextBlock x:Name="TxtDivergenciaMsg"
+                                                   Text="âš  DIVERGáŠNCIA DETECTADA"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="#FF6D00"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Separador -->
+                            <Rectangle Height="1" Fill="{StaticResource BorderColor}" Margin="0,8"/>
+                            <TextBlock Text="DETECTORES ATIVOS" Style="{StaticResource SectionHeader}"/>
+
+                            <!-- Lista detectores ativos (mini) -->
+                            <ItemsControl x:Name="DetectoresMiniList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource PanelCard}"
+                                                Padding="8,6" Margin="0,0,0,3">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding Nome}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="{StaticResource TextPrimary}"/>
+                                                    <TextBlock Text="{Binding WinRateStr}"
+                                                               Style="{StaticResource MetricLabel}"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="1"
+                                                        Style="{StaticResource StatusBadge}"
+                                                        Background="{Binding StatusCorFundo}">
+                                                    <TextBlock Text="{Binding StatusStr}"
+                                                               FontSize="9" FontWeight="Bold"
+                                                               Foreground="{Binding StatusCorTexto}"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- â”€â”€ COLUNA CENTRAL: CVD + PRICE ACTION â”€â”€ -->
+                <Grid Grid.Column="1" Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>    <!-- Grá¡fico CVD -->
+                        <RowDefinition Height="180"/>  <!-- Tape recente -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Grá¡fico CVD (placeholder para LiveCharts2) -->
+                    <Border Grid.Row="0" Style="{StaticResource PanelCard}" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Header grá¡fico -->
+                            <Border Grid.Row="0"
+                                    BorderBrush="{StaticResource BorderColor}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="12,0">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="CUMULATIVE VOLUME DELTA (CVD)"
+                                                   FontSize="10" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextSecondary}"/>
+                                        <TextBlock Text=" â€” áºltimos 30min"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextMuted}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal"
+                                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Content="5m"  Style="{StaticResource ToolbarBtn}"
+                                                Tag="5"  Click="BtnCvdPeriodo_Click" FontSize="10"/>
+                                        <Button Content="15m" Style="{StaticResource ToolbarBtn}"
+                                                Tag="15" Click="BtnCvdPeriodo_Click" FontSize="10"/>
+                                        <Button Content="30m" Style="{StaticResource ToolbarBtnActive}"
+                                                Tag="30" Click="BtnCvdPeriodo_Click" FontSize="10"/>
+                                        <Button Content="1h"  Style="{StaticResource ToolbarBtn}"
+                                                Tag="60" Click="BtnCvdPeriodo_Click" FontSize="10"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- área do grá¡fico -->
+                            <Grid Grid.Row="1" x:Name="CvdChartContainer">
+                                <!-- Placeholder â€” LiveCharts2 adicionado no code-behind -->
+                                <TextBlock Text="Grá¡fico CVD â€” LiveCharts2"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{StaticResource TextMuted}"
+                                           FontSize="13"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- Tape recente (áºltimas execuçáµes) -->
+                    <Border Grid.Row="1" Style="{StaticResource PanelCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="32"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    BorderBrush="{StaticResource BorderColor}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="12,0">
+                                <Grid>
+                                    <TextBlock Text="TAPE â€” ášLTIMAS EXECUá‡á•ES"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextSecondary}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="TxtTapeCount"
+                                               Text="0 trades"
+                                               FontSize="10"
+                                               Foreground="{StaticResource TextMuted}"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+
+                            <ListView Grid.Row="1"
+                                      x:Name="TapeListView"
+                                      Style="{StaticResource AlertListView}"
+                                      ItemContainerStyle="{StaticResource AlertItem}"
+                                      VirtualizingPanel.IsVirtualizing="True"
+                                      VirtualizingPanel.VirtualizationMode="Recycling">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background"  Value="#1A1A1A"/>
+                                                <Setter Property="Foreground"  Value="#616161"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FontSize"    Value="10"/>
+                                                <Setter Property="Padding"     Value="8,4"/>
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn Header="HORA"      Width="65"
+                                                        DisplayMemberBinding="{Binding HoraStr}"/>
+                                        <GridViewColumn Header="PREá‡O"     Width="75"
+                                                        DisplayMemberBinding="{Binding PrecoStr}"/>
+                                        <GridViewColumn Header="QTD"       Width="55"
+                                                        DisplayMemberBinding="{Binding Quantidade}"/>
+                                        <GridViewColumn Header="LADO"      Width="60">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding LadoStr}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{Binding LadoCor}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="CORRETORA" Width="140"
+                                                        DisplayMemberBinding="{Binding Corretora}"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- â”€â”€ COLUNA DIREITA: ALERTAS LIVE â”€â”€ -->
+                <Border Grid.Column="2"
+                        Background="{StaticResource BgPanel}"
+                        BorderBrush="{StaticResource BorderColor}"
+                        BorderThickness="1,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header alertas -->
+                        <Border Grid.Row="0"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,0">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="ALERTAS"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextSecondary}"/>
+                                    <Border Background="#1A1A00" BorderBrush="#424200"
+                                            BorderThickness="1" CornerRadius="8"
+                                            Padding="6,1" Margin="8,0,0,0">
+                                        <TextBlock x:Name="TxtAlertCount" Text="0"
+                                                   FontSize="10" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentYellow}"/>
+                                    </Border>
+                                </StackPanel>
+                                <Button Content="LIMPAR"
+                                        Style="{StaticResource ToolbarBtn}"
+                                        HorizontalAlignment="Right"
+                                        Click="BtnLimparAlertas_Click"
+                                        FontSize="10"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Lista de alertas -->
+                        <ListView Grid.Row="1"
+                                  x:Name="AlertasListView"
+                                  Style="{StaticResource AlertListView}"
+                                  ItemContainerStyle="{StaticResource AlertItem}"
+                                  VirtualizingPanel.IsVirtualizing="True">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding FundoCor}"
+                                            BorderBrush="{Binding BordaCor}"
+                                            BorderThickness="0,0,0,1"
+                                            Padding="10,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="4"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Barra lateral colorida -->
+                                            <Rectangle Grid.Column="0"
+                                                       Fill="{Binding BarraCor}"
+                                                       RadiusX="2" RadiusY="2"
+                                                       Margin="0,0,8,0"/>
+
+                                            <!-- Conteáºdo -->
+                                            <StackPanel Grid.Column="1">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Tipo}"
+                                                               FontSize="10" FontWeight="Bold"
+                                                               Foreground="{Binding TipoCor}"/>
+                                                    <TextBlock Text="{Binding HoraStr}"
+                                                               FontSize="9"
+                                                               Foreground="{StaticResource TextMuted}"
+                                                               HorizontalAlignment="Right"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding Mensagem}"
+                                                           FontSize="11"
+                                                           Foreground="{StaticResource TextPrimary}"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,3,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <Border Background="{Binding ProbFundo}"
+                                                            CornerRadius="2" Padding="4,1">
+                                                        <TextBlock Text="{Binding ProbStr}"
+                                                                   FontSize="9" FontWeight="Bold"
+                                                                   Foreground="{Binding ProbCor}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Detector}"
+                                                               FontSize="9"
+                                                               Foreground="{StaticResource TextMuted}"
+                                                               Margin="6,0,0,0"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <!-- Footer: resumo do dia -->
+                        <Border Grid.Row="2"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="0,1,0,0"
+                                Padding="12,8">
+                            <StackPanel>
+                                <TextBlock Text="HOJE" Style="{StaticResource SectionHeader}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <TextBlock x:Name="TxtAlertasHoje" Text="0"
+                                                   FontSize="16" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentYellow}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock Text="alertas" Style="{StaticResource MetricLabel}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock x:Name="TxtAcertosHoje" Text="0%"
+                                                   FontSize="16" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentGreen}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock Text="acerto" Style="{StaticResource MetricLabel}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <TextBlock x:Name="TxtTradesHoje" Text="0"
+                                                   FontSize="16" FontWeight="Bold"
+                                                   Foreground="{StaticResource TextPrimary}"
+                                                   HorizontalAlignment="Center"/>
+                                        <TextBlock Text="trades" Style="{StaticResource MetricLabel}"
+                                                   HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TAB: DETECTORES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+            <Grid x:Name="TabDetectores" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Lista de detectores -->
+                <Border Grid.Column="0"
+                        Background="{StaticResource BgPanel}"
+                        BorderBrush="{StaticResource BorderColor}"
+                        BorderThickness="0,0,1,0"
+                        Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="DETECTORES REGISTRADOS" Style="{StaticResource SectionHeader}"/>
+                        <ListView x:Name="DetectoresListView"
+                                  Style="{StaticResource AlertListView}"
+                                  ItemContainerStyle="{StaticResource AlertItem}"
+                                  SelectionChanged="DetectoresListView_SelectionChanged">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource PanelCard}"
+                                            Padding="10,8" Margin="0,0,0,3">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Nome}"
+                                                           FontSize="11" FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Text="{Binding Categoria}"
+                                                           Style="{StaticResource MetricLabel}"/>
+                                                <TextBlock Text="{Binding WinRateStr}"
+                                                           FontSize="10" FontWeight="Bold"
+                                                           Foreground="{Binding WinRateCor}"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <ToggleButton Grid.Column="1"
+                                                          IsChecked="{Binding Ativo}"
+                                                          VerticalAlignment="Center"
+                                                          Checked="DetectorToggle_Checked"
+                                                          Unchecked="DetectorToggle_Unchecked"
+                                                          Tag="{Binding Nome}">
+                                                <ToggleButton.Style>
+                                                    <Style TargetType="ToggleButton">
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ToggleButton">
+                                                                    <Border x:Name="Bd"
+                                                                            Width="32" Height="16"
+                                                                            CornerRadius="8"
+                                                                            Background="#333333">
+                                                                        <Ellipse x:Name="Dot"
+                                                                                 Width="12" Height="12"
+                                                                                 Fill="#666666"
+                                                                                 HorizontalAlignment="Left"
+                                                                                 Margin="2,0"/>
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsChecked" Value="True">
+                                                                            <Setter TargetName="Bd" Property="Background" Value="#0D2A1A"/>
+                                                                            <Setter TargetName="Dot" Property="Fill" Value="{StaticResource AccentGreen}"/>
+                                                                            <Setter TargetName="Dot" Property="HorizontalAlignment" Value="Right"/>
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </ToggleButton.Style>
+                                            </ToggleButton>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <!-- Detalhe do detector selecionado -->
+                <Grid Grid.Column="1" Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header detector -->
+                    <Border Grid.Row="0" Style="{StaticResource PanelCard}" Padding="16" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock x:Name="TxtDetNome"
+                                           Text="Selecione um detector"
+                                           FontSize="16" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}"/>
+                                <TextBlock x:Name="TxtDetCategoria"
+                                           Text="â€”"
+                                           Style="{StaticResource MetricLabel}"
+                                           Margin="0,4,0,0"/>
+                                <TextBlock x:Name="TxtDetDescricao"
+                                           Text=""
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Right" Margin="12,0,0,0">
+                                <Border x:Name="DetStatusBadge"
+                                        Style="{StaticResource StatusBadge}"
+                                        Background="#1A2A00">
+                                    <TextBlock x:Name="TxtDetStatus" Text="INATIVO"
+                                               FontSize="11" FontWeight="Bold"
+                                               Foreground="{StaticResource TextSecondary}"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Métricas do detector -->
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource PanelCard}" Padding="12" Margin="0,0,4,0">
+                            <StackPanel>
+                                <TextBlock Text="WIN RATE" Style="{StaticResource MetricLabel}"/>
+                                <TextBlock x:Name="TxtDetWinRate" Text="â€”"
+                                           FontSize="20" FontWeight="Bold"
+                                           Foreground="{StaticResource AccentGreen}"/>
+                                <TextBlock Text="backtest 60d" Style="{StaticResource MetricLabel}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource PanelCard}" Padding="12" Margin="4,0,4,0">
+                            <StackPanel>
+                                <TextBlock Text="PROFIT FACTOR" Style="{StaticResource MetricLabel}"/>
+                                <TextBlock x:Name="TxtDetPF" Text="â€”"
+                                           FontSize="20" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}"/>
+                                <TextBlock Text="áºltimos 60d" Style="{StaticResource MetricLabel}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource PanelCard}" Padding="12" Margin="4,0,4,0">
+                            <StackPanel>
+                                <TextBlock Text="TOTAL SINAIS" Style="{StaticResource MetricLabel}"/>
+                                <TextBlock x:Name="TxtDetSinais" Text="â€”"
+                                           FontSize="20" FontWeight="Bold"
+                                           Foreground="{StaticResource TextPrimary}"/>
+                                <TextBlock Text="áºltimos 60d" Style="{StaticResource MetricLabel}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Style="{StaticResource PanelCard}" Padding="12" Margin="4,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="WIN RATE LIVE" Style="{StaticResource MetricLabel}"/>
+                                <TextBlock x:Name="TxtDetWinRateLive" Text="â€”"
+                                           FontSize="20" FontWeight="Bold"
+                                           Foreground="{StaticResource AccentCyan}"/>
+                                <TextBlock Text="hoje" Style="{StaticResource MetricLabel}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Histá³rico sinais do detector -->
+                    <Border Grid.Row="2" Style="{StaticResource PanelCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="36"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0"
+                                    BorderBrush="{StaticResource BorderColor}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="12,0">
+                                <TextBlock Text="HISTá“RICO DE SINAIS"
+                                           FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <ListView Grid.Row="1"
+                                      x:Name="DetectorHistoricoListView"
+                                      Style="{StaticResource AlertListView}"
+                                      ItemContainerStyle="{StaticResource AlertItem}">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background"  Value="#1A1A1A"/>
+                                                <Setter Property="Foreground"  Value="#616161"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FontSize"    Value="10"/>
+                                                <Setter Property="Padding"     Value="8,4"/>
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn Header="DATA/HORA" Width="130"
+                                                        DisplayMemberBinding="{Binding DataHoraStr}"/>
+                                        <GridViewColumn Header="SINAL"     Width="80"
+                                                        DisplayMemberBinding="{Binding Sinal}"/>
+                                        <GridViewColumn Header="PREá‡O"     Width="80"
+                                                        DisplayMemberBinding="{Binding PrecoStr}"/>
+                                        <GridViewColumn Header="PROB."     Width="65"
+                                                        DisplayMemberBinding="{Binding ProbStr}"/>
+                                        <GridViewColumn Header="RESULTADO" Width="90">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Resultado}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{Binding ResultadoCor}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TAB: ALERTAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+            <Grid x:Name="TabAlertas" Visibility="Collapsed" Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Filtros -->
+                <Border Grid.Row="0" Style="{StaticResource PanelCard}" Padding="12" Margin="0,0,0,8">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="FILTRAR:" Style="{StaticResource MetricLabel}"
+                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <ComboBox x:Name="CmbFiltroDetector"
+                                  Width="180" Margin="0,0,8,0"
+                                  Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                  BorderBrush="{StaticResource BorderColor}"
+                                  SelectionChanged="CmbFiltroDetector_Changed"/>
+                        <ComboBox x:Name="CmbFiltroTipo"
+                                  Width="120" Margin="0,0,8,0"
+                                  Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                  BorderBrush="{StaticResource BorderColor}"
+                                  SelectionChanged="CmbFiltroTipo_Changed">
+                            <ComboBoxItem Content="Todos" IsSelected="True"/>
+                            <ComboBoxItem Content="BUY"/>
+                            <ComboBoxItem Content="SELL"/>
+                            <ComboBoxItem Content="DIVERGáŠNCIA"/>
+                        </ComboBox>
+                        <TextBlock x:Name="TxtAlertasFiltrados"
+                                   Text="0 alertas"
+                                   Style="{StaticResource MetricLabel}"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0,0,0"/>
+                        <Button Content="EXPORTAR CSV"
+                                Style="{StaticResource ToolbarBtn}"
+                                HorizontalAlignment="Right"
+                                Click="BtnExportarAlertas_Click"
+                                Margin="10,0,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Lista completa de alertas -->
+                <Border Grid.Row="1" Style="{StaticResource PanelCard}">
+                    <ListView x:Name="AlertasFullListView"
+                              Style="{StaticResource AlertListView}"
+                              ItemContainerStyle="{StaticResource AlertItem}">
+                        <ListView.View>
+                            <GridView>
+                                <GridView.ColumnHeaderContainerStyle>
+                                    <Style TargetType="GridViewColumnHeader">
+                                        <Setter Property="Background"  Value="#1A1A1A"/>
+                                        <Setter Property="Foreground"  Value="#616161"/>
+                                        <Setter Property="BorderThickness" Value="0"/>
+                                        <Setter Property="FontSize"    Value="10"/>
+                                        <Setter Property="Padding"     Value="8,6"/>
+                                    </Style>
+                                </GridView.ColumnHeaderContainerStyle>
+                                <GridViewColumn Header="HORA"      Width="75"
+                                                DisplayMemberBinding="{Binding HoraStr}"/>
+                                <GridViewColumn Header="DETECTOR"  Width="180"
+                                                DisplayMemberBinding="{Binding Detector}"/>
+                                <GridViewColumn Header="TIPO"      Width="90"
+                                                DisplayMemberBinding="{Binding Tipo}"/>
+                                <GridViewColumn Header="MENSAGEM"  Width="350"
+                                                DisplayMemberBinding="{Binding Mensagem}"/>
+                                <GridViewColumn Header="PROB."     Width="65"
+                                                DisplayMemberBinding="{Binding ProbStr}"/>
+                                <GridViewColumn Header="PREá‡O"     Width="80"
+                                                DisplayMemberBinding="{Binding PrecoStr}"/>
+                                <GridViewColumn Header="RESULTADO" Width="90">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Resultado}"
+                                                       FontWeight="Bold"
+                                                       Foreground="{Binding ResultadoCor}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Border>
+            </Grid>
+
+            <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TAB: BACKTEST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+            <Grid x:Name="TabBacktest" Visibility="Collapsed" Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Configuraçá£o do backtest -->
+                <Border Grid.Row="0" Style="{StaticResource PanelCard}" Padding="16" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="DETECTOR" Style="{StaticResource MetricLabel}"/>
+                            <ComboBox x:Name="CmbBacktestDetector"
+                                      Width="200" Margin="0,4,0,0"
+                                      Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BorderColor}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="0,0,16,0">
+                            <TextBlock Text="DATA INáCIO" Style="{StaticResource MetricLabel}"/>
+                            <DatePicker x:Name="DtBacktestInicio"
+                                        Width="130" Margin="0,4,0,0"
+                                        Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                        BorderBrush="{StaticResource BorderColor}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="0,0,16,0">
+                            <TextBlock Text="DATA FIM" Style="{StaticResource MetricLabel}"/>
+                            <DatePicker x:Name="DtBacktestFim"
+                                        Width="130" Margin="0,4,0,0"
+                                        Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                        BorderBrush="{StaticResource BorderColor}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3" Margin="0,0,16,0">
+                            <TextBlock Text="SáMBOLO" Style="{StaticResource MetricLabel}"/>
+                            <ComboBox x:Name="CmbBacktestSymbol"
+                                      Width="90" Margin="0,4,0,0"
+                                      Background="#222222" Foreground="{StaticResource TextPrimary}"
+                                      BorderBrush="{StaticResource BorderColor}">
+                                <ComboBoxItem Content="WIN" IsSelected="True"/>
+                                <ComboBoxItem Content="WDO"/>
+                                <ComboBoxItem Content="WSP"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <Grid Grid.Column="5">
+                            <Button x:Name="BtnRunBacktest"
+                                    Content="â–¶  RODAR BACKTEST"
+                                    Click="BtnRunBacktest_Click"
+                                    Background="{StaticResource AccentBlue}"
+                                    Foreground="White"
+                                    BorderThickness="0"
+                                    Padding="16,8"
+                                    FontSize="11" FontWeight="SemiBold"
+                                    Cursor="Hand"
+                                    VerticalAlignment="Bottom">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                CornerRadius="3"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#1976D2"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Resultados backtest -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="320"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Trades do backtest -->
+                    <Border Grid.Column="0" Style="{StaticResource PanelCard}" Margin="0,0,8,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="36"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Border Grid.Row="0"
+                                    BorderBrush="{StaticResource BorderColor}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="12,0">
+                                <TextBlock Text="TRADES DO BACKTEST"
+                                           FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                            <ListView Grid.Row="1"
+                                      x:Name="BacktestTradesListView"
+                                      Style="{StaticResource AlertListView}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Foreground="White"/>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                                <ListView.View>
+                                    <GridView>
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="GridViewColumnHeader">
+                                                <Setter Property="Background"  Value="#1A1A1A"/>
+                                                <Setter Property="Foreground"  Value="#616161"/>
+                                                <Setter Property="BorderThickness" Value="0"/>
+                                                <Setter Property="FontSize"    Value="10"/>
+                                                <Setter Property="Padding"     Value="8,4"/>
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn Header="DATA/HORA" Width="130"
+                                                        DisplayMemberBinding="{Binding DataHoraStr}"/>
+                                        <GridViewColumn Header="ENTRADA"   Width="80"
+                                                        DisplayMemberBinding="{Binding EntradaStr}"/>
+                                        <GridViewColumn Header="SAáDA"     Width="80"
+                                                        DisplayMemberBinding="{Binding SaidaStr}"/>
+                                        <GridViewColumn Header="P&amp;L (pts)" Width="80">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding PnlStr}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{Binding PnlCor}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="RESULTADO" Width="90">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Resultado}"
+                                                               FontWeight="Bold"
+                                                               Foreground="{Binding ResultadoCor}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </Grid>
+                    </Border>
+
+                    <!-- Resumo / métricas do backtest -->
+                    <StackPanel Grid.Column="1">
+                        <Border Style="{StaticResource PanelCard}" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="RESULTADO BACKTEST" Style="{StaticResource SectionHeader}"/>
+
+                                <Border Style="{StaticResource PanelCard}" Padding="12" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="WIN RATE" Style="{StaticResource MetricLabel}"/>
+                                        <TextBlock x:Name="TxtBtWinRate" Text="â€”"
+                                                   FontSize="28" FontWeight="Bold"
+                                                   Foreground="{StaticResource AccentGreen}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,3,0">
+                                        <StackPanel>
+                                            <TextBlock Text="PROFIT FACTOR" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtPF" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource PanelCard}" Padding="10" Margin="3,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="SHARPE" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtSharpe" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,3,0">
+                                        <StackPanel>
+                                            <TextBlock Text="TOTAL TRADES" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtTotal" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource TextPrimary}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource PanelCard}" Padding="10" Margin="3,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="MAX DRAWDOWN" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtDD" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentRed}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource PanelCard}" Padding="10" Margin="0,0,3,0">
+                                        <StackPanel>
+                                            <TextBlock Text="Má‰D. WIN (pts)" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtAvgWin" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentGreen}"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Style="{StaticResource PanelCard}" Padding="10" Margin="3,0,0,0">
+                                        <StackPanel>
+                                            <TextBlock Text="Má‰D. LOSS (pts)" Style="{StaticResource MetricLabel}"/>
+                                            <TextBlock x:Name="TxtBtAvgLoss" Text="â€”"
+                                                       FontSize="18" FontWeight="Bold"
+                                                       Foreground="{StaticResource AccentRed}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Status aprovaçá£o -->
+                                <Border x:Name="BtAprovacaoBorder"
+                                        Margin="0,12,0,0"
+                                        CornerRadius="4"
+                                        Padding="12,10"
+                                        Background="#1A1A00">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TxtBtAprovacao"
+                                                   Text="Rode o backtest para ver resultado"
+                                                   FontSize="12" FontWeight="Bold"
+                                                   Foreground="{StaticResource TextSecondary}"
+                                                   TextWrapping="Wrap"/>
+                                        <Button x:Name="BtnAtivarDetector"
+                                                Content="âœ“  ATIVAR DETECTOR"
+                                                Visibility="Collapsed"
+                                                Click="BtnAtivarDetector_Click"
+                                                Background="{StaticResource AccentGreen}"
+                                                Foreground="#000000"
+                                                BorderThickness="0"
+                                                Padding="12,6"
+                                                FontSize="11" FontWeight="Bold"
+                                                Cursor="Hand"
+                                                Margin="0,8,0,0">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}"
+                                                            CornerRadius="3"
+                                                            Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ TAB: EDITOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+            <Grid x:Name="TabEditor" Visibility="Collapsed" Margin="16">
+                <Border Style="{StaticResource PanelCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="40"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="EDITOR DE DETECTORES PYTHON"
+                                           FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextSecondary}"/>
+                                <TextBlock Text=" â€” AvalonEdit (Fase 8)"
+                                           FontSize="10"
+                                           Foreground="{StaticResource TextMuted}"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Grid.Row="1"
+                                   Text="Editor de cá³digo será¡ implementado na Fase 8 (AvalonEdit + syntax highlighting Python)"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextMuted}"
+                                   FontSize="13"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+        </Grid>
+
+        <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+             STATUS BAR
+        â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+        <Border Grid.Row="2"
+                Background="#0A0A0A"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="0,1,0,0">
+            <Grid Margin="12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtStatusBar"
+                               Text="Pronto"
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"/>
+                    <TextBlock Text=" | "
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"
+                               Margin="8,0"/>
+                    <TextBlock x:Name="TxtUltimaAtualizacao"
+                               Text="ášltima atualizaçá£o: â€”"
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtTotalTradesDB"
+                               Text="DB: 0 trades"
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"/>
+                    <TextBlock Text=" | "
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"
+                               Margin="8,0"/>
+                    <TextBlock Text="MarketCore FlowSense"
+                               FontSize="10"
+                               Foreground="{StaticResource TextMuted}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>
+

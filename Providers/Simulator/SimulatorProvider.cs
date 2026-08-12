@@ -60,7 +60,24 @@ public sealed class SimulatorProvider : IMarketDataProvider
     {
         _faseTimer.Stop();
         _cts.Cancel();
-        if (_simTask != null) await _simTask.WaitAsync(TimeSpan.FromSeconds(2));
+
+        if (_simTask != null)
+        {
+            try
+            {
+                // ConfigureAwait(false) é obrigatório aqui: sem ele, a continuação
+                // captura o WPF SynchronizationContext e tenta voltar para a thread de UI.
+                // Quando chamado via Dispose() → GetAwaiter().GetResult() na thread de UI,
+                // a thread de UI está bloqueada esperando essa continuação → DEADLOCK.
+                // Com ConfigureAwait(false), a continuação roda no ThreadPool, sem deadlock.
+                await _simTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+            }
+            catch
+            {
+                // OperationCanceledException (task cancelada) ou TimeoutException — esperado no shutdown.
+            }
+        }
+
         Status = ConnectionStatus.Disconnected;
         OnConnectionChanged?.Invoke(new ConnectionChangedEvent(Status, "Simulador desconectado"));
     }
@@ -125,7 +142,15 @@ public sealed class SimulatorProvider : IMarketDataProvider
 
         var broker = Brokers[_rng.Next(Brokers.Length)];
 
-        OnTrade?.Invoke(new TradeEvent(ticker, price, vol, broker, aggressor, DateTime.Now));
+        OnTrade?.Invoke(new TradeEvent(
+            ticker,
+            price,
+            vol,
+            broker,
+            aggressor,
+            DateTime.Now,
+            ExchangeTimeUtc: null,
+            ReceivedUtc: DateTime.UtcNow));
 
         state.TotalVolume += vol;
         if (aggressor == TradeAggressor.Buy) state.Delta += vol;

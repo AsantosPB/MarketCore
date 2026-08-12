@@ -5,7 +5,7 @@ using System.Linq;
 namespace MarketCore.FlowSense
 {
     /// <summary>
-    /// FlowScoreEngine — calcula score direcional -100 a +100
+    /// FlowScoreEngine - calcula score direcional -100 a +100
     /// Todos os pesos e parâmetros são lidos de FlowScoreConfig,
     /// permitindo calibragem em tempo real via popup de configuração.
     /// </summary>
@@ -16,7 +16,7 @@ namespace MarketCore.FlowSense
         private readonly BookAnalyzer      _bookAnalyzer;
         private readonly DetectorAggregator _detectors;
 
-        /// <summary>Configuração ativa — pode ser alterada em tempo real via popup.</summary>
+        /// <summary>Configuração ativa - pode ser alterada em tempo real via popup.</summary>
         public FlowScoreConfig Config { get; }
 
         public double FlowScore              { get; private set; }
@@ -45,10 +45,12 @@ namespace MarketCore.FlowSense
         /// </summary>
         public void CalculateScore()
         {
-            BrokerFlowComponent   = CalculateBrokerFlowScore();
+            bool agg = Config.PreferAggregatedBookSignals;
+
+            BrokerFlowComponent   = agg ? 0 : CalculateBrokerFlowScore();
             FluxoDirectoComponent = CalculateFluxoDirectoScore();
             BookComponent         = CalculateBookScore();
-            DetectoresComponent   = CalculateDetectoresScore();
+            DetectoresComponent   = agg ? CalculateDetectoresScoreAggregated() : CalculateDetectoresScore();
 
             FlowScore =
                 (BrokerFlowComponent   * Config.WeightBrokerFlow)  +
@@ -60,10 +62,13 @@ namespace MarketCore.FlowSense
         }
 
         // ══════════════════════════════════════════════════════
-        // GRUPO 1 — BrokerFlow (peso configurável)
+        // GRUPO 1 - BrokerFlow (peso configurável)
         // ══════════════════════════════════════════════════════
         private double CalculateBrokerFlowScore()
         {
+            if (Config.WeightBrokerFlow <= 0)
+                return 0;
+
             var activeBuyers  = _brokerAccum.GetActiveBuyers60s();
             var activeSellers = _brokerAccum.GetActiveSellers60s();
 
@@ -74,7 +79,7 @@ namespace MarketCore.FlowSense
             if (buySignal + sellSignal > 0)
                 brokerScore = ((buySignal - sellSignal) / (buySignal + sellSignal)) * 100;
 
-            // Amplifica com RVOL — cap definido em Config
+            // Amplifica com RVOL - cap definido em Config
             double rvolMultiplier = Math.Min(Config.BrokerRvolMaxMultiplier, _deltaEngine.RVOL);
             brokerScore *= rvolMultiplier;
 
@@ -86,7 +91,7 @@ namespace MarketCore.FlowSense
         }
 
         // ══════════════════════════════════════════════════════
-        // GRUPO 2 — FluxoDireto (peso configurável)
+        // GRUPO 2 - FluxoDireto (peso configurável)
         // ══════════════════════════════════════════════════════
         private double CalculateFluxoDirectoScore()
         {
@@ -106,13 +111,21 @@ namespace MarketCore.FlowSense
         }
 
         // ══════════════════════════════════════════════════════
-        // GRUPO 3 — Book (peso configurável)
+        // GRUPO 3 - Book (peso configurável)
         // ══════════════════════════════════════════════════════
         private double CalculateBookScore()
         {
             double pressureScore  = _bookAnalyzer.GetBidAskPressure() * 100;
             double imbalanceScore = _bookAnalyzer.GetLevelImbalance()  * 100;
-            double renewableScore = _bookAnalyzer.IsRenewableActive()  ? Config.BookRenewableScore : 0;
+            double renewableScore = 0;
+            if (!Config.PreferAggregatedBookSignals
+                && Config.BookRenewableWeight > 0
+                && Config.BookRenewableScore > 0
+                && _bookAnalyzer.IsRenewableActive())
+            {
+                renewableScore = Config.BookRenewableScore;
+            }
+
             double vwapDistance   = _bookAnalyzer.GetVWAPDistance();
             double vwapScore      = -vwapDistance * 100;
 
@@ -126,7 +139,7 @@ namespace MarketCore.FlowSense
         }
 
         // ══════════════════════════════════════════════════════
-        // GRUPO 4 — Detectores (peso configurável)
+        // GRUPO 4 - Detectores (peso configurável)
         // ══════════════════════════════════════════════════════
         private double CalculateDetectoresScore()
         {
@@ -143,6 +156,22 @@ namespace MarketCore.FlowSense
 
             if (_deltaEngine.StopHuntDetected)
                 detectScore -= Config.DetectorStopHuntPenalty;
+
+            if (Math.Abs(_deltaEngine.CVDDivergence) > Config.DetectorCVDThreshold)
+                detectScore += (_deltaEngine.CVDDivergence > 0
+                    ? Config.DetectorCVDScore
+                    : -Config.DetectorCVDScore);
+
+            return Math.Max(-100, Math.Min(100, detectScore));
+        }
+
+        /// <summary>Apenas exaustão Renko + limiar CVD - sem spoof/iceberg/stop hunt (livro agregado).</summary>
+        private double CalculateDetectoresScoreAggregated()
+        {
+            double detectScore = 0;
+
+            if (_detectors.IsExhaustionDetected())
+                detectScore -= Config.DetectorExhaustionPenalty;
 
             if (Math.Abs(_deltaEngine.CVDDivergence) > Config.DetectorCVDThreshold)
                 detectScore += (_deltaEngine.CVDDivergence > 0

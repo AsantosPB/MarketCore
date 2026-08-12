@@ -1,0 +1,216 @@
+using System;
+using System.Threading.Tasks;
+using Npgsql;
+
+namespace MarketCore.WPF.Data
+{
+    /// <summary>
+    /// Gerencia salvamento de trades em PostgreSQL em tempo real.
+    /// Salva em trades_intraday durante o pregão.
+    /// </summary>
+    public class MarketDataManager : IDisposable
+    {
+        private readonly string _connectionString;
+        private NpgsqlConnection _connection;
+        private bool _isConnected;
+
+        /// <summary>
+        /// Construtor - configura connection string
+        /// </summary>
+        public MarketDataManager(string host = "localhost", int port = 5432, 
+            string database = "marketcore_historical", string username = "postgres", 
+            string password = "postgres")
+        {
+            _connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password}";
+            _isConnected = false;
+        }
+
+        /// <summary>
+        /// Conecta ao PostgreSQL
+        /// </summary>
+        public async Task<bool> ConnectAsync()
+        {
+            try
+            {
+                _connection = new NpgsqlConnection(_connectionString);
+                await _connection.OpenAsync();
+                _isConnected = true;
+                
+                Console.WriteLine($"✓ MarketDataManager: Conectado ao PostgreSQL");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ MarketDataManager: Erro ao conectar - {ex.Message}");
+                _isConnected = false;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Insere um trade em trades_intraday (com deduplicação automática)
+        /// </summary>
+        public async Task<bool> InsertTradeAsync(
+            DateTime timestamp,
+            string symbol,
+            int price,
+            int quantity,
+            string side,
+            int aggressor,
+            int brokerCode,
+            string brokerName = null,
+            string source = "realtime")
+        {
+            if (!_isConnected)
+            {
+                Console.WriteLine("✗ MarketDataManager: Não conectado ao PostgreSQL");
+                return false;
+            }
+
+            try
+            {
+                // SQL com ON CONFLICT DO NOTHING (deduplicação automática)
+                string sql = @"
+                    INSERT INTO trades_intraday 
+                    (timestamp, symbol, price, quantity, side, aggressor, broker_code, broker_name, source)
+                    VALUES 
+                    (@timestamp, @symbol, @price, @quantity, @side, @aggressor, @broker_code, @broker_name, @source)
+                    ON CONFLICT (timestamp, symbol, price, quantity, side, COALESCE(broker_code, 0)) 
+                    DO NOTHING";
+
+                using (var cmd = new NpgsqlCommand(sql, _connection))
+                {
+                    cmd.Parameters.AddWithValue("timestamp", timestamp);
+                    cmd.Parameters.AddWithValue("symbol", symbol);
+                    cmd.Parameters.AddWithValue("price", price);
+                    cmd.Parameters.AddWithValue("quantity", quantity);
+                    cmd.Parameters.AddWithValue("side", side);
+                    cmd.Parameters.AddWithValue("aggressor", aggressor);
+                    cmd.Parameters.AddWithValue("broker_code", brokerCode);
+                    cmd.Parameters.AddWithValue("broker_name", brokerName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("source", source);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ MarketDataManager: Erro ao inserir trade - {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Versão síncrona do InsertTrade (para chamar de callbacks)
+        /// </summary>
+        public bool InsertTrade(
+            DateTime timestamp,
+            string symbol,
+            int price,
+            int quantity,
+            string side,
+            int aggressor,
+            int brokerCode,
+            string brokerName = null,
+            string source = "realtime")
+        {
+            return InsertTradeAsync(timestamp, symbol, price, quantity, side, aggressor, 
+                brokerCode, brokerName, source).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Conta quantos trades estão salvos hoje
+        /// </summary>
+        public async Task<int> GetTodayTradeCountAsync()
+        {
+            if (!_isConnected) return 0;
+
+            try
+            {
+                string sql = "SELECT COUNT(*) FROM trades_intraday";
+                
+                using (var cmd = new NpgsqlCommand(sql, _connection))
+                {
+                    var result = await cmd.ExecuteScalarAsync();
+                    return Convert.ToInt32(result);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ MarketDataManager: Erro ao contar trades - {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Limpa a tabela trades_intraday (executar no final do dia)
+        /// </summary>
+        public async Task<bool> ClearTodayTradesAsync()
+        {
+            if (!_isConnected) return false;
+
+            try
+            {
+                string sql = "TRUNCATE TABLE trades_intraday";
+                
+                using (var cmd = new NpgsqlCommand(sql, _connection))
+                {
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                Console.WriteLine($"✓ MarketDataManager: Tabela trades_intraday limpa");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ MarketDataManager: Erro ao limpar trades - {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Testa a conexão e a tabela
+        /// </summary>
+        public async Task<bool> TestConnectionAsync()
+        {
+            try
+            {
+                if (!_isConnected)
+                {
+                    await ConnectAsync();
+                }
+
+                // Testa query simples
+                string sql = "SELECT COUNT(*) FROM trades_intraday";
+                using (var cmd = new NpgsqlCommand(sql, _connection))
+                {
+                    var result = await cmd.ExecuteScalarAsync();
+                    int count = Convert.ToInt32(result);
+                    Console.WriteLine($"✓ MarketDataManager: Conexão OK - {count} trades na tabela");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ MarketDataManager: Teste falhou - {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Dispose - fecha conexão
+        /// </summary>
+        public void Dispose()
+        {
+            if (_connection != null)
+            {
+                _connection.Close();
+                _connection.Dispose();
+                _isConnected = false;
+                Console.WriteLine($"✓ MarketDataManager: Conexão fechada");
+            }
+        }
+    }
+}

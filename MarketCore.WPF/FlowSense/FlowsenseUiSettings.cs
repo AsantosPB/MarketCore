@@ -13,6 +13,12 @@ public sealed class FlowsenseUiSettings
     /// <summary>Ticker último na janela de download histórico (ex.: WINFUT).</summary>
     public string? HistoryDownloadTicker { get; set; }
 
+    /// <summary>
+    /// Quando <c>true</c>, não alimenta Spoof/Renewable a partir da fila de níveis do livro (menos CPU, sem poda 400k).
+    /// Predefinição em ficheiros antigos sem esta chave: <c>false</c> (detectores ligados).
+    /// </summary>
+    public bool DisableBookMicrostructureDetectors { get; set; }
+
     private static string SettingsPath =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

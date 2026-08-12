@@ -90,6 +90,19 @@ public static class ProfitMarketInit
     private static TProgressCallBack? s_progress;
     private static TNewTinyBookCallBack? s_tiny;
     private static TChangeCotation? s_changeCotation;
+    private static volatile bool s_providerDllInitialized;
+    private static readonly SemaphoreSlim s_dllBootstrapGate = new(1, 1);
+
+    /// <summary>Serializa <c>DLLInitializeMarketLogin</c> e reanexação entre mercado ao vivo e histórico.</summary>
+    public static SemaphoreSlim DllBootstrapGate => s_dllBootstrapGate;
+
+    /// <summary>Chamado pelo <c>ProfitDLLProvider</c> após <c>DLLInitializeMarketLogin</c> bem-sucedido.</summary>
+    public static void MarkDllInitializedFromProvider() =>
+        Volatile.Write(ref s_providerDllInitialized, true);
+
+    /// <summary>Evita segundo <c>DLLInitializeMarketLogin</c> no mesmo processo.</summary>
+    public static bool IsDllInitializedInProcess =>
+        Volatile.Read(ref s_providerDllInitialized) || s_marketReady;
 
     /// <summary>
     /// Se <paramref name="sessionAlreadyConnected"/> é <c>true</c>, assume que a ProfitDLL já foi inicializada
@@ -101,7 +114,7 @@ public static class ProfitMarketInit
         bool sessionAlreadyConnected,
         CancellationToken ct = default)
     {
-        if (sessionAlreadyConnected)
+        if (sessionAlreadyConnected || IsDllInitializedInProcess)
             return Task.FromResult(true);
 
         return TryInitializeAsync(creds, timeout, ct);
@@ -114,10 +127,16 @@ public static class ProfitMarketInit
         if (string.IsNullOrWhiteSpace(creds.Username) || string.IsNullOrWhiteSpace(creds.Password))
             return false;
 
-        s_marketReady = false;
-        RootDelegates();
+        await s_dllBootstrapGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (IsDllInitializedInProcess)
+                return true;
 
-        int code = DLLInitializeMarketLogin(
+            s_marketReady = false;
+            RootDelegates();
+
+            int code = DLLInitializeMarketLogin(
             creds.ActivationKey ?? "",
             creds.Username,
             creds.Password,
@@ -130,31 +149,44 @@ public static class ProfitMarketInit
             s_progress,
             s_tiny);
 
-        if (code != 0)
-        {
-            ProfitDllDiag.Append($"[ProfitMarketInit] DLLInitializeMarketLogin rc={code}");
-            return false;
-        }
+            if (code != 0)
+            {
+                ProfitDllDiag.Append($"[ProfitMarketInit] DLLInitializeMarketLogin rc={code}");
+                return false;
+            }
 
-        try
-        {
-            int rCot = SetChangeCotationCallback(s_changeCotation!);
-            int rOb = SetOfferBookCallbackV2(s_offerBook!);
-            ProfitDllDiag.Append($"[ProfitMarketInit] SetChangeCotationCallback rc={rCot} SetOfferBookCallbackV2 rc={rOb}");
-        }
-        catch (Exception ex)
-        {
-            ProfitDllDiag.Append($"[ProfitMarketInit] post-init ex: {ex.Message}");
-        }
+            try
+            {
+                int rCot = SetChangeCotationCallback(s_changeCotation!);
+                int rOb = SetOfferBookCallbackV2(s_offerBook!);
+                ProfitDllDiag.Append($"[ProfitMarketInit] SetChangeCotationCallback rc={rCot} SetOfferBookCallbackV2 rc={rOb}");
+            }
+            catch (Exception ex)
+            {
+                ProfitDllDiag.Append($"[ProfitMarketInit] post-init ex: {ex.Message}");
+            }
 
-        var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
-        {
-            if (s_marketReady) return true;
-            await Task.Delay(100, ct);
-        }
+            var deadline = DateTime.UtcNow + timeout;
+            while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+            {
+                if (s_marketReady)
+                {
+                    Volatile.Write(ref s_providerDllInitialized, true);
+                    return true;
+                }
 
-        return s_marketReady;
+                await Task.Delay(100, ct).ConfigureAwait(false);
+            }
+
+            if (s_marketReady)
+                Volatile.Write(ref s_providerDllInitialized, true);
+
+            return s_marketReady;
+        }
+        finally
+        {
+            s_dllBootstrapGate.Release();
+        }
     }
 
     private static void RootDelegates()

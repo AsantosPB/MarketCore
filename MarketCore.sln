@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketCore.HistoricalImport
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HistoricalImporterTool", "HistoricalImporterTool\HistoricalImporterTool.csproj", "{5EBEB964-4621-4916-83AE-3CF605EC1631}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketCore.WPF", "MarketCore.WPF\MarketCore.WPF.csproj", "{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,8 +43,23 @@ Global
 		{5EBEB964-4621-4916-83AE-3CF605EC1631}.Release|x64.Build.0 = Release|x64
 		{5EBEB964-4621-4916-83AE-3CF605EC1631}.Release|x86.ActiveCfg = Release|x64
 		{5EBEB964-4621-4916-83AE-3CF605EC1631}.Release|x86.Build.0 = Release|x64
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|x64.Build.0 = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Debug|x86.Build.0 = Debug|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|x64.ActiveCfg = Release|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|x64.Build.0 = Release|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|x86.ActiveCfg = Release|Any CPU
+		{30BB56FC-CAC1-1AA9-067F-44AD9986A89F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BEBDB4F4-FBB9-43DE-8974-F759C4EC6390}
 	EndGlobalSection
 EndGlobal

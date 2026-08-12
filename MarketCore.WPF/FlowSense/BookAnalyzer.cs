@@ -5,11 +5,13 @@ using System.Linq;
 namespace MarketCore.FlowSense
 {
     /// <summary>
-    /// BookAnalyzer — processa snapshots do book bilateral para gerar sinais
+    /// BookAnalyzer - processa snapshots do book bilateral para gerar sinais
     /// Expandido com VWAP distance para o FlowScoreEngine
     /// </summary>
     public class BookAnalyzer
     {
+        private readonly FlowScoreConfig? _flowScoreConfig;
+
         /// <summary>Snapshot do livro arrive na MarketEngine UiDispatch; leituras na UI timer.</summary>
         private readonly object _sync = new();
 
@@ -22,6 +24,11 @@ namespace MarketCore.FlowSense
         private DateTime _lastBookUpdate = DateTime.UtcNow;
         private double _vwapDistance = 0; // distancia do preco ao VWAP
 
+        public BookAnalyzer(FlowScoreConfig? flowScoreConfig = null)
+        {
+            _flowScoreConfig = flowScoreConfig;
+        }
+
         public void OnBookSnapshot(
             List<double> bidPrices, List<double> bidQtys,
             List<double> askPrices, List<double> askQtys)
@@ -33,13 +40,14 @@ namespace MarketCore.FlowSense
                 _askPrices = askPrices;
                 _askQtys = askQtys;
 
-                DetectRenewable();
+                if (_flowScoreConfig?.PreferAggregatedBookSignals != true)
+                    DetectRenewable();
                 _lastBookUpdate = DateTime.UtcNow;
             }
         }
 
         /// <summary>
-        /// Pressão bid/ask — se ask está fraco (pouca qty), é comprador
+        /// Pressão bid/ask - se ask está fraco (pouca qty), é comprador
         /// Retorna [-1, +1]: +1 = pressão comprador máxima, -1 = vendedor máximo
         /// </summary>
         public double GetBidAskPressure()
@@ -111,7 +119,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Atualiza a distância VWAP — chamada pelo DeltaEngine ou fluxo de dados
+        /// Atualiza a distância VWAP - chamada pelo DeltaEngine ou fluxo de dados
         /// </summary>
         public void SetVWAPDistance(double currentPrice, double sessionVWAP)
         {
@@ -126,7 +134,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Retorna absorção — preço mantém enquanto volume aumenta
+        /// Retorna absorção - preço mantém enquanto volume aumenta
         /// </summary>
         public bool IsAbsorptionActive()
         {
@@ -135,6 +143,19 @@ namespace MarketCore.FlowSense
                 if (_bidQtys.Count > 1)
                     return _bidQtys[0] > _bidQtys[1] * 1.2;
                 return false;
+            }
+        }
+
+        public void ClearBookState()
+        {
+            lock (_sync)
+            {
+                _bidPrices.Clear();
+                _bidQtys.Clear();
+                _askPrices.Clear();
+                _askQtys.Clear();
+                _renewableDetected = false;
+                _vwapDistance = 0;
             }
         }
     }

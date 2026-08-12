@@ -18,4 +18,20 @@
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.3.0" />
+    <PackageReference Include="Npgsql" Version="9.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Data\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Remove="AnaliseQuantitativa\*.backup*" />
+    <None Include="AnaliseQuantitativa\*.backup*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Config\PregaoVivaVoz\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

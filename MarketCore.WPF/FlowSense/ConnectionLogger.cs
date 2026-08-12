@@ -7,11 +7,11 @@ using System.Linq;
 namespace MarketCore.FlowSense
 {
     /// <summary>
-    /// Logger de conexão — registra eventos de conexão, desconexão,
+    /// Logger de conexão - registra eventos de conexão, desconexão,
     /// instabilidades, latência e qualidade geral da sessão.
     ///
     /// Arquivo salvo em: %AppData%\MarketCore\Logs\conexao_YYYYMMDD.log
-    /// Rotação diária automática — 1 arquivo por dia.
+    /// Rotação diária automática - 1 arquivo por dia.
     /// </summary>
     public class ConnectionLogger
     {
@@ -71,7 +71,7 @@ namespace MarketCore.FlowSense
             _latencySamples.Clear();
 
             Write("═══════════════════════════════════════════════════════════");
-            Write($"  SESSÃO INICIADA — {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            Write($"  SESSÃO INICIADA - {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
             Write($"  Modo   : {mode}");
             Write($"  Ticker : {ticker}");
             Write($"  Log    : {LogFile}");
@@ -90,7 +90,7 @@ namespace MarketCore.FlowSense
 
             Write("");
             Write("───────────────────────────────────────────────────────────");
-            Write($"  SESSÃO ENCERRADA — {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
+            Write($"  SESSÃO ENCERRADA - {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
             Write($"  Duração total  : {duration:hh\\:mm\\:ss}");
             Write($"  Uptime         : {uptime:F1}%");
             Write($"  Reconexões     : {_reconnectCount}");
@@ -178,7 +178,7 @@ namespace MarketCore.FlowSense
                 if (ms > 500)
                     Write($"[LATÊNCIA   ] ⚠ Alta latência detectada: {ms:F0}ms");
                 else if (ms > 1000)
-                    Write($"[LATÊNCIA   ] ⛔ Latência crítica: {ms:F0}ms — verifique conexão");
+                    Write($"[LATÊNCIA   ] ⛔ Latência crítica: {ms:F0}ms - verifique conexão");
 
                 // Log periódico de qualidade (a cada 100 amostras)
                 if (_latencySamples.Count % 100 == 0)
@@ -191,7 +191,7 @@ namespace MarketCore.FlowSense
         /// </summary>
         public void LogDataFreeze(int secondsWithoutData)
         {
-            Write($"[FREEZE     ] ⚠ Sem dados há {secondsWithoutData}s — possível instabilidade");
+            Write($"[FREEZE     ] ⚠ Sem dados há {secondsWithoutData}s - possível instabilidade");
         }
 
         /// <summary>

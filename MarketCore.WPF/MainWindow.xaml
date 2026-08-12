@@ -65,6 +65,16 @@
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="CaretBrush" Value="#E8E8E8"/>
         </Style>
+        <!-- Ticker principal: editável; Enter ou perda de foco aplica subscrição -->
+        <Style x:Key="HeaderTickerInput" TargetType="TextBox" BasedOn="{StaticResource DarkInput}">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="MaxWidth" Value="160"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
         <Style x:Key="DarkButton" TargetType="Button">
             <Setter Property="Background" Value="#1E2A1E"/>
             <Setter Property="Foreground" Value="#00C853"/>
@@ -138,7 +148,9 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="WINFUT" FontSize="14" FontWeight="Bold" Foreground="#E8E8E8" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBox Grid.Column="0" x:Name="TxPrimaryTicker" Style="{StaticResource HeaderTickerInput}"
+                         Text="WINQ26"
+                         ToolTip="Código do ativo (ex.: WINFUT, WINQ26, PETR4). Enter ou clique fora para monitorizar em todo o FlowSense."/>
                 <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440" FontSize="14" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center" Margin="0,0,16,0"/>
                 <Border Grid.Column="2" Background="#1A1A1A" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
                     <StackPanel Orientation="Horizontal">
@@ -159,9 +171,9 @@
                         Background="Transparent"
                         BorderThickness="0"
                         Cursor="Hand"
-                        ToolTip="Abrir Agent Panel"
+                        ToolTip="Abrir Leitura de Fluxo"
                         HorizontalAlignment="Left"
-                        Margin="220,0,0,0"
+                        Margin="246,0,0,0"
                         VerticalAlignment="Center">
                     <Viewbox Width="15" Height="15">
                         <Canvas Width="24" Height="24">
@@ -178,6 +190,27 @@
                     </Viewbox>
                 </Button>
 
+                <!-- Histórico WIN (CSV) -->
+                <Button Grid.Column="3" x:Name="BtnHistory"
+                        Width="22" Height="22"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Baixar histórico WIN (CSV por contrato)"
+                        HorizontalAlignment="Left"
+                        Margin="190,0,0,0"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                    <Viewbox Width="14" Height="14">
+                        <Canvas Width="24" Height="24">
+                            <Path Stroke="#00BCD4" StrokeThickness="1.6" StrokeLineJoin="Round"
+                                  Data="M6,4 L6,20 M4,7 L8,7 M4,12 L8,12 M4,17 L8,12"/>
+                            <Path Stroke="#00BCD4" StrokeThickness="1.6"
+                                  Data="M12,6 L14,4 L20,4 L20,20 L12,20 Z M12,10 L18,10 M12,14 L18,14 M12,18 L16,18"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
                 <!-- Botão Configuração de Gravação -->
                 <Button Grid.Column="3" x:Name="BtnRecordingConfig"
                         Width="22" Height="22"
@@ -186,13 +219,59 @@
                         Cursor="Hand"
                         ToolTip="Configurar caminho de gravação"
                         HorizontalAlignment="Left"
-                        Margin="190,0,0,0"
+                        Margin="218,0,0,0"
                         VerticalAlignment="Center">
                     <Viewbox Width="14" Height="14">
                         <Canvas Width="24" Height="24">
                             <!-- Ícone de pasta/disco -->
                             <Path Fill="#4488FF" Data="M2,6 L8,6 L10,4 L22,4 L22,18 L2,18 Z"/>
                             <Path Fill="#2266CC" Data="M2,8 L22,8 L22,18 L2,18 Z"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <!-- Botão Análise Quantitativa -->
+                <Button Grid.Column="3" x:Name="BtnAnaliseQuant"
+                        Width="22" Height="22"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Análise Quantitativa"
+                        HorizontalAlignment="Left"
+                        Margin="274,0,0,0"
+                        VerticalAlignment="Center">
+                    <Viewbox Width="15" Height="15">
+                        <Canvas Width="24" Height="24">
+                            <Rectangle Canvas.Left="2" Canvas.Top="14" Width="4" Height="8" Fill="#00BCD4"/>
+                            <Rectangle Canvas.Left="8" Canvas.Top="9"  Width="4" Height="13" Fill="#00BCD4"/>
+                            <Rectangle Canvas.Left="14" Canvas.Top="5" Width="4" Height="17" Fill="#00BCD4"/>
+                            <Rectangle Canvas.Left="20" Canvas.Top="2" Width="4" Height="20" Fill="#00C853"/>
+                            <Polyline Points="4,13 10,8 16,4 22,1"
+                                      Stroke="#FFD600" StrokeThickness="1.5"
+                                      StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                        </Canvas>
+                    </Viewbox>
+                </Button>
+
+                <!-- Botão Pregão Viva Voz -->
+                <Button Grid.Column="3" x:Name="BtnPregaoVivaVoz"
+                        Width="22" Height="22"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        ToolTip="Pregão Viva Voz"
+                        HorizontalAlignment="Left"
+                        Margin="302,0,0,0"
+                        VerticalAlignment="Center">
+                    <Viewbox Width="15" Height="15">
+                        <Canvas Width="24" Height="24">
+                            <Rectangle Canvas.Left="9" Canvas.Top="2" Width="6" Height="10" RadiusX="3" RadiusY="3" Fill="#FF8C00"/>
+                            <Path Stroke="#FF8C00" StrokeThickness="1.5" Fill="Transparent"
+                                  Data="M6,12 A6,6 0 0 0 18,12"/>
+                            <Line X1="12" Y1="18" X2="12" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Line X1="8" Y1="21" X2="16" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                         </Canvas>
                     </Viewbox>
                 </Button>
@@ -205,7 +284,7 @@
                         Cursor="Hand"
                         ToolTip="Encerrar MarketCore"
                         HorizontalAlignment="Left"
-                        Margin="160,0,0,0"
+                        Margin="330,0,0,0"
                         VerticalAlignment="Center">
                     <Viewbox Width="16" Height="16">
                         <Canvas Width="24" Height="24">
@@ -271,7 +350,12 @@
                     <StackPanel Margin="10,10,10,10">
                         <TextBlock Text="Filtros de lote por corretora" FontSize="12" FontWeight="Bold" Foreground="#FFFFFF" Margin="0,0,0,8"/>
                         <TextBlock Text="Corretora" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
-                        <ComboBox x:Name="CbFilterBroker" Style="{StaticResource DarkCombo}" Margin="0,0,0,6">
+                        <!-- Lista completa: as 8 originais + as mesmas 27 corretoras do catálogo usado na
+                             Leitura de Fluxo (LeituraFluxoWindow.BrokerCatalog), pra manter as duas telas
+                             consistentes. Continua IsEditable, então digitar qualquer coisa não listada
+                             aqui ainda funciona (BrokerMatchesFilter casa por substring, não exige item
+                             exato da lista) — isto é só pra não precisar decorar/digitar o código certo. -->
+                        <ComboBox x:Name="CbFilterBroker" Style="{StaticResource DarkCombo}" Margin="0,0,0,6" IsEditable="True">
                             <ComboBoxItem Content="(todas)" IsSelected="True"/>
                             <ComboBoxItem Content="XP"/>
                             <ComboBoxItem Content="BTG"/>
@@ -281,6 +365,28 @@
                             <ComboBoxItem Content="Bradesco"/>
                             <ComboBoxItem Content="Itaú"/>
                             <ComboBoxItem Content="RLP"/>
+                            <ComboBoxItem Content="AGORA"/>
+                            <ComboBoxItem Content="ATIVA"/>
+                            <ComboBoxItem Content="BGC"/>
+                            <ComboBoxItem Content="C6"/>
+                            <ComboBoxItem Content="CITI"/>
+                            <ComboBoxItem Content="ELLIOT"/>
+                            <ComboBoxItem Content="GENIAL"/>
+                            <ComboBoxItem Content="IDEAL"/>
+                            <ComboBoxItem Content="INTER"/>
+                            <ComboBoxItem Content="JPM"/>
+                            <ComboBoxItem Content="MERRILL"/>
+                            <ComboBoxItem Content="MIRAE"/>
+                            <ComboBoxItem Content="NECTON"/>
+                            <ComboBoxItem Content="NF"/>
+                            <ComboBoxItem Content="NUL"/>
+                            <ComboBoxItem Content="SAFRA"/>
+                            <ComboBoxItem Content="SANT"/>
+                            <ComboBoxItem Content="SANTANDER"/>
+                            <ComboBoxItem Content="STONEX"/>
+                            <ComboBoxItem Content="TERRA"/>
+                            <ComboBoxItem Content="TULLETT"/>
+                            <ComboBoxItem Content="UBS"/>
                         </ComboBox>
                         <Grid Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
@@ -316,7 +422,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding DisplayText}" FontSize="10" Foreground="#00C853" FontFamily="Consolas" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="1" Content="✕" Style="{StaticResource DangerButton}" Width="16" Height="16" FontSize="9" Tag="{Binding}"/>
+                                            <Button Grid.Column="1" Content="✕" Style="{StaticResource DangerButton}" Width="16" Height="16" FontSize="9" Tag="{Binding}" Click="BtnRemoveFilter_Click"/>
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -325,7 +431,7 @@
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
                         </Border>
-                        <TextBlock x:Name="TbFilterStatus" Text="Nenhum filtro ativo — todas as ordens exibidas" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="TbFilterStatus" Text="Nenhum filtro ativo - todas as ordens exibidas" FontSize="10" Foreground="#AAAAAA" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <Separator Style="{StaticResource HSep}"/>
                         <TextBlock Text="Níveis:" Style="{StaticResource SectionLabel}" Margin="0,4,0,3"/>
                         <ComboBox x:Name="CbLevels" Style="{StaticResource DarkCombo}" Margin="0,0,0,8">
@@ -333,6 +439,9 @@
                             <ComboBoxItem Content="15"/>
                             <ComboBoxItem Content="20"/>
                             <ComboBoxItem Content="30" IsSelected="True"/>
+                            <ComboBoxItem Content="50"/>
+                            <ComboBoxItem Content="100"/>
+                            <ComboBoxItem Content="200"/>
                         </ComboBox>
                         <TextBlock Text="Agrupa (pts):" Style="{StaticResource SectionLabel}" Margin="0,0,0,3"/>
                         <ComboBox x:Name="CbGrouping" Style="{StaticResource DarkCombo}" Margin="0,0,0,8">
@@ -356,6 +465,18 @@
                         </Border>
                         <Separator Style="{StaticResource HSep}"/>
                         <TextBlock Text="Engine" FontSize="12" FontWeight="Bold" Foreground="#CCCCCC" Margin="0,6,0,6"/>
+                        <Border Background="#141008" BorderBrush="#6D5A1E" BorderThickness="1" CornerRadius="4" Padding="8,8" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="Interruptor (fila Spoof/Renew)" FontSize="11" FontWeight="Bold" Foreground="#FFD54F" Margin="0,0,0,4"/>
+                                <TextBlock Text="Desligar poupa CPU e evita poda da fila 400k. O livro COMPRA/VENDA continua igual." FontSize="9" Foreground="#888888" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                <CheckBox x:Name="ChkBookMicrostructureDetectors"
+                                          Content="Ligado - Spoof + Renewable no DOM"
+                                          FontSize="11" Foreground="#E8E8E8" FontFamily="Consolas"
+                                          FontWeight="SemiBold"
+                                          IsChecked="True"
+                                          ToolTip="Marcado: alimenta Spoof e Renewable a partir dos deltas do livro. Desmarcado: mesmo livro de ofertas, sem essa fila interna (ícones S/R no grid podem parar)."/>
+                            </StackPanel>
+                        </Border>
                         <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Trades/s" FontSize="10" Foreground="#BBBBBB" FontFamily="Consolas"/>
@@ -396,7 +517,6 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="18"/>
                             <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="52"/>
                             <ColumnDefinition Width="38"/>
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="2"/>
@@ -405,69 +525,89 @@
                             <ColumnDefinition Width="2"/>
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="38"/>
-                            <ColumnDefinition Width="52"/>
                             <ColumnDefinition Width="16"/>
                             <ColumnDefinition Width="18"/>
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="7" Background="#081208" BorderBrush="#1A3A1A" BorderThickness="0,0,1,1">
+                        <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="6" Background="#081208" BorderBrush="#1A3A1A" BorderThickness="0,0,1,1">
                             <TextBlock Text="COMPRA" FontSize="12" FontWeight="Bold" Foreground="#00E676" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <Border Grid.Row="0" Grid.Column="7" Grid.ColumnSpan="7" Background="#120808" BorderBrush="#3A1A1A" BorderThickness="0,0,0,1">
+                        <Border Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="6" Background="#120808" BorderBrush="#3A1A1A" BorderThickness="0,0,0,1">
                             <TextBlock Text="VENDA" FontSize="12" FontWeight="Bold" Foreground="#FF4444" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Corretora" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="3" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Corr." FontSize="9" Foreground="#666666" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Right" Margin="0,0,3,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="5" Text="Preço" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <TextBlock Grid.Row="1" Grid.Column="6" Text="Preço" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="7" Text="Preço" FontSize="10" Foreground="#888888" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="10" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Row="1" Grid.Column="11" Text="Corretora" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="9" Text="Vol" FontSize="10" Foreground="#888888" HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="1" Grid.Column="7" Text="Corr." FontSize="9" Foreground="#666666" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                     <ScrollViewer Grid.Row="1" Style="{StaticResource HiddenScroll}" x:Name="BookScrollViewer">
-                        <ItemsControl x:Name="IcBookRows" ItemsSource="{Binding BookRows}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid x:Name="BookRowGrid" Height="22" Background="{Binding RowBackground}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="56"/>
-                                            <ColumnDefinition Width="42"/>
-                                            <ColumnDefinition Width="90"/>
-                                            <ColumnDefinition Width="2"/>
-                                            <ColumnDefinition Width="65"/>
-                                            <ColumnDefinition Width="65"/>
-                                            <ColumnDefinition Width="2"/>
-                                            <ColumnDefinition Width="90"/>
-                                            <ColumnDefinition Width="42"/>
-                                            <ColumnDefinition Width="56"/>
-                                            <ColumnDefinition Width="16"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" x:Name="TbBidDetector" Text="{Binding BidDetector}" Foreground="{Binding BidDetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding BidBroker}" FontSize="12" Foreground="#E8E8E8" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding BidVolume}" FontSize="12" FontWeight="{Binding BidVolWeight}" Foreground="{Binding BidVolColor}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <Grid Grid.Column="3" Margin="1,3,1,3">
-                                            <Border Background="#0A0A0A" CornerRadius="1"/>
-                                            <Border HorizontalAlignment="Right" CornerRadius="1" Background="{Binding BidBarColor}" Width="{Binding BidBarWidth}" Opacity="{Binding BidBarOpacity}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ItemsControl Grid.Column="0" x:Name="IcBidRows" ItemsSource="{Binding BidRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Height="22" Background="{Binding RowBackground}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="46"/>
+                                                <ColumnDefinition Width="66"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="2"/>
+                                                <ColumnDefinition Width="65"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Detector}" Foreground="{Binding DetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Broker}" FontSize="10" FontWeight="SemiBold" Foreground="#9FA8B2" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="1,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Volume}" FontSize="12" FontWeight="{Binding VolWeight}" Foreground="{Binding VolColor}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
+                                            <Grid Grid.Column="3" Margin="1,3,1,3">
+                                                <Border Background="#0A0A0A" CornerRadius="1"/>
+                                                <Border HorizontalAlignment="Right" CornerRadius="1" Background="{Binding BarColor}" Width="{Binding BarWidth}" Opacity="{Binding BarOpacity}"/>
+                                            </Grid>
+                                            <Border Grid.Column="4" Background="#2A2A2A"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding Price}" FontSize="12" FontWeight="SemiBold" Foreground="#00C853" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
                                         </Grid>
-                                        <Border Grid.Column="4" Background="#2A2A2A"/>
-                                        <TextBlock Grid.Column="5" Text="{Binding BidPrice}" FontSize="12" FontWeight="SemiBold" Foreground="#00C853" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,3,0"/>
-                                        <TextBlock Grid.Column="6" Text="{Binding AskPrice}" FontSize="12" FontWeight="SemiBold" Foreground="#FF1744" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <Border Grid.Column="7" Background="#2A2A2A"/>
-                                        <Grid Grid.Column="8" Margin="1,3,1,3">
-                                            <Border Background="#0A0A0A" CornerRadius="1"/>
-                                            <Border HorizontalAlignment="Left" CornerRadius="1" Background="{Binding AskBarColor}" Width="{Binding AskBarWidth}" Opacity="{Binding AskBarOpacity}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <ItemsControl Grid.Column="1" x:Name="IcAskRows" ItemsSource="{Binding AskRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Height="22" Background="{Binding RowBackground}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="65"/>
+                                                <ColumnDefinition Width="2"/>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="66"/>
+                                                <ColumnDefinition Width="46"/>
+                                                <ColumnDefinition Width="16"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Price}" FontSize="12" FontWeight="SemiBold" Foreground="#FF1744" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                            <Border Grid.Column="1" Background="#2A2A2A"/>
+                                            <Grid Grid.Column="2" Margin="1,3,1,3">
+                                                <Border Background="#0A0A0A" CornerRadius="1"/>
+                                                <Border HorizontalAlignment="Left" CornerRadius="1" Background="{Binding BarColor}" Width="{Binding BarWidth}" Opacity="{Binding BarOpacity}"/>
+                                            </Grid>
+                                            <TextBlock Grid.Column="3" Text="{Binding Volume}" FontSize="12" FontWeight="{Binding VolWeight}" Foreground="{Binding VolColor}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding Broker}" FontSize="10" FontWeight="SemiBold" Foreground="#9FA8B2" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="1,0" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="5" Text="{Binding Detector}" Foreground="{Binding DetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                         </Grid>
-                                        <TextBlock Grid.Column="9" Text="{Binding AskVolume}" FontSize="12" FontWeight="{Binding AskVolWeight}" Foreground="{Binding AskVolColor}" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <TextBlock Grid.Column="10" Text="{Binding AskBroker}" FontSize="12" Foreground="#E8E8E8" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="3,0,0,0"/>
-                                        <TextBlock Grid.Column="11" x:Name="TbAskDetector" Text="{Binding AskDetector}" Foreground="{Binding AskDetectorColor}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <VirtualizingStackPanel IsVirtualizing="True" VirtualizationMode="Recycling"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                        </ItemsControl>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </Grid>
                     </ScrollViewer>
 
                     <!-- ══ PAINEL SPOOF NOTIFICATIONS ══ -->
@@ -673,7 +813,7 @@
                             </Grid.RowDefinitions>
                             <Grid Grid.Row="0" Background="#080808">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="52"/>
+                                    <ColumnDefinition Width="76"/>
                                     <ColumnDefinition Width="48"/>
                                     <ColumnDefinition Width="62"/>
                                     <ColumnDefinition Width="35"/>
@@ -691,7 +831,7 @@
                                         <DataTemplate>
                                             <Grid Height="19" Background="{Binding RowBg}">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="62"/>
+                                                    <ColumnDefinition Width="76"/>
                                                     <ColumnDefinition Width="52"/>
                                                     <ColumnDefinition Width="62"/>
                                                     <ColumnDefinition Width="35"/>
@@ -804,8 +944,14 @@
                     <TextBlock Text="Replay:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     <TextBlock x:Name="TbReplayStatus" Foreground="#EEEEEE" FontSize="10" Text="--" VerticalAlignment="Center" Margin="3,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="8" x:Name="TbDiskAlert" Text="" FontSize="9" Foreground="#FF1744" VerticalAlignment="Center" Visibility="Collapsed"/>
-                <TextBlock Grid.Column="10" Text="MarketCore FlowSense v3.1" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                        <TextBlock Text="Relógio:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TbDataLatency" FontSize="10" Foreground="#EEEEEE" VerticalAlignment="Center" Margin="6,0,0,0" FontFamily="Consolas" Text="--" ToolTip="Negócio = hora vinda da DLL (quando há data). DLL→motor = fila/processador Profit. motor→HUD = até este frame da UI (~33 ms). PC = relógio local agora. Se aparecer 'DLL sem data', o callback não trouxe string de hora interpretável — compare só com PC." TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TbDiskAlert" Text="" FontSize="9" Foreground="#FF1744" VerticalAlignment="Center" Visibility="Collapsed"/>
+                </StackPanel>
+                <TextBlock Grid.Column="10" Text="MarketCore FlowSense v3.2 • L2 agregado pt-BR" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
             </Grid>
         </Border>
         
@@ -871,5 +1017,3 @@
         
     </Grid>
 </Window>
-
-

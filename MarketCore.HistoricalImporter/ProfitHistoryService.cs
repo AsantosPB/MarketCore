@@ -17,14 +17,123 @@ public sealed class ProfitHistoryService : IDisposable
     private static volatile bool s_optionalSubscribeTried;
     private static int s_historySampleLogs;
     private static readonly object StaticSync = new();
+    private static readonly SemaphoreSlim s_dllGate = new(1, 1);
     private static long s_historyTicks;
+    /// <summary>
+    /// Última % de progresso conhecida para o ticker em download (case-insensitive).
+    /// Atualizada pelo callback <c>Progress</c> e usada por <see cref="WaitHistoryQuietAsync"/>
+    /// para sair imediatamente quando a DLL sinaliza 100%.
+    /// </summary>
+    private static volatile int s_lastProgressPct = -1;
 
-    private static readonly string[] HistoryExchanges = ["F", "B", "BMF"];
+    /// <summary>
+    /// Bolsas para <c>GetHistoryTrades</c> (manual ProfitDLL):
+    /// <c>"F"</c> = BM&amp;F (futuros), <c>"B"</c> = Bovespa (ações).
+    /// A ordem de tentativa depende do ticker — ver <see cref="GetHistoryExchangesForTicker"/>.
+    /// </summary>
+    private const string BmfMonthLetters = "FGHJKMNQUVXZ";
 
-    private const int HistoryWaitMaxMs = 90_000;
-    private const int HistoryQuietMs = 2_000;
-    /// <summary>Limite por chamada a <c>GetHistoryTrades</c>: a DLL pode bloquear indefinidamente mal o servidor falhe.</summary>
-    public static TimeSpan NativeGetHistoryTradesCallTimeout { get; set; } = TimeSpan.FromSeconds(120);
+    /// <summary>Prefixos de contratos negociados na BMF (mais longos primeiro onde importa).</summary>
+    private static readonly string[] BmfInstrumentRoots =
+    [
+        "BGI", "CCM", "DAP", "FRC", "WIN", "WDO", "IND", "DOL", "WSP",
+        "BIT", "ETH", "TF", "BG",
+    ];
+
+    /// <summary>
+    /// Futuros BMF (contínuos *FUT, DI*, ou contrato com mês FGHJKMNQUVXZ + ano) → só bolsa <c>F</c>.
+    /// Ação típica Bovespa (4 letras + dígito, ex. PETR4) → só <c>B</c>.
+    /// Caso ambíguo → <c>F</c> depois <c>B</c> (comportamento legado).
+    /// </summary>
+    private static string[] GetHistoryExchangesForTicker(string sym)
+    {
+        if (IsBmfFuturesTicker(sym))
+            return ["F"];
+        if (IsTypicalBovespaEquityTicker(sym))
+            return ["B"];
+        return ["F", "B"];
+    }
+
+    private static bool IsBmfFuturesTicker(string sym)
+    {
+        if (sym.EndsWith("FUT", StringComparison.Ordinal))
+            return true;
+        // DI1, DI1F25, etc.
+        if (sym.Length >= 3 && sym.StartsWith("DI", StringComparison.Ordinal) && char.IsAsciiDigit(sym[2]))
+            return true;
+
+        foreach (string root in BmfInstrumentRoots)
+        {
+            if (!sym.StartsWith(root, StringComparison.Ordinal))
+                continue;
+            ReadOnlySpan<char> rest = sym.AsSpan(root.Length);
+            if (rest.Length < 2 || rest.Length > 4)
+                continue;
+            if (BmfMonthLetters.IndexOf(rest[0]) < 0)
+                continue;
+            ReadOnlySpan<char> yy = rest.Slice(1);
+            bool allDigits = true;
+            foreach (char c in yy)
+            {
+                if (!char.IsAsciiDigit(c))
+                {
+                    allDigits = false;
+                    break;
+                }
+            }
+            if (allDigits)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Padrão clássico de ticker de ação na B3 (ex.: PETR4, VALE3) — 4 letras + dígito.</summary>
+    private static bool IsTypicalBovespaEquityTicker(string s)
+    {
+        if (s.Length != 5 || !char.IsAsciiDigit(s[4]))
+            return false;
+        for (int i = 0; i < 4; i++)
+        {
+            if (!char.IsAsciiLetter(s[i]))
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Teto duro para a espera após o primeiro callback chegar. Saímos cedo via
+    /// <c>HistoryQuietMs</c> ou pelo sinal <c>Progress=100</c> + drain.
+    /// </summary>
+    private const int HistoryWaitMaxMs = 600_000; // 10 min
+    /// <summary>
+    /// Tempo máximo à espera do PRIMEIRO callback após <c>GetHistoryTrades</c> retornar.
+    /// Se a DLL não emitir nada nestes segundos, abandonamos esta tentativa.
+    /// </summary>
+    private const int HistoryInitialWaitMs = 60_000;
+    /// <summary>
+    /// Janela de silêncio que conclui o download (sem sinal de Progress).
+    /// </summary>
+    private const int HistoryQuietMs = 60_000;
+    /// <summary>
+    /// Drain após <c>Progress=100</c>: o manual diz que Progress é específico do <c>THistoryTradeCallback</c>
+    /// e vai de 0 a 100. Quando atinge 100 sabemos que a DLL terminou — damos 15 s de margem
+    /// para os últimos callbacks chegarem antes de retornar.
+    /// </summary>
+    private const int HistoryProgressDoneDrainMs = 15_000;
+    /// <summary>Tempo máximo para a chamada da DLL retornar (não confundir com a espera por callbacks).</summary>
+    public static TimeSpan NativeGetHistoryTradesCallTimeout { get; set; } = TimeSpan.FromMinutes(3);
+
+    /// <summary>
+    /// Notificação opcional para a UI durante o download: ticker, bolsa, formato e estado/observação.
+    /// Permite mostrar "WINM26 / F / dd/MM HH:mm:ss : sem callbacks…" em vez de só "A descarregar…".
+    /// </summary>
+    public static event Action<string, string, string, string>? AttemptStatus;
+
+    private static void RaiseAttemptStatus(string ticker, string exchange, string dateFormat, string note)
+    {
+        try { AttemptStatus?.Invoke(ticker, exchange, dateFormat, note); } catch { /* best effort */ }
+    }
 
     /// <summary>
     /// Dias máximos por cada chamada a <c>GetHistoryTrades</c>. O manual ProfitDLL não fixa limite de período;
@@ -32,6 +141,13 @@ public sealed class ProfitHistoryService : IDisposable
     /// Podes aumentar ou diminuir antes de <see cref="RequestHistoricalData"/> conforme testes na tua conta.
     /// </summary>
     public static int MaxHistoryChunkDays { get; set; } = 7;
+
+    /// <summary>
+    /// Quando <c>true</c>, <c>WINFUT</c>/<c>WDOFUT</c>/<c>INDFUT</c> são substituídos pelo código do contrato
+    /// (ex. <c>WINJ26</c>) antes de <c>GetHistoryTrades</c>. Predefinição <c>false</c>: recomendação Nelogica —
+    /// pedir histórico com o ticker contínuo (<c>WINFUT</c>, etc.).
+    /// </summary>
+    public static bool ResolveContinuousAliasForHistory { get; set; }
 
     public ProfitHistoryService(IProfitHistoryTradeSink sink)
     {
@@ -66,6 +182,10 @@ public sealed class ProfitHistoryService : IDisposable
             throw new ArgumentException("Data fim < início.");
 
         string sym = symbol.Trim().ToUpperInvariant();
+
+        if (ResolveContinuousAliasForHistory)
+            sym = ResolveContinuousAliasIfNeeded(sym, start);
+
         _sink.SetCurrentContract(sym);
 
         int startInt = ToYyyyMmDd(start);
@@ -74,12 +194,22 @@ public sealed class ProfitHistoryService : IDisposable
         var bridge = new ProviderHistoryBridge(_sink);
         bridge.Subscribe();
         ProfitHistoryRelay.BeginHistoricalDownloadScope();
-        Action<string, int>? onProg = static (tk, p) =>
+        Interlocked.Exchange(ref s_lastProgressPct, -1);
+        Action<string, int>? onProg = (tk, p) =>
         {
             if (p < 0) return;
+            // Sinal de fim: a DLL costuma emitir Progress=100 quando termina de despejar histórico.
+            // Guardamos a última % para o WaitHistoryQuietAsync sair imediatamente em 100%.
+            if (!string.IsNullOrEmpty(tk) && !ProgressTickerMatchesRequest(sym, tk))
+            {
+                ProfitDllDiag.Append($"[Progress] {tk} {p}% (outro ticker, ignorado para sinal de fim)");
+                return;
+            }
+            Interlocked.Exchange(ref s_lastProgressPct, p);
             ProfitDllDiag.Append($"[Progress] {tk} {p}%");
         };
         ProfitHistoryRelay.HistoryProgress += onProg;
+        await s_dllGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             Interlocked.Exchange(ref s_historySampleLogs, 0);
@@ -115,15 +245,47 @@ public sealed class ProfitHistoryService : IDisposable
 
             if (!haveGet && !haveByPeriod)
                 throw new MissingMethodException(
-                    "ProfitDLL64.dll: não foi encontrado GetHistoryTrades nem export DLLNewHistoryTypedTradesByPeriod.");
+                    "ProfitDLL64.dll não expõe histórico por período nesta instalação. " +
+                    "Confirme que ProfitDLL64.dll está junto ao executável e que a sessão de mercado está ligada. " +
+                    "Export esperado: GetHistoryTrades (DLLNewHistoryTypedTradesByPeriod não está presente nesta build).");
 
             return lastRc;
         }
         finally
         {
+            // Drain final: dá tempo para os últimos callbacks da DLL chegarem antes
+            // de descer o bridge e fechar o escopo. Sem isto, em downloads grandes,
+            // perdiam-se as últimas centenas/milhares de negócios do dia.
+            try
+            {
+                long ticksBeforeFinalDrain = Volatile.Read(ref s_historyTicks);
+                long lastChange = Environment.TickCount64;
+                long deadline = lastChange + 5_000;
+                while (Environment.TickCount64 < deadline)
+                {
+                    await Task.Delay(200, CancellationToken.None).ConfigureAwait(false);
+                    long now = Volatile.Read(ref s_historyTicks);
+                    if (now != ticksBeforeFinalDrain)
+                    {
+                        ticksBeforeFinalDrain = now;
+                        lastChange = Environment.TickCount64;
+                        deadline = lastChange + 5_000;
+                    }
+                    else if (Environment.TickCount64 - lastChange >= 1_500)
+                    {
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                /* drain best-effort */
+            }
+
             ProfitHistoryRelay.HistoryProgress -= onProg;
             bridge.Unsubscribe();
             ProfitHistoryRelay.EndHistoricalDownloadScope();
+            s_dllGate.Release();
         }
     }
 
@@ -149,7 +311,7 @@ public sealed class ProfitHistoryService : IDisposable
     /// <summary>Tenta exports opcionais (varia por build da DLL) antes de <c>GetHistoryTrades</c>.</summary>
     private static void TryOptionalSubscribeHistoryOnce()
     {
-        if (s_optionalSubscribeTried)
+        if (s_optionalSubscribeTried || ProfitMarketInit.IsDllInitializedInProcess)
             return;
         s_optionalSubscribeTried = true;
 
@@ -178,11 +340,9 @@ public sealed class ProfitHistoryService : IDisposable
             try
             {
                 var d = Marshal.GetDelegateForFunctionPointer<OptionalSubscribeLikeFn>(fn);
-                foreach (string ex in HistoryExchanges)
-                {
-                    int r = d("WINFUT", ex);
-                    ProfitDllDiag.Append($"optional {export} WINFUT/{ex} rc={r}");
-                }
+                // Probes só com WINFUT (BMF) — bolsa F conforme manual.
+                int r = d("WINFUT", "F");
+                ProfitDllDiag.Append($"optional {export} WINFUT/F rc={r}");
             }
             catch (Exception ex)
             {
@@ -228,22 +388,24 @@ public sealed class ProfitHistoryService : IDisposable
 
         EnsureDllModuleLoaded();
 
-        string[] names =
+        string[] candidates =
         [
             "GetHistoryTrades",
-            "GetHistoryTradesW",
-            "_GetHistoryTrades@16"
+            "_GetHistoryTrades@16",
+            "_GetHistoryTrades@20"
         ];
 
-        foreach (string name in names)
+        foreach (string name in candidates)
         {
             if (!NativeLibrary.TryGetExport(s_dllModule, name, out nint fn))
                 continue;
+
             s_getHistoryTrades = Marshal.GetDelegateForFunctionPointer<GetHistoryTradesFn>(fn);
-            ProfitDllDiag.Append($"GetHistoryTrades delegate ligado ao export: {name}");
+            ProfitDllDiag.Append($"GetHistoryTrades ligado via export {name}");
             return true;
         }
 
+        ProfitDllDiag.Append("Export GetHistoryTrades não encontrado na ProfitDLL64");
         return false;
     }
 
@@ -265,15 +427,23 @@ public sealed class ProfitHistoryService : IDisposable
             var (c0, c1) = chunks[i];
             ProfitDllDiag.Append($"  janela [{i + 1}/{chunks.Count}] {c0:dd/MM/yyyy HH:mm:ss} → {c1:dd/MM/yyyy HH:mm:ss}");
 
-            var datePairs = BuildDateRangePairs(c0, c1);
-            long baseline = Volatile.Read(ref s_historyTicks);
-
             string primary = symbol.Trim().ToUpperInvariant();
-            lastRc = await RequestGetHistoryWorkAsync(primary, datePairs, useAsyncWait, ct).ConfigureAwait(false);
 
-            if (Volatile.Read(ref s_historyTicks) == baseline
-                && !primary.Equals("WINFUT", StringComparison.OrdinalIgnoreCase))
-                lastRc = await RequestGetHistoryWorkAsync("WINFUT", datePairs, useAsyncWait, ct).ConfigureAwait(false);
+            // Um pedido por dia civil: intervalos multi-dia costumam ficar com Progress ~98%
+            // e zero callbacks; por dia o servidor completa e despacha negócios.
+            for (DateTime day = c0.Date; day <= c1.Date; day = day.AddDays(1))
+            {
+                DateTime segStart = day <= c0.Date ? c0 : day.Date;
+                DateTime dayEndMoment = day.Date.AddDays(1).AddMilliseconds(-1);
+                DateTime segEnd = dayEndMoment < c1 ? dayEndMoment : c1;
+                if (segStart > segEnd)
+                    continue;
+
+                ProfitDllDiag.Append($"    segmento {segStart:dd/MM/yyyy HH:mm:ss} → {segEnd:dd/MM/yyyy HH:mm:ss}");
+
+                var datePairs = BuildDateRangePairs(segStart, segEnd);
+                lastRc = await RequestGetHistoryWorkAsync(primary, datePairs, useAsyncWait, ct).ConfigureAwait(false);
+            }
         }
 
         return lastRc;
@@ -310,23 +480,19 @@ public sealed class ProfitHistoryService : IDisposable
         DateTime dayEnd = end.Date.AddDays(1).AddMilliseconds(-1);
         DateTime clippedStart = start > dayStart ? start : dayStart;
 
-        // Manual: PWideChar + formato "DD/MM/YYYY HH:mm:SS" — prioridade sem fração de segundo.
+        // Manual ProfitDLL (GetHistoryTrades): formato OBRIGATÓRIO "DD/MM/YYYY HH:mm:SS".
+        // Formatos ISO (yyyy-MM-dd) NÃO são suportados — retornam NL_INVALID_ARGS (-2147483645).
         string ddStartNoMs = clippedStart.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
         string ddEndNoMs = dayEnd.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture);
 
+        // Variante com .fff como fallback defensivo — algumas builds aceitam, outras ignoram.
         string ddStart = clippedStart.ToString("dd/MM/yyyy HH:mm:ss.fff", CultureInfo.InvariantCulture);
         string ddEnd = dayEnd.ToString("dd/MM/yyyy HH:mm:ss.fff", CultureInfo.InvariantCulture);
-        string isoStartNoMs = clippedStart.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-        string isoEndNoMs = dayEnd.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-        string isoStart = clippedStart.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-        string isoEnd = dayEnd.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
 
         return
         [
             (ddStartNoMs, ddEndNoMs),
             (ddStart, ddEnd),
-            (isoStartNoMs, isoEndNoMs),
-            (isoStart, isoEnd)
         ];
     }
 
@@ -340,8 +506,8 @@ public sealed class ProfitHistoryService : IDisposable
         TimeSpan budget = NativeGetHistoryTradesCallTimeout;
         if (budget < TimeSpan.FromSeconds(15))
             budget = TimeSpan.FromSeconds(15);
-        else if (budget > TimeSpan.FromMinutes(15))
-            budget = TimeSpan.FromMinutes(15);
+        else if (budget > TimeSpan.FromMinutes(10))
+            budget = TimeSpan.FromMinutes(10);
 
         GetHistoryTradesFn fn = s_getHistoryTrades!;
         Task<int> work = Task.Run(() => fn(ticker, ex, startStr, endStr));
@@ -364,21 +530,35 @@ public sealed class ProfitHistoryService : IDisposable
         bool useAsyncWait,
         CancellationToken ct)
     {
-        TryOptionalSubscribeHistoryOnce();
+        bool skipMarketSetup = ProfitMarketInit.IsDllInitializedInProcess;
+        if (!skipMarketSetup)
+            TryOptionalSubscribeHistoryOnce();
 
         int lastRc = 0;
-        foreach (string ex in HistoryExchanges)
+        string[] exchanges = GetHistoryExchangesForTicker(ticker);
+        ProfitDllDiag.Append($"[GetHistoryTrades] ticker={ticker} bolsas={string.Join(',', exchanges)}");
+
+        foreach (string ex in exchanges)
         {
             long tickRound = Volatile.Read(ref s_historyTicks);
+            // Manual: antes de histórico pode ser necessário SubscribeTicker no ativo.
+            // Com sessão já ligada também fazemos subscribe — sem isto vimos Progress ~98% e 0 callbacks.
             int rsT = SubscribeTicker(ticker, ex);
             int rsO = SubscribeOfferBook(ticker, ex);
-            ProfitDllDiag.Append($"SubscribeTicker({ticker},{ex}) rc={rsT} SubscribeOfferBook rc={rsO}");
+            ProfitDllDiag.Append(
+                skipMarketSetup
+                    ? $"SubscribeTicker({ticker},{ex}) rc={rsT} OfferBook rc={rsO} (sessão já ativa)"
+                    : $"SubscribeTicker({ticker},{ex}) rc={rsT} SubscribeOfferBook rc={rsO}");
 
             try
             {
                 foreach (var pair in datePairs)
                 {
                     long tickBefore = Volatile.Read(ref s_historyTicks);
+                    Interlocked.Exchange(ref s_lastProgressPct, -1);
+
+                    RaiseAttemptStatus(ticker, ex, pair.Start, "a chamar GetHistoryTrades…");
+
                     try
                     {
                         lastRc = await CallGetHistoryTradesWithTimeoutAsync(ticker, ex, pair.Start, pair.End, ct)
@@ -386,24 +566,66 @@ public sealed class ProfitHistoryService : IDisposable
                     }
                     catch (TimeoutException)
                     {
+                        RaiseAttemptStatus(ticker, ex, pair.Start, "TIMEOUT na chamada DLL — tentando próximo formato");
                         continue;
                     }
 
                     ProfitDllDiag.Append($"GetHistoryTrades ticker={ticker} ex={ex} rc={lastRc} start={pair.Start} end={pair.End}");
 
-                    await WaitHistoryQuietAsync(tickBefore, HistoryWaitMaxMs, HistoryQuietMs, useAsyncWait, ct).ConfigureAwait(false);
-
-                    if (Volatile.Read(ref s_historyTicks) > tickBefore)
+                    // rc != 0: a DLL recusou o pedido. Esperar 10 min de callbacks que nunca virão
+                    // é o que estava a causar downloads "parados" sem informação. Saímos com janela curta.
+                    if (lastRc != 0)
                     {
-                        ProfitDllDiag.Append($"{ticker}/{ex}: recebidos callbacks (Δticks)");
+                        RaiseAttemptStatus(ticker, ex, pair.Start, $"rc={lastRc} (recusado) — próxima tentativa");
+                        await WaitHistoryQuietAsync(
+                            tickBefore,
+                            maxWaitMs: 5_000,
+                            initialWaitMs: 5_000,
+                            quietWindowMs: HistoryQuietMs,
+                            useAsyncWait, ct).ConfigureAwait(false);
+
+                        if (Volatile.Read(ref s_historyTicks) > tickBefore)
+                            return lastRc; // surpresa: ainda assim chegaram callbacks
+                        continue;
+                    }
+
+                    RaiseAttemptStatus(ticker, ex, pair.Start, "rc=0, à espera de callbacks…");
+
+                    // rc == 0: pode haver dados a caminho. Damos 45s para o primeiro callback aparecer.
+                    // Se nada chegar, abandonamos esta tentativa. Se chegar, esperamos a janela quieta.
+                    await WaitHistoryQuietAsync(
+                        tickBefore,
+                        maxWaitMs: HistoryWaitMaxMs,
+                        initialWaitMs: HistoryInitialWaitMs,
+                        quietWindowMs: HistoryQuietMs,
+                        useAsyncWait, ct).ConfigureAwait(false);
+
+                    long ticksAfter = Volatile.Read(ref s_historyTicks);
+                    if (ticksAfter > tickBefore)
+                    {
+                        ProfitDllDiag.Append(
+                            $"{ticker}/{ex}: recebidos callbacks (Δticks={ticksAfter - tickBefore}, progress={s_lastProgressPct})");
+                        RaiseAttemptStatus(ticker, ex, pair.Start, $"OK — {ticksAfter - tickBefore} callbacks");
                         return lastRc;
                     }
+
+                    RaiseAttemptStatus(ticker, ex, pair.Start, "0 callbacks neste formato — próxima tentativa");
                 }
             }
             finally
             {
-                _ = UnsubscribeOfferBook(ticker, ex);
-                _ = UnsubscribeTicker(ticker, ex);
+                // Só desinscreve quando foi nós que fizemos login isolado — não quebrar livro ao vivo.
+                if (!skipMarketSetup)
+                {
+                    long ticksBeforeDrain = Volatile.Read(ref s_historyTicks);
+                    await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
+                    long ticksAfterDrain = Volatile.Read(ref s_historyTicks);
+                    if (ticksAfterDrain != ticksBeforeDrain)
+                        ProfitDllDiag.Append($"{ticker}/{ex}: drain capturou {ticksAfterDrain - ticksBeforeDrain} callbacks adicionais antes do unsubscribe");
+
+                    _ = UnsubscribeOfferBook(ticker, ex);
+                    _ = UnsubscribeTicker(ticker, ex);
+                }
             }
 
             if (Volatile.Read(ref s_historyTicks) > tickRound)
@@ -413,10 +635,17 @@ public sealed class ProfitHistoryService : IDisposable
         return lastRc;
     }
 
-    /// <summary>Espera após bursts de ticks; só considera “silêncio” depois do primeiro novo tick.</summary>
+    /// <summary>
+    /// Espera após bursts de ticks. Sai pelas seguintes condições, em ordem:
+    ///   • <paramref name="initialWaitMs"/> sem nenhum callback (DLL ignorou o pedido) — desiste rápido;
+    ///   • <paramref name="quietWindowMs"/> de silêncio APÓS o último callback (fim normal);
+    ///   • <c>Progress=100</c> + <see cref="HistoryProgressDoneDrainMs"/> sem novos callbacks (fim sinalizado);
+    ///   • <paramref name="maxWaitMs"/> total (teto duro).
+    /// </summary>
     private static async Task WaitHistoryQuietAsync(
         long tickAtStart,
         int maxWaitMs,
+        int initialWaitMs,
         int quietWindowMs,
         bool useAsyncWait,
         CancellationToken ct)
@@ -424,6 +653,8 @@ public sealed class ProfitHistoryService : IDisposable
         var sw = System.Diagnostics.Stopwatch.StartNew();
         long lastSeen = tickAtStart;
         long lastChangeAt = -1;
+        long progress100At = -1;
+        long ticksAtProgress100 = tickAtStart;
 
         while (sw.ElapsedMilliseconds < maxWaitMs)
         {
@@ -434,20 +665,144 @@ public sealed class ProfitHistoryService : IDisposable
                 lastSeen = now;
                 lastChangeAt = sw.ElapsedMilliseconds;
             }
-            else if (lastChangeAt >= 0 && sw.ElapsedMilliseconds - lastChangeAt >= quietWindowMs)
+
+            if (progress100At < 0 && s_lastProgressPct >= 100)
+            {
+                progress100At = sw.ElapsedMilliseconds;
+                ticksAtProgress100 = now;
+                ProfitDllDiag.Append(
+                    $"[WaitQuiet] Progress=100 visto aos {progress100At}ms — drain {HistoryProgressDoneDrainMs}ms para últimos callbacks");
+            }
+
+            // Progress=100 + drain sem novos callbacks → fim sinalizado pela DLL.
+            if (progress100At >= 0
+                && sw.ElapsedMilliseconds - progress100At >= HistoryProgressDoneDrainMs
+                && (lastChangeAt < 0 || sw.ElapsedMilliseconds - lastChangeAt >= HistoryProgressDoneDrainMs))
+            {
+                long extraCallbacks = now - ticksAtProgress100;
+                ProfitDllDiag.Append(
+                    $"[WaitQuiet] fim por Progress=100 (drain {HistoryProgressDoneDrainMs}ms; +{extraCallbacks} callbacks após 100%)");
                 return;
+            }
+
+            // Janela quieta após último callback recebido (fallback se Progress não chegar).
+            if (lastChangeAt >= 0 && sw.ElapsedMilliseconds - lastChangeAt >= quietWindowMs)
+            {
+                ProfitDllDiag.Append(
+                    $"[WaitQuiet] fim por janela quieta de {quietWindowMs}ms (elapsed={sw.ElapsedMilliseconds}ms, lastChangeAt={lastChangeAt}ms)");
+                return;
+            }
+
+            // Initial-wait: sem callbacks — mas se Progress está entre 1 e 99, a DLL está a carregar
+            // histórico no servidor; abandonar aos 60s deixa o pedido eternamente em ~98% sem ticks.
+            int prog = s_lastProgressPct;
+            bool loadingHistory = prog >= 1 && prog < 100;
+            if (lastChangeAt < 0
+                && initialWaitMs > 0
+                && sw.ElapsedMilliseconds >= initialWaitMs
+                && !loadingHistory)
+            {
+                ProfitDllDiag.Append(
+                    $"[WaitQuiet] abandono — sem callbacks em {initialWaitMs}ms (progress={prog})");
+                return;
+            }
 
             if (useAsyncWait)
                 await Task.Delay(120, ct).ConfigureAwait(false);
             else
                 Thread.Sleep(120);
         }
+
+        ProfitDllDiag.Append(
+            $"[WaitQuiet] saiu por maxWait={maxWaitMs}ms (lastChange={lastChangeAt}, progress={s_lastProgressPct})");
     }
 
     private static int ToYyyyMmDd(DateTime dt)
     {
         dt = dt.Date;
         return dt.Year * 10_000 + dt.Month * 100 + dt.Day;
+    }
+
+    /// <summary>
+    /// Permite que pedidos com ticker contínuo (<c>WINFUT</c>) continuem a aceitar <c>Progress</c>
+    /// quando a DLL reporta o contrato negociado (ex. <c>WINJ26</c>) — caso contrário o fim do download nunca é detectado.
+    /// </summary>
+    private static bool ProgressTickerMatchesRequest(string requestSym, string progressTicker)
+    {
+        if (string.IsNullOrEmpty(progressTicker))
+            return true;
+
+        if (progressTicker.IndexOf(requestSym, StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+        if (requestSym.IndexOf(progressTicker, StringComparison.OrdinalIgnoreCase) >= 0)
+            return true;
+
+        string norm = requestSym.Replace("-", "", StringComparison.Ordinal)
+            .Replace("_", "", StringComparison.Ordinal)
+            .ToUpperInvariant();
+
+        ReadOnlySpan<char> tk = progressTicker.AsSpan().Trim();
+        return norm switch
+        {
+            "WINFUT" => tk.StartsWith("WIN", StringComparison.OrdinalIgnoreCase),
+            "WDOFUT" => tk.StartsWith("WDO", StringComparison.OrdinalIgnoreCase),
+            "INDFUT" => tk.StartsWith("IND", StringComparison.OrdinalIgnoreCase),
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Opcional (<see cref="ResolveContinuousAliasForHistory"/>): mapeia <c>WINFUT</c>→<c>WINJ26</c>, etc.,
+    /// pela data de vencimento. Recomendação Nelogica é usar <c>WINFUT</c> direto em <c>GetHistoryTrades</c>.
+    /// </summary>
+    private static string ResolveContinuousAliasIfNeeded(string sym, DateTime requestStart)
+    {
+        if (string.IsNullOrEmpty(sym))
+            return sym;
+
+        // Reconhece WINFUT, WDOFUT, INDFUT (e variantes com underscore/hífen).
+        string normalized = sym.Replace("-", "").Replace("_", "");
+        string? baseTicker = normalized switch
+        {
+            "WINFUT" => "WIN",
+            "WDOFUT" => "WDO",
+            "INDFUT" => "IND",
+            _ => null,
+        };
+
+        if (baseTicker == null)
+            return sym;
+
+        // Encontra o vencimento de WIN/WDO/IND corrente na data de início (vencimentos em meses pares).
+        DateTime d = requestStart.Date;
+        int[] evenMonths = [2, 4, 6, 8, 10, 12];
+
+        for (int monthsAhead = 0; monthsAhead <= 6; monthsAhead++)
+        {
+            DateTime candidateMonth = new DateTime(d.Year, d.Month, 1).AddMonths(monthsAhead);
+            if (Array.IndexOf(evenMonths, candidateMonth.Month) < 0)
+                continue;
+
+            DateTime exp = ContractGenerator.GetExpirationWednesday(candidateMonth.Year, candidateMonth.Month);
+            if (exp >= d)
+            {
+                // Letra do mês conforme convenção B3.
+                char letter = candidateMonth.Month switch
+                {
+                    2 => 'G', 4 => 'J', 6 => 'M', 8 => 'Q', 10 => 'V', 12 => 'Z',
+                    _ => '?'
+                };
+                int yy = candidateMonth.Year % 100;
+                string resolved = $"{baseTicker}{letter}{yy:D2}";
+                ProfitDllDiag.Append(
+                    $"[ResolveAlias] '{sym}' em {d:dd/MM/yyyy} → '{resolved}' (venc. {exp:dd/MM/yyyy})");
+                return resolved;
+            }
+        }
+
+        ProfitDllDiag.Append(
+            $"[ResolveAlias] '{sym}' em {d:dd/MM/yyyy} — não encontrei vencimento corrente; mantendo o alias (vai falhar)");
+        return sym;
     }
 
     private void OnDllNewHistoryTypedTrade(
@@ -464,9 +819,23 @@ public sealed class ProfitHistoryService : IDisposable
         string sellBroker,
         int aggressor)
     {
-        _sink.OnHistoricalTrade(
-            opType, symbol, date, time, price, qty, tradeNum,
-            buyOrder, sellOrder, buyBroker, sellBroker, aggressor);
+        Interlocked.Increment(ref s_historyTicks);
+
+        // Algumas builds da DLL devolvem qty=0 no fluxo typed (a quantidade vai
+        // implícita no número de chamadas ou pelo opType). Garantir 1 mínimo evita
+        // que o TradeRecordFactory descarte silenciosamente o negócio.
+        int qtyForSink = qty > 0 ? qty : 1;
+
+        try
+        {
+            _sink.OnHistoricalTrade(
+                opType, symbol, date, time, price, qtyForSink, tradeNum,
+                buyOrder, sellOrder, buyBroker, sellBroker, aggressor);
+        }
+        catch (Exception ex)
+        {
+            ProfitDllDiag.Append($"[HistorySink] {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     public void Dispose()
@@ -556,19 +925,26 @@ public sealed class ProfitHistoryService : IDisposable
                 qtyFromDll = vol > 0 ? Math.Max(1, (int)Math.Round(vol, MidpointRounding.AwayFromZero)) : 1;
             }
 
-            _sink.OnHistoricalTrade(
-                tradeType,
-                symbol,
-                yyyymmdd,
-                hhmmssfff,
-                price,
-                qtyFromDll,
-                unchecked((int)tradeNumber),
-                0,
-                0,
-                buyAgent.ToString(CultureInfo.InvariantCulture),
-                sellAgent.ToString(CultureInfo.InvariantCulture),
-                tradeType);
+            try
+            {
+                _sink.OnHistoricalTrade(
+                    tradeType,
+                    symbol,
+                    yyyymmdd,
+                    hhmmssfff,
+                    price,
+                    qtyFromDll,
+                    unchecked((int)tradeNumber),
+                    0,
+                    0,
+                    buyAgent.ToString(CultureInfo.InvariantCulture),
+                    sellAgent.ToString(CultureInfo.InvariantCulture),
+                    tradeType);
+            }
+            catch (Exception ex)
+            {
+                ProfitDllDiag.Append($"[HistorySink] {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 

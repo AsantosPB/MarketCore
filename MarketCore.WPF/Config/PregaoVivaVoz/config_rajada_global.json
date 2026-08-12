@@ -1,0 +1,8 @@
+{
+  "versao": "1.0.0",
+  "descricao": "Parâmetros globais do detector de rajada. Aplicam-se a TODOS os players participantes.",
+  "sequenciaMinima": 3,
+  "janelaMilissegundos": 2000,
+  "volumeMinimo": 200,
+  "silencioParouMilissegundos": 3000
+}

@@ -89,7 +89,7 @@ namespace MarketCore.FlowSense
         {
             ClearError();
 
-            // Modo simulador — conecta direto sem credenciais
+            // Modo simulador - conecta direto sem credenciais
             if (!IsRealMarket)
             {
                 Credentials = new ProfitCredentials
@@ -104,7 +104,7 @@ namespace MarketCore.FlowSense
                 return;
             }
 
-            // Modo real — valida credenciais
+            // Modo real - valida credenciais
             string activationKey = TxtActivationKey.Text.Trim();
             string username      = TxtUsername.Text.Trim();
             string password      = _passwordVisible

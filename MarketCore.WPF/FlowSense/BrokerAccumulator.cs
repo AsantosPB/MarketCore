@@ -7,7 +7,7 @@ namespace MarketCore.FlowSense
 {
     /// <summary>
     /// Acumula e ranqueia fluxo por corretora.
-    /// Alimentado por cada TradeEvent do tape — mantém dicionario de BrokerStats,
+    /// Alimentado por cada TradeEvent do tape - mantém dicionario de BrokerStats,
     /// expõe GetTop4Buyers/Sellers ordenados por volume do dia ou atividade 60s
     /// </summary>
     public class BrokerAccumulator
@@ -22,7 +22,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Processa um trade — cria ou atualiza BrokerStats para o broker
+        /// Processa um trade - cria ou atualiza BrokerStats para o broker
         /// </summary>
         public void OnTrade(string brokerName, double volume, bool isBuyAggressor, DateTime timestamp)
         {
@@ -99,7 +99,7 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Retorna o dicionario inteiro (cuidado — apenas para debug)
+        /// Retorna o dicionario inteiro (cuidado - apenas para debug)
         /// </summary>
         public IReadOnlyDictionary<string, BrokerStats> GetAllBrokers()
         {
@@ -140,6 +140,12 @@ namespace MarketCore.FlowSense
         public void Stop()
         {
             _resetTimer?.Stop();
+        }
+
+        /// <summary>Limpa volumes por corretora ao mudar o ativo na UI principal.</summary>
+        public void ClearAllBrokers()
+        {
+            lock (_sync) _brokers.Clear();
         }
     }
 }

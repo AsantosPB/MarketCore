@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -164,11 +164,9 @@ namespace MarketCore.WPF
                 }
             }
 
-            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
-            {
-                RedrawCurrentPriceLine();
-                RedrawYAxis();
-            }));
+            // Não usar BeginInvoke por trade: com centenas de trades/tick inundava o Dispatcher.
+            // O timer de redesenho (~250 ms) atualiza preview + eixo.
+
         }
 
         private void CloseRenkoBlock(double openPrice, double closePrice)
@@ -227,7 +225,7 @@ namespace MarketCore.WPF
             {
                 all = new List<FlowCandle>(_candles);
 
-                // Bloco em formação (não fechado ainda) — mostra como preview
+                // Bloco em formação (não fechado ainda) - mostra como preview
                 if (_renkoBase > 0 && _renkoVol > 0)
                 {
                     double previewClose = _currentPrice;
@@ -308,7 +306,7 @@ namespace MarketCore.WPF
                 double yBottom = PriceToY(Math.Min(c.Open, c.Close), h);
                 double bht     = Math.Max(yBottom - yTop, 2.0);
 
-                // Bloco em formação — leve transparência
+                // Bloco em formação - leve transparência
                 double opacity = isLast && _renkoVol > 0 ? 0.55 : 1.0;
 
                 var body = new Rectangle
@@ -414,7 +412,7 @@ namespace MarketCore.WPF
         }
 
         // ══════════════════════════════════════════════════════════
-        // INTERAÇÃO — Mouse
+        // INTERAÇÃO - Mouse
         // ══════════════════════════════════════════════════════════
 
         private void OnChartMouseMove(object sender, MouseEventArgs e)
@@ -621,7 +619,7 @@ namespace MarketCore.WPF
                 if (bigLot < 1 || exhVol < 1 || exhDelta < 0 || candleW < 2 || bigMult < 1)
                     throw new Exception("Valores fora do intervalo.");
 
-                // Verificar se o tamanho do Renko mudou — só nesse caso limpa o histórico
+                // Verificar se o tamanho do Renko mudou - só nesse caso limpa o histórico
                 bool renkoChanged = Math.Abs(_config.RenkoPoints - renkoPoints) > 0.001;
 
                 _config.RenkoPoints              = renkoPoints;
@@ -689,6 +687,13 @@ namespace MarketCore.WPF
             Redraw();
         }
 
+        /// <summary>Atualiza o rótulo do ativo e limpa Renko ao mudar o instrumento na janela principal.</summary>
+        public void ApplyPrimaryInstrument(string displayTicker)
+        {
+            lblSymbol.Text = string.IsNullOrEmpty(displayTicker) ? "" : displayTicker;
+            ClearChart();
+        }
+
         // ══════════════════════════════════════════════════════════
         // HELPERS
         // ══════════════════════════════════════════════════════════
@@ -723,7 +728,7 @@ namespace MarketCore.WPF
         };
 
         // ══════════════════════════════════════════════════════════
-        // DEMO DATA — simula movimento Renko
+        // DEMO DATA - simula movimento Renko
         // ══════════════════════════════════════════════════════════
 
         private void GenerateDemoData()

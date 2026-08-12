@@ -12,7 +12,7 @@ public interface IMarketDataProvider : IDisposable
     // --- Eventos que o provedor dispara para a aplicação ---
     event Action<TradeEvent>?             OnTrade;
     event Action<BookLevel>?              OnBook;
-    /// <summary>Substituição atômica do livro (ex.: array FullBook da Nelogica). Opcional — provedores simulados não disparam.</summary>
+    /// <summary>Mescla snapshot de livro (ex.: <c>atFullBook</c> Nelogica) no estado incremental — opcional.</summary>
     event Action<BookFullRefresh>?       OnBookFullRefresh;
     event Action<QuoteEvent>?             OnQuote;
     event Action<ConnectionChangedEvent>? OnConnectionChanged;

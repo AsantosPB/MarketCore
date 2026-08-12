@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace MarketCore.Providers.Nelogica
@@ -37,8 +37,30 @@ namespace MarketCore.Providers.Nelogica
             }
             catch (Exception ex)
             {
-                // Se nÃ£o conseguir criar o log, continua sem ele
+                // Se n-o conseguir criar o log, continua sem ele
                 Console.WriteLine($"Erro ao criar log: {ex.Message}");
+            }
+
+            PurgeOldLogFiles(logFolder, daysToKeep: 10);
+        }
+
+        /// <summary>Apaga arquivos de log (um por dia, "ProfitDLL_AAAA-MM-DD.log") com mais de
+        /// <paramref name="daysToKeep"/> dias — mesma janela de retenção rolante usada em trades_intraday.
+        /// Roda uma vez por abertura do programa; sem isso os logs diários se acumulam para sempre na pasta.</summary>
+        private static void PurgeOldLogFiles(string logFolder, int daysToKeep)
+        {
+            try
+            {
+                DateTime cutoff = DateTime.Now.Date.AddDays(-daysToKeep);
+                foreach (var path in Directory.GetFiles(logFolder, "ProfitDLL_*.log"))
+                {
+                    if (File.GetLastWriteTime(path).Date < cutoff)
+                        File.Delete(path);
+                }
+            }
+            catch
+            {
+                // Limpeza de log é best-effort — nunca deve impedir o app de abrir.
             }
         }
 
@@ -54,7 +76,7 @@ namespace MarketCore.Providers.Nelogica
                     // Escreve no arquivo
                     _writer?.WriteLine(logLine);
 
-                    // TambÃ©m escreve no console para debug
+                    // Tamb-m escreve no console para debug
                     Console.WriteLine(logLine);
                 }
                 catch (Exception ex)

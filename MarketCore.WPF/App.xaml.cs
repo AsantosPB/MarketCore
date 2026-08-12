@@ -1,15 +1,33 @@
-﻿using System;
+using System;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using MarketCore.FlowSense;
+using MarketCore.WPF.Services.PregaoVivaVoz;
 
 namespace MarketCore.WPF
 {
     public partial class App : Application
     {
+        private const string SingleInstanceMutexName = "Local\\MarketCore.FlowSense.SingleInstance";
+        private static Mutex? _singleInstanceMutex;
+
+        /// <summary>
+        /// Ponte entre os callbacks reais da ProfitDLL e o motor do Pregão Viva Voz.
+        /// Criada quando o motor do PVV é iniciado; nula quando parado.
+        /// Os callbacks da ProfitDLL fazem `App.PregaoVivaVozBridge?.OnTradeReceived(...)`
+        /// e o próprio bridge descarta eventos com zero overhead se o motor estiver parado.
+        /// </summary>
+        public static ProfitDLLBridge? PregaoVivaVozBridge { get; set; }
+        /// <summary>Evita avalanche de MessageBox quando o mesmo erro dispara todos os ticks (ex.: timers ~30 Hz).</summary>
+        private static long _lastDispatcherErrorDialogTicks;
+        private const int DispatcherErrorDialogCooldownMs = 4500;
+
         private static readonly string CrashLogPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MarketCore",
@@ -55,24 +73,76 @@ namespace MarketCore.WPF
             catch { /* best effort */ }
         }
 
+        protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+        {
+            AppendLifecycle($"Application.SessionEnding reason={e.ReasonSessionEnding}");
+            base.OnSessionEnding(e);
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            AppendLifecycle($"Application.OnExit pid={Environment.ProcessId} exitCode={e.ApplicationExitCode}");
+            ReleaseSingleInstanceMutex();
+            base.OnExit(e);
+        }
+
+        private static void ReleaseSingleInstanceMutex()
+        {
+            try
+            {
+                _singleInstanceMutex?.ReleaseMutex();
+            }
+            catch { /* ignore */ }
+            finally
+            {
+                _singleInstanceMutex?.Dispose();
+                _singleInstanceMutex = null;
+            }
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            AppendLifecycle("Application.OnStartup");
+            AppendLifecycle($"Application.OnStartup pid={Environment.ProcessId}");
+
+            _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
+            if (!createdNew)
+            {
+                AppendLifecycle("Application.SecondInstanceRejected");
+                bool focused = TryFocusExistingInstance();
+                MessageBox.Show(
+                    focused
+                        ? "O MarketCore já estava aberto - a janela existente foi trazida para a frente."
+                        : "O MarketCore já está em execução.\n\nFeche a outra janela antes de abrir de novo.",
+                    "MarketCore",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                Shutdown(0);
+                return;
+            }
 
             Current.DispatcherUnhandledException += (_, args) =>
             {
                 AppendCrashLog("DispatcherUnhandledException", args.Exception);
                 try
                 {
-                    _ = MessageBox.Show(
-                        $"Erro na interface:\n\n{args.Exception?.GetType().Name}: {args.Exception?.Message}\n\n" +
-                        $"O programa continuará em execução (erro marcado como tratado).\n" +
-                        $"Registo técnico: {CrashLogPath}",
-                        "MarketCore — erro",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    long now = Environment.TickCount64;
+                    if (now - _lastDispatcherErrorDialogTicks >= DispatcherErrorDialogCooldownMs)
+                    {
+                        _lastDispatcherErrorDialogTicks = now;
+                        _ = MessageBox.Show(
+                            $"Erro na interface:\n\n{args.Exception?.GetType().Name}: {args.Exception?.Message}\n\n" +
+                            $"O programa continuará em execução (erro marcado como tratado).\n" +
+                            $"Registo técnico: {CrashLogPath}",
+                            "MarketCore - erro",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                    }
+                    else
+                    {
+                        AppendCrashLog("DispatcherUnhandledException repeated (dialog suppressed)", args.Exception);
+                    }
                 }
                 catch { /* ignore */ }
                 finally
@@ -113,6 +183,7 @@ namespace MarketCore.WPF
 
                 if (result != true)
                 {
+                    AppendLifecycle("Login cancelled");
                     Shutdown();
                     return;
                 }
@@ -120,9 +191,16 @@ namespace MarketCore.WPF
                 var mainWindow = new MainWindow(loginWindow.Credentials, loginWindow.IsRealMarket);
 
                 // Encerra o app quando a MainWindow for fechada
-                mainWindow.Closed += (s, args) => Shutdown();
+                mainWindow.Closed += (_, _) =>
+                {
+                    AppendLifecycle("MainWindow.Closed");
+                    Shutdown();
+                };
 
+                Current.MainWindow = mainWindow;
                 mainWindow.Show();
+                mainWindow.Activate();
+                mainWindow.Focus();
 
                 AppendLifecycle("MainWindow.Show completed");
             }
@@ -136,5 +214,42 @@ namespace MarketCore.WPF
                 Shutdown();
             }
         }
+
+        private static bool TryFocusExistingInstance()
+        {
+            int self = Environment.ProcessId;
+            string processName = Process.GetCurrentProcess().ProcessName;
+
+            foreach (Process process in Process.GetProcessesByName(processName))
+            {
+                if (process.Id == self)
+                    continue;
+
+                try
+                {
+                    process.Refresh();
+                    IntPtr handle = process.MainWindowHandle;
+                    if (handle == IntPtr.Zero)
+                        continue;
+
+                    ShowWindowAsync(handle, SwRestore);
+                    return SetForegroundWindow(handle);
+                }
+                catch
+                {
+                    /* best effort */
+                }
+            }
+
+            return false;
+        }
+
+        private const int SwRestore = 9;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
     }
 }

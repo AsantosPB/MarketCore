@@ -40,7 +40,9 @@ public sealed class IcebergDetector
         {
             if (level.Volume < _minVolume) continue;
 
-            var key = $"{snap.Ticker}_{side}_{level.Broker}";
+            var key = string.IsNullOrWhiteSpace(level.Broker)
+                ? FormattableString.Invariant($"{snap.Ticker}_{side}_P{level.Price}")
+                : FormattableString.Invariant($"{snap.Ticker}_{side}_{level.Broker}");
 
             if (_activeLevels.TryGetValue(key, out var prev))
             {
