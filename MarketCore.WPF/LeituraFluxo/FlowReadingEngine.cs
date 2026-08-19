@@ -26,6 +26,12 @@ namespace MarketCore.WPF.LeituraFluxo
         private readonly Dictionary<string, List<FlowPatternMatch>> _historyByBroker = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<FlowTradeSample> _global = new();
 
+        // [PERF] Cache de normalização broker → key. broker.Trim().ToUpperInvariant() aloca
+        // uma string nova a cada trade (~200/s = 200 alocações inúteis/s + GC pressure).
+        // Como o universo de corretoras é pequeno (~30-50), o cache satura rápido e a partir
+        // daí cada OnTrade faz apenas um TryGetValue — zero alocação.
+        private readonly Dictionary<string, string> _brokerKeyCache = new(StringComparer.Ordinal);
+
         // 300.000 era baseado numa estimativa errada de volume diário. Você reportou 6+ milhões de negócios
         // no dia — bem maior. Subi para 15.000.000, com folga confortável mesmo em pregão recorde. Cada
         // amostra (struct pequena) é guardada 2x (uma vez em _global, uma vez na lista da própria corretora),
@@ -93,7 +99,17 @@ namespace MarketCore.WPF.LeituraFluxo
             if (volume <= 0 || price <= 0)
                 return;
 
-            string key = string.IsNullOrWhiteSpace(broker) ? "N/D" : broker.Trim().ToUpperInvariant();
+            // [PERF] Cache evita broker.Trim().ToUpperInvariant() a cada trade (200+ allocs/s → 0).
+            string key;
+            if (string.IsNullOrWhiteSpace(broker))
+            {
+                key = "N/D";
+            }
+            else if (!_brokerKeyCache.TryGetValue(broker, out key!))
+            {
+                key = broker.Trim().ToUpperInvariant();
+                _brokerKeyCache[broker] = key;
+            }
             var sample = new FlowTradeSample(time, price, volume, isBuy, key);
 
             lock (_sync)

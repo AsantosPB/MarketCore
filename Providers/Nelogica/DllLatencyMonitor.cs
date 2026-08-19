@@ -36,6 +36,17 @@ internal static class DllLatencyMonitor
     public static long LastBookExchangeTicks;
     public static long LastBookProcessedExchangeTicks;
 
+    /// <summary>
+    /// Profundidade atual da fila de book — escrita pelo BookProcessingLoop a cada 256 eventos,
+    /// lida pelo MarketEngine.HandleBook para decidir se pula computações PVV (backpressure).
+    /// Quando &gt; <c>PvvBackpressureThreshold</c>, PVV é pulado para que os deltas de book
+    /// sejam aplicados sem overhead dos scans O(n); PVV retoma quando a fila esvazia.
+    /// </summary>
+    public static volatile int BookQueueDepth;
+
+    /// <summary>Acima desse tamanho de fila, PVV é desligado temporariamente.</summary>
+    public const int PvvBackpressureThreshold = 500;
+
     public static long TradesReceivedTotal;
     public static long TradesProcessedTotal;
     public static long BooksReceivedTotal;
@@ -163,11 +174,15 @@ internal static class DllLatencyMonitor
         }
         catch { /* snapshot é best-effort */ }
 
+        int bqDepth = BookQueueDepth;
+        string pvvStatus = bqDepth >= PvvBackpressureThreshold ? "SKIP" : "ok";
+
         string linha =
             $"[{now:HH:mm:ss.fff}] " +
             $"tradeAge={tradeAge,-10} tradeProcAge={tradeProcAge,-10} " +
             $"bookAge={bookAge,-10} bookProcAge={bookProcAge,-10} " +
             $"tradeQ={tradeQ,-6} bookQ={bookQ,-6} depthQ={depthQ,-6} " +
+            $"pvv={pvvStatus,-5} " +
             $"tradesRx/s={tradesRxRate,6:0} tradesProc/s={tradesProcRate,6:0} " +
             $"booksRx/s={booksRxRate,6:0} booksProc/s={booksProcRate,6:0}" +
             Environment.NewLine;

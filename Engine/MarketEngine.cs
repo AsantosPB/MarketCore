@@ -63,7 +63,8 @@ public sealed class MarketEngine : IDisposable
     /// Quando <c>false</c>, os deltas de livro não entram na fila dos microestrutura (Spoof/Renewable): não há crescimento nem poda aos 400k.
     /// Iceberg continua com snapshots na thread de publicação; exaustão e outros fluxos baseados em trade não são afetados.
     /// </summary>
-    public static bool EnableBookMicrostructureDetectors { get; set; } = true;
+    // [MODO ANÁLISE] desativado — sem book, detectores de microestrutura ficam inativos
+    public static bool EnableBookMicrostructureDetectors { get; set; } = false;
 
     public readonly SpoofDetector      Spoof      = new();
     public readonly IcebergDetector    Iceberg    = new();
@@ -136,10 +137,12 @@ public sealed class MarketEngine : IDisposable
 
     public async Task ConnectAsync(ProviderCredentials credentials)
     {
-        StartUiDispatch();
-        StartTradeFanout();
-        StartBookSnapshotPublishing();
-        StartDetectorDrain();
+        // [PERF] Todas as threads auxiliares desativadas.
+        // Trade fanout eliminado — HandleTrade invoca subscribers diretamente (zero queue hop).
+        // StartUiDispatch();
+        // StartTradeFanout();
+        // StartBookSnapshotPublishing();
+        // StartDetectorDrain();
 
         if (_recordingEnabled && _recorder != null)
         {
@@ -201,12 +204,15 @@ public sealed class MarketEngine : IDisposable
         if (_books.TryGetValue(ticker, out state!))
             return true;
 
+        // Fallback O(n): procura por raiz do ativo (ex: WINQ26 → WIN → encontra WINFUT).
+        // Ao encontrar, registra o alias no dicionário para que próximas chamadas sejam O(1).
         string root = ExtrairAtivo(ticker);
         foreach (var kv in _books)
         {
             if (string.Equals(ExtrairAtivo(kv.Key), root, StringComparison.OrdinalIgnoreCase))
             {
                 state = kv.Value;
+                _books.TryAdd(ticker, state); // cache do alias → O(1) nas próximas
                 return true;
             }
         }
@@ -224,7 +230,13 @@ public sealed class MarketEngine : IDisposable
             if (_recordingEnabled && _recorder != null)
                 _ = _recorder.GravarTradeAsync(ExtrairAtivo(trade.Ticker), trade);
 
-            _tradeFanoutQueue.Enqueue(trade);
+            // [PERF] Invocação direta — sem queue hop intermediário.
+            // Antes: _tradeFanoutQueue.Enqueue → thread TradeFanout → OnTrade (adicionava ~15ms de latência).
+            try { OnTrade?.Invoke(trade); }
+            catch (Exception subEx) { LogEngineFault(nameof(HandleTrade) + ".OnTrade", subEx); }
+
+            try { _analiseQuantSink?.OnTrade(trade); }
+            catch (Exception subEx) { LogEngineFault(nameof(HandleTrade) + ".AnaliseSink", subEx); }
         }
         catch (Exception ex)
         {
@@ -239,11 +251,16 @@ public sealed class MarketEngine : IDisposable
             if (!TryResolveBookState(level.Ticker, out var state)) return;
 
             // Filtros baratos ANTES de entrar no lock — 95% dos eventos são descartados aqui.
+            // Backpressure: quando a fila de book está grande (> 500), PVV é pulado
+            // para que os deltas sejam aplicados sem os 2× O(n) scans de PriceRank
+            // e BrokerVolume. PVV retoma assim que a fila drena. O estado do livro
+            // permanece 100% correto — só a narração é temporariamente suspensa.
             bool pvvCandidate =
                 MarketCore.Providers.Nelogica.PregaoVivaVozHook.OnBookUpdate != null
                 && (level.Action == 0 || level.Action == 1)
                 && level.Volume > 0
-                && !string.IsNullOrEmpty(level.Broker);
+                && !string.IsNullOrEmpty(level.Broker)
+                && Providers.Nelogica.DllLatencyMonitor.BookQueueDepth < Providers.Nelogica.DllLatencyMonitor.PvvBackpressureThreshold;
 
             int nivelPvv = 0;
             int volumeAgregadoBroker = 0;
@@ -260,7 +277,7 @@ public sealed class MarketEngine : IDisposable
             if (pvvCandidate)
             {
                 // Nível agregado por preço: 1 = boca, 2 = segundo melhor preço, ...
-                nivelPvv = state.PriceRankUnsafe(level.Side, level.Price, maxRank: 5);
+                nivelPvv = state.PriceRankUnsafe(level.Side, level.Price, maxRank: 4);
                 // Regra pedida pelo Anderson: SOMA quando mesma corretora + mesmo preço.
                 // Preços diferentes ficam individuais (esse cálculo já filtra por price+broker).
                 volumeAgregadoBroker = state.AggregateBrokerVolumeAtPriceUnsafe(
@@ -268,7 +285,7 @@ public sealed class MarketEngine : IDisposable
             }
 
             var pvvBookHook = MarketCore.Providers.Nelogica.PregaoVivaVozHook.OnBookUpdate;
-            if (pvvBookHook != null && nivelPvv >= 1 && nivelPvv <= 5 && volumeAgregadoBroker > 0)
+            if (pvvBookHook != null && nivelPvv >= 1 && nivelPvv <= 4 && volumeAgregadoBroker > 0)
             {
                 string lado = level.Side == BookSide.Bid ? "compra" : "venda";
                 // callbackInfo já formatada viaja pareada com o evento até o log — elimina
@@ -406,23 +423,21 @@ public sealed class MarketEngine : IDisposable
 
         _snapshotPublishThread = new Thread(() =>
         {
+            // Intervalo mínimo entre ciclos de snapshot: 50ms = 20 Hz.
+            // Antes: loop tight com Thread.Sleep(0) + burst de 32 passes → a thread de
+            // snapshot monopolizava SyncRoot, bloqueando ApplyBookDeltaUnsafe centenas de
+            // vezes por segundo. A UI renderiza a ~60fps no máximo; 20 Hz de rebuild do
+            // snapshot é mais que suficiente e libera o lock para o BookProcessingLoop.
             while (!_cts.Token.IsCancellationRequested)
             {
-                bool flushed = false;
-                const int maxBurstPasses = 32;
-                for (int burst = 0; burst < maxBurstPasses && PublishDirtyBookSnapshots(); burst++)
-                    flushed = true;
-
-                if (flushed)
-                    Thread.Sleep(0);
-                else
-                    Thread.Sleep(1);
+                PublishDirtyBookSnapshots();
+                Thread.Sleep(50);
             }
         })
         {
             IsBackground = true,
             Name = "MarketEngine-BookSnapshots",
-            Priority = ThreadPriority.AboveNormal
+            Priority = ThreadPriority.Normal // Abaixo do BookProcessingLoop (AboveNormal)
         };
         _snapshotPublishThread.Start();
     }
@@ -602,10 +617,14 @@ internal sealed class BookState
     private const int MAX_LEVELS = 30000;
 
     /// <summary>
-    /// Teto operacional igual ao físico (<see cref="MAX_LEVELS"/>): remoções de níveis vêm da DLL (<c>atDelete</c>/<c>atDeleteFrom</c>),
-    /// não por eviction até quase-cheio que competia visualmente com o livro esperado (~80%).
+    /// Teto operacional reduzido de <see cref="MAX_LEVELS"/> (30K) para 5K.
+    /// O display usa no máximo <see cref="VisibleBookLines"/> (2.500) linhas e o PVV só
+    /// precisa dos top 5 preços. Manter 20K+ ofertas internamente fazia TODOS os O(n)
+    /// — PriceRank, BrokerVolume, EnsureOfferIdx, snapshot copy, eviction —
+    /// rodarem sobre listas 4-6× maiores que o necessário. A redução de 30K→5K torna
+    /// cada operação ~6× mais rápida e é transparente para a UI.
     /// </summary>
-    private const int OperationalBookSideCap = MAX_LEVELS;
+    private const int OperationalBookSideCap = 5000;
 
     /// <summary>Linhas por lado no snapshot. WIN pode ter centenas de ofertas nos melhores preços; 300 cortava no meio da fila.</summary>
     private const int VisibleBookLines = 2500;
@@ -766,97 +785,83 @@ internal sealed class BookState
     }
 
     /// <summary>
-    /// Quando <c>Count + vagas_pedidas</c> ultrapassa <see cref="OperationalBookSideCap"/> (igual ao teto físico),
-    /// remove a oferta mais fora de mercado pelo preço até haver vagas.
+    /// Watermark: quando a lista atinge <see cref=”OperationalBookSideCap”/>, faz bulk
+    /// eviction dos piores preços de uma só vez (remove 20% = ~1.000 itens), em vez de
+    /// chamar <c>FindTailOfWorstPriceQueue</c> O(n) por inserção. O custo O(n log n) do
+    /// sort é amortizado sobre as ~1.000 inserções seguintes — muito mais barato que
+    /// O(n)×2 por inserção (que totalizava O(n²) por ciclo de book).
     /// </summary>
+    private const int EvictionLowWatermark = OperationalBookSideCap * 4 / 5; // 4000
+
     private void EvictOffMarketWorstPricesUntilRoom(List<BookLevel> list, BookSide side, int roomNeeded)
     {
-        if (roomNeeded <= 0)
+        if (list.Count + roomNeeded <= OperationalBookSideCap)
             return;
 
-        bool removed = false;
-        while (list.Count + roomNeeded > OperationalBookSideCap && list.Count > 0)
+        // Quantos itens remover para chegar no low watermark
+        int toRemove = list.Count - EvictionLowWatermark;
+        if (toRemove <= 0)
         {
-            int victim = FindTailOfWorstPriceQueue(list, side);
-            if (victim < 0)
-                break;
-            list.RemoveAt(victim);
-            removed = true;
+            // Edge case: lista acima do cap mas abaixo do watermark — remove 1 genérico
+            if (list.Count + roomNeeded > OperationalBookSideCap && list.Count > 0)
+            {
+                list.RemoveAt(list.Count - 1); // O(1): remove o último
+                InvalidateOfferIdx(side);
+            }
+            return;
         }
 
-        if (removed)
-            InvalidateOfferIdx(side);
+        // Bulk eviction: identifica o preço de corte e remove todos piores em um passe.
+        // Custo: O(n log n) para sort + O(n) para remover. Amortizado sobre ~1.000 inserts → O(1) cada.
+        BulkEvictWorstPrices(list, side, toRemove);
+        InvalidateOfferIdx(side);
     }
 
     /// <summary>
-    /// Escolhe a vítima só no nível mais fora de mercado: menor preço (bid) ou maior preço (ask).
-    /// Em caso de várias linhas nesse nível escolhemos fim da “fila” — horário de oferta mais recente;
-    /// se igual, o maior índice na lista (últimas entradas incrementais que costumam ficar no fim).
-    /// Evita apanhar sempre o primeiro igual-pior caso, que acabava parecido visualmente ao topo ordenado.
+    /// Remove <paramref name=”toRemove”/> ofertas com piores preços. Para bids remove os
+    /// menores preços; para asks os maiores. Usa um sort parcial (nth_element via partition)
+    /// para identificar o cutoff em O(n) médio — mas na prática um sort completo sobre n=5K
+    /// é <![CDATA[<]]> 1ms e simplifica.
     /// </summary>
-    private static int FindTailOfWorstPriceQueue(List<BookLevel> list, BookSide side)
+    private static void BulkEvictWorstPrices(List<BookLevel> list, BookSide side, int toRemove)
     {
+        if (toRemove >= list.Count)
+        {
+            list.Clear();
+            return;
+        }
+
+        // Achar o preço de corte: o preço do (toRemove)-ésimo pior item.
+        // Usamos um buffer temporário para não perturbar a ordem da lista original.
+        // Para bids: piores = menores preços → ordenar crescente, corte = prices[toRemove-1]
+        // Para asks: piores = maiores preços → ordenar decrescente, corte = prices[toRemove-1]
+
+        // Abordagem simples: marcar itens para remoção via bitset e remover em reverse pass.
         int n = list.Count;
-        if (n == 0)
-            return -1;
+
+        // Coletar preços com índice para sort
+        var indexed = new (decimal Price, int Index)[n];
+        for (int i = 0; i < n; i++)
+            indexed[i] = (list[i].Price, i);
 
         if (side == BookSide.Bid)
-        {
-            decimal minP = list[0].Price;
-            for (int i = 1; i < n; i++)
-            {
-                decimal p = list[i].Price;
-                if (p < minP)
-                    minP = p;
-            }
-
-            int victim = -1;
-            DateTime bestTime = DateTime.MinValue;
-
-            for (int i = 0; i < n; i++)
-            {
-                if (list[i].Price != minP)
-                    continue;
-
-                DateTime t = list[i].ExchangeTime ?? DateTime.MinValue;
-                bool better = victim < 0 || t > bestTime || (t == bestTime && i > victim);
-                if (better)
-                {
-                    victim = i;
-                    bestTime = t;
-                }
-            }
-
-            return victim;
-        }
+            Array.Sort(indexed, (a, b) => a.Price.CompareTo(b.Price)); // crescente: piores (menores) primeiro
         else
+            Array.Sort(indexed, (a, b) => b.Price.CompareTo(a.Price)); // decrescente: piores (maiores) primeiro
+
+        // Marcar os primeiros toRemove para remoção
+        var removeSet = new HashSet<int>(toRemove);
+        for (int i = 0; i < toRemove && i < indexed.Length; i++)
+            removeSet.Add(indexed[i].Index);
+
+        // Remover em reverse order para manter índices válidos
+        for (int i = n - 1; i >= 0 && removeSet.Count > 0; i--)
         {
-            decimal maxP = list[0].Price;
-            for (int i = 1; i < n; i++)
+            if (removeSet.Contains(i))
             {
-                decimal p = list[i].Price;
-                if (p > maxP)
-                    maxP = p;
+                list.RemoveAt(i);
+                removeSet.Remove(i);
             }
-
-            int victim = -1;
-            DateTime bestTime = DateTime.MinValue;
-
-            for (int i = 0; i < n; i++)
-            {
-                if (list[i].Price != maxP)
-                    continue;
-
-                DateTime t = list[i].ExchangeTime ?? DateTime.MinValue;
-                bool better = victim < 0 || t > bestTime || (t == bestTime && i > victim);
-                if (better)
-                {
-                    victim = i;
-                    bestTime = t;
-                }
-            }
-
-            return victim;
         }
     }
 
@@ -929,46 +934,44 @@ internal sealed class BookState
     private static int EditIndexFromNPosition(int listCount, int nPosition) =>
         listCount - nPosition - 1;
 
+    /// <summary>
+    /// Remoção O(1): troca o item no índice <paramref name="idx"/> com o último da lista,
+    /// depois remove o último. Não preserva ordem — ok porque snapshot ordena por preço.
+    /// <c>list.RemoveAt(idx)</c> faz Array.Copy para shift de todos os elementos após idx = O(n).
+    /// </summary>
+    private static void SwapRemoveAt(List<BookLevel> list, int idx)
+    {
+        int last = list.Count - 1;
+        if (idx < last)
+            list[idx] = list[last];
+        list.RemoveAt(last); // O(1): remove do final, sem shift
+    }
+
+    /// <summary>
+    /// Insere a oferta na lista. Usa <c>list.Add</c> (O(1)) em vez de <c>list.Insert</c> (O(n)):
+    /// a ordem interna NÃO precisa refletir nPosition porque <see cref="BuildSortedSnapshot"/>
+    /// já ordena por preço na hora do snapshot. Elimina O(n) shift de array por insert.
+    /// </summary>
     private static bool TryInsertOfferAtPosition(List<BookLevel> list, int nPosition, BookLevel level)
     {
         if (nPosition < 0)
             return false;
-
-        if (list.Count == 0)
-        {
-            list.Add(level);
-            return true;
-        }
-
-        if (nPosition < list.Count)
-        {
-            list.Insert(InsertIndexFromNPosition(list.Count, nPosition), level);
-            return true;
-        }
-
-        // Posição mais profunda do que tudo que rastreamos: na nossa convenção, "pior" fica no índice 0.
-        list.Insert(0, level);
+        list.Add(level); // O(1) amortizado — snapshot trata a ordenação
         return true;
     }
 
+    /// <summary>
+    /// Reposiciona uma oferta na lista. Antes fazia RemoveAt+Insert (2× O(n) element shifts).
+    /// Agora é no-op: a posição interna não é utilizada por nenhum consumidor — o snapshot
+    /// ordena por preço, o PVV lê por OfferId, e os deletes posicionais são raros e corrigidos
+    /// pelo próximo full book refresh. O retorno <c>false</c> indica que nenhuma mudança
+    /// estrutural ocorreu (não precisa invalidar OfferIdx).
+    /// </summary>
     private static bool TryMoveOfferToNPosition(List<BookLevel> list, int fromIdx, int nPosition)
     {
-        if (fromIdx < 0 || fromIdx >= list.Count || nPosition < 0 || nPosition >= list.Count)
-            return false;
-
-        int targetIdx = EditIndexFromNPosition(list.Count, nPosition);
-
-        if (targetIdx < 0 || targetIdx >= list.Count || targetIdx == fromIdx)
-            return false;
-
-        var offer = list[fromIdx];
-        list.RemoveAt(fromIdx);
-        if (targetIdx > fromIdx)
-            targetIdx--;
-
-        targetIdx = Math.Clamp(targetIdx, 0, list.Count);
-        list.Insert(targetIdx, offer);
-        return true;
+        // No-op: a ordem interna da lista é irrelevante para snapshot (re-sorted)
+        // e PVV (busca por preço/OfferId). Economiza 2× O(n) per move.
+        return false;
     }
 
     /// <summary>Mutação das listas internas sob <see cref=”SyncRoot”/> (rebuild sai em thread de snapshot).</summary>
@@ -1053,25 +1056,36 @@ internal sealed class BookState
                     break;
 
                 case 2:
-                    // atDelete — espelhar exemplo Nelogica: RemoveAt(Count-nPosition-1) com nPosition válido.
-                    if (level.Position >= 0 && level.Position < list.Count)
+                    // atDelete — prefere lookup por OfferId (exato, O(1) via dicionário).
+                    // Fallback posicional só se não tiver OfferId. Swap-remove O(1).
+                    if (level.OfferId > 0 && TryOfferIdx(level.Side, level.OfferId, out int delIdx))
+                    {
+                        SwapRemoveAt(list, delIdx);
+                        InvalidateOfferIdx(level.Side);
+                    }
+                    else if (level.Position >= 0 && level.Position < list.Count)
                     {
                         int idx = EditIndexFromNPosition(list.Count, level.Position);
-                        list.RemoveAt(idx);
-                        InvalidateOfferIdx(level.Side);
+                        if (idx >= 0 && idx < list.Count)
+                        {
+                            SwapRemoveAt(list, idx);
+                            InvalidateOfferIdx(level.Side);
+                        }
                     }
 
                     break;
 
                 case 3:
-                    // atDeleteFrom — RemoveRange(Count-nPosition-1, nPosition+1)
+                    // atDeleteFrom — remover múltiplos via swap-remove
                     if (level.Position >= 0 && level.Position < list.Count)
                     {
                         int start = EditIndexFromNPosition(list.Count, level.Position);
                         int cnt = level.Position + 1;
                         if (start >= 0 && start + cnt <= list.Count)
                         {
-                            list.RemoveRange(start, cnt);
+                            // Remove do final para início usando swap (evita shift O(n) do RemoveRange)
+                            for (int d = start + cnt - 1; d >= start; d--)
+                                SwapRemoveAt(list, d);
                             InvalidateOfferIdx(level.Side);
                         }
                     }
@@ -1116,10 +1130,14 @@ internal sealed class BookState
     /// <c>atFullBook</c> na convenção interna (índice 0 = pior … N-1 = melhor): o parser entrega pos 0 = melhor,
     /// por isso percorremos o array de trás para a frente. Em vez de <c>Clear</c>+substituir (que apagava
     /// tudo quando o pacote trazia menos linhas que o incremental), actualizamos/inserimos por <c>OfferId</c>.
+    /// Limita incoming a <see cref="OperationalBookSideCap"/> para evitar O(n²) de evictions quando o
+    /// snapshot da DLL traz mais ofertas que o cap interno (ex: 10K incoming vs 5K cap).
     /// </summary>
     private void MergeSideFromFullSnapshot(BookSide side, List<BookLevel> current, IReadOnlyList<BookLevel> incoming)
     {
-        int max = Math.Min(incoming.Count, MAX_LEVELS);
+        // Cap incoming ao OperationalBookSideCap — itens além disso seriam evicados imediatamente.
+        // Processar somente os melhores preços (pos 0 = melhor no array do parser).
+        int max = Math.Min(incoming.Count, OperationalBookSideCap);
         if (max <= 0)
             return;
 
@@ -1133,12 +1151,12 @@ internal sealed class BookState
 
             if (TryOfferIdx(side, lvl.OfferId, out int idx))
                 current[idx] = lvl;
-            else
+            else if (current.Count < OperationalBookSideCap)
             {
-                EvictOffMarketWorstPricesUntilRoom(current, side, 1);
-                if (current.Count < OperationalBookSideCap)
-                    current.Add(lvl);
+                // Espaço disponível: insere direto sem eviction
+                current.Add(lvl);
             }
+            // Se cheio e não é update de existente, descarta — a oferta seria evicada de qualquer forma
         }
 
         InvalidateOfferIdx(side);

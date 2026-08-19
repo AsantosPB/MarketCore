@@ -293,7 +293,8 @@ namespace MarketCore.WPF
             };
             TxPrimaryTicker.KeyDown += TxPrimaryTicker_KeyDown;
 
-            IcActiveFilters.ItemsSource = ActiveFilters;
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // IcActiveFilters.ItemsSource = ActiveFilters;
 
             // Timers
             _uiTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };
@@ -308,17 +309,18 @@ namespace MarketCore.WPF
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
 
-            // Filtros do book: handlers no XAML (evitar duplicar com += aqui).
-            CbWindowPeriod.SelectionChanged  += CbWindowPeriod_SelectionChanged;
-            CbWindowPeriod2.SelectionChanged += CbWindowPeriod2_SelectionChanged;
-            CbLevels.SelectionChanged      += CbLevels_SelectionChanged;
-            CbGrouping.SelectionChanged    += CbGrouping_SelectionChanged;
-            TxHighlightThreshold.LostFocus += TxHighlightThreshold_LostFocus;
-            TxTapeVolMin.TextChanged += TxTapeVolMin_TextChanged;
-            TxTapeMoveMin.TextChanged += TxTapeMoveMin_TextChanged;
-            TapeScrollViewer.ScrollChanged += TapeScrollViewer_ScrollChanged;
-            BtnClearAlerts.Click           += BtnClearAlerts_Click;
-            
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // CbWindowPeriod.SelectionChanged  += CbWindowPeriod_SelectionChanged;
+            // CbWindowPeriod2.SelectionChanged += CbWindowPeriod2_SelectionChanged;
+            // CbLevels.SelectionChanged      += CbLevels_SelectionChanged;
+            // CbGrouping.SelectionChanged    += CbGrouping_SelectionChanged;
+            // TxHighlightThreshold.LostFocus += TxHighlightThreshold_LostFocus;
+            // TxTapeVolMin.TextChanged += TxTapeVolMin_TextChanged;
+            // TxTapeMoveMin.TextChanged += TxTapeMoveMin_TextChanged;
+            // TapeScrollViewer.ScrollChanged += TapeScrollViewer_ScrollChanged;
+            // BtnClearAlerts.Click           += BtnClearAlerts_Click;
+
+            /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
             // ═══ Event handlers do Popup de Configuração de Alertas ═══
             BtnConfigAlerts.Click += (s, e) => PopupConfigAlerts.IsOpen = true;
             BtnApplyAlertConfig.Click += (s, e) =>
@@ -328,21 +330,21 @@ namespace MarketCore.WPF
                 if (int.TryParse(TxIcebergMinVol.Text, out int iVal)) _icebergMinVol = iVal;
                 if (int.TryParse(TxRenewableMinVol.Text, out int rVal)) _renewableMinVol = rVal;
                 if (int.TryParse(TxExhaustionMinVol.Text, out int eVal)) _exhaustionMinVol = eVal;
-                
+
                 // ═══ LIMPAR TODOS OS DETECTORES ANTIGOS ═══
                 lock (_detectorsByPrice)
                 {
                     _detectorsByPrice.Clear();
                 }
-                
+
                 // Re-renderizar o book para remover os indicadores antigos
                 if (_lastSnapshot != null)
                 {
                     Dispatcher.InvokeAsync(() => RenderBook(_lastSnapshot), DispatcherPriority.Background);
                 }
-                
+
                 PopupConfigAlerts.IsOpen = false;
-                
+
                 // Mostrar mensagem de confirmação
                 MessageBox.Show(
                     $"Filtros aplicados com sucesso!\n\n" +
@@ -356,6 +358,7 @@ namespace MarketCore.WPF
                     MessageBoxImage.Information
                 );
             };
+            */
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -470,9 +473,9 @@ namespace MarketCore.WPF
 
         private void InitializeMarketRuntime()
         {
-            // ── Vincular ItemsSource da Tape ──
-            IcTape.ItemsSource = _tapeRecords;
-            IcSpoofNotifications.ItemsSource = _spoofNotifications;
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // IcTape.ItemsSource = _tapeRecords;
+            // IcSpoofNotifications.ItemsSource = _spoofNotifications;
             BtnPower.Click += BtnPower_Click;
             BtnPregaoVivaVoz.Click += BtnPregaoVivaVoz_Click;
             BtnRecordingConfig.Click += BtnRecordingConfig_Click;
@@ -502,15 +505,18 @@ namespace MarketCore.WPF
             var uiDetect = FlowsenseUiSettings.Load();
             bool microOn = !uiDetect.DisableBookMicrostructureDetectors;
             MarketEngine.EnableBookMicrostructureDetectors = microOn;
-            ChkBookMicrostructureDetectors.IsChecked = microOn;
-            ChkBookMicrostructureDetectors.Click += ChkBookMicrostructureDetectors_Click;
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // ChkBookMicrostructureDetectors.IsChecked = microOn;
+            // ChkBookMicrostructureDetectors.Click += ChkBookMicrostructureDetectors_Click;
 
             _engine.OnTrade          += Engine_OnTrade;
-            _engine.OnBookSnapshot   += Engine_OnBookSnapshot;
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // _engine.OnBookSnapshot   += Engine_OnBookSnapshot;
             _engine.OnConnectionChanged += Engine_OnConnectionChanged;
-            _engine.Spoof.OnSpoofDetected           += (d) => HandleSpoof(d);
-            _engine.Iceberg.OnIcebergDetected       += (d) => HandleIceberg(d);
-            _engine.Renewable.OnRenewableDetected   += (d) => HandleRenewable(d);
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI (handlers de Spoof/Iceberg/Renewable comentados)
+            // _engine.Spoof.OnSpoofDetected           += (d) => HandleSpoof(d);
+            // _engine.Iceberg.OnIcebergDetected       += (d) => HandleIceberg(d);
+            // _engine.Renewable.OnRenewableDetected   += (d) => HandleRenewable(d);
             _engine.Exhaustion.OnExhaustionDetected += (d) => HandleExhaustion(d);
 
             var providerCredentials = _isRealMarket
@@ -522,6 +528,8 @@ namespace MarketCore.WPF
 
             // ── Inicializar FlowSense ──────────────────────────────────────
             _flowScoreConfig    = new FlowScoreConfig();
+            // [MODO ANÁLISE] forçar degradação graciosa — book components retornam 0
+            _flowScoreConfig.PreferAggregatedBookSignals = true;
             _brokerAccum       = new BrokerAccumulator();
             _deltaEngine       = new DeltaEngine();
             _bookAnalyzer      = new BookAnalyzer(_flowScoreConfig);
@@ -559,13 +567,15 @@ namespace MarketCore.WPF
                 App.AppendCrashLog(nameof(MainWindow) + ".HabilitarGravacao", ex);
             }
 
-            WireBookFilterButtons();
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // WireBookFilterButtons();
 
-            if (CbLevels.SelectedItem is ComboBoxItem levelsItem
-                && int.TryParse(levelsItem.Content?.ToString(), out int initialLevels))
-            {
-                _levels = initialLevels;
-            }
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // if (CbLevels.SelectedItem is ComboBoxItem levelsItem
+            //     && int.TryParse(levelsItem.Content?.ToString(), out int initialLevels))
+            // {
+            //     _levels = initialLevels;
+            // }
 
             _uiTimer.Start();
             _uiPulseTimer.Start();
@@ -727,6 +737,7 @@ namespace MarketCore.WPF
             }
         }
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
         private void WireBookFilterButtons()
         {
             if (_bookFilterButtonsWired)
@@ -752,6 +763,7 @@ namespace MarketCore.WPF
                 App.AppendCrashLog(nameof(ChkBookMicrostructureDetectors_Click), ex);
             }
         }
+        */
 
         private async Task ConnectEngineSafelyAsync(ProviderCredentials credentials)
         {
@@ -866,10 +878,11 @@ namespace MarketCore.WPF
             _lastAsk = 0;
             TbLastPrice.Text = "--";
             TbLastPrice.Foreground = new SolidColorBrush(Color.FromRgb(0, 200, 83));
-            TbSpread.Text = "-- pts";
-            TbDepth.Text = "-- níveis";
-            TbFooterBid.Text = "--";
-            TbFooterAsk.Text = "--";
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // TbSpread.Text = "-- pts";
+            // TbDepth.Text = "-- níveis";
+            // TbFooterBid.Text = "--";
+            // TbFooterAsk.Text = "--";
             lock (_bookMailboxSync)
                 _bookMailboxSnapshot = null;
             lock (_tradeLagSync)
@@ -879,7 +892,8 @@ namespace MarketCore.WPF
                 _tradeReceivedUtcSnap = null;
             }
 
-            TbTapeTotal.Text = "0 trades";
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // TbTapeTotal.Text = "0 trades";
 
             BidRows.Clear();
             AskRows.Clear();
@@ -893,7 +907,8 @@ namespace MarketCore.WPF
                 Array.Empty<BookLevel>(),
                 Array.Empty<BookLevel>());
             _bookVisualDirty = true;
-            RenderBook(_lastSnapshot);
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // RenderBook(_lastSnapshot);
 
             _deltaEngine?.ClearSessionState();
             _brokerAccum?.ClearAllBrokers();
@@ -1037,7 +1052,7 @@ namespace MarketCore.WPF
                 Interlocked.Add(ref _delta, -trade.Volume);
             }
 
-            // ──── Janelas Móveis ────
+            // ──── Janela Móvel 1 (usada pelo AnaliseQuant) ────
             var buyVol  = trade.Aggressor == TradeAggressor.Buy  ? trade.Volume : 0;
             var sellVol = trade.Aggressor == TradeAggressor.Sell ? trade.Volume : 0;
 
@@ -1055,19 +1070,7 @@ namespace MarketCore.WPF
                 }
             }
 
-            lock (_aggressionWindow2)
-            {
-                _aggressionWindow2.Enqueue((trade.Time, buyVol, sellVol));
-                _windowBuy2  += buyVol;
-                _windowSell2 += sellVol;
-                var cutoff2 = trade.Time.AddMinutes(-_windowMinutes2);
-                while (_aggressionWindow2.Count > 0 && _aggressionWindow2.Peek().Time < cutoff2)
-                {
-                    var removed = _aggressionWindow2.Dequeue();
-                    _windowBuy2  = Math.Max(0, _windowBuy2  - removed.Buy);
-                    _windowSell2 = Math.Max(0, _windowSell2 - removed.Sell);
-                }
-            }
+            // [PERF] Janela Móvel 2 removida — alimentava pressure bars que não existem mais.
 
             // ──── FlowSense - alimenta BrokerAccumulator e DeltaEngine ────
             if (trade.Aggressor == TradeAggressor.Buy || trade.Aggressor == TradeAggressor.Sell)
@@ -1088,47 +1091,8 @@ namespace MarketCore.WPF
             // Análise Quantitativa — CoordPlayerMiner precisa de TODOS os trades (antes dos filtros de tape).
             AnaliseQuantLiveHub.PushTrade(trade);
 
-            // ──── FILTRO DE VOLUME MÍNIMO ────
-            if (_tapeVolMin > 0 && trade.Volume < _tapeVolMin)
-                return;
-
-            // ──── FILTRO DE MOVIMENTO DE PREÇO ────
-            decimal priceMove = 0;
-            if (_lastTradePrice > 0)
-            {
-                priceMove = Math.Abs(trade.Price - _lastTradePrice);
-                if (_tapeMoveMin > 0 && priceMove < _tapeMoveMin)
-                    return;
-            }
-            _lastTradePrice = trade.Price;
-
-            // ──── ENFILEIRAR PARA A TAPE (sem tocar no Dispatcher aqui) ────
-            // Tape: coleção atualizada pelo pulso leve (~30 Hz) em lotes, sem Reload em massa na UI.
-            bool isBuy = trade.Aggressor == TradeAggressor.Buy;
-            bool isSell = trade.Aggressor == TradeAggressor.Sell;
-            bool bigVol = trade.Volume >= 500;
-
-            var rec = new TapeRecord
-            {
-                Time = trade.Time.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture),
-                Broker = trade.Broker.Length > 6 ? trade.Broker[..6] : trade.Broker,
-                Price = trade.Price.ToString("N0"),
-                Volume = trade.Volume.ToString(),
-                Side = isBuy ? "Compra" : isSell ? "Venda" : "Outro",
-                PriceColor = TapePriceBrush,
-                VolColor = bigVol ? TapeVolBigBrush : TapeVolSmallBrush,
-                SideColor = isBuy ? TapeBuyBrush : isSell ? TapeSellBrush : TapeNeutralBrush,
-                RowBg = TapeRowBgBrush,
-                VolWeight = bigVol ? "Bold" : "Normal"
-            };
-
-            _pendingTape.Enqueue(rec);
-            Interlocked.Increment(ref _tapePendingDepth);
-
-            // Cap: descarta negócios pendentes mais antigos (evita usar ConcurrentQueue.Count).
-            while (Volatile.Read(ref _tapePendingDepth) > PendingTapeMaxQueue
-                   && _pendingTape.TryDequeue(out _))
-                Interlocked.Decrement(ref _tapePendingDepth);
+            // [PERF] Tape UI removida — código de filtro/enqueue de TapeRecord eliminado.
+            // Economia: ~6 alocações de string + 1 TapeRecord + locks por trade.
         }
 
         /// <summary>Drena FlowCandle (Renko) em lote no timer pesado.</summary>
@@ -1152,6 +1116,7 @@ namespace MarketCore.WPF
             }
         }
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
         /// <summary>
         /// Drena <b>toda</b> a fila pendente da tape a cada tick. Antes: fatia ~900 na <b>cabeça</b> da <c>ConcurrentQueue</c>
         /// deixava os negócios mais novos na <b>cauda</b> — atraso real de vários segundos na exibição mesmo com feed em dia.
@@ -1211,9 +1176,10 @@ namespace MarketCore.WPF
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 try { TapeScrollViewer.ScrollToTop(); }
-                catch { /* ignore */ }
+                catch { /- ignore -/ }
             }), DispatcherPriority.Background);
         }
+        */
 
         private void FeedBookAnalyzerFromTop(IReadOnlyList<BookLevel> bids, IReadOnlyList<BookLevel> asks)
         {
@@ -1242,6 +1208,7 @@ namespace MarketCore.WPF
             _bookAnalyzer.OnBookSnapshot(_analyzerBidPrices, _analyzerBidQtys, _analyzerAskPrices, _analyzerAskQtys);
         }
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
         private void Engine_OnBookSnapshot(BookSnapshot snapshot)
         {
             Interlocked.Increment(ref _bookCount);
@@ -1336,6 +1303,7 @@ namespace MarketCore.WPF
             _lastBookRenderMs = nowMs;
             RenderBook(_lastSnapshot);
         }
+        */
 
         // ══════════════════════════════════════════════════════════════════════
         //  RENDERIZAÇÃO DO BOOK BILATERAL
@@ -1421,6 +1389,7 @@ namespace MarketCore.WPF
             return selected;
         }
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
         private string ReadFilterBrokerFromUi()
         {
             string broker = (CbFilterBroker.Text ?? string.Empty).Trim();
@@ -1469,7 +1438,9 @@ namespace MarketCore.WPF
             TbFilterStatus.Text =
                 $"{ActiveFilters.Count} filtro(s) ativo(s) - {visible} nível(is) visível(eis); filtro só por volume (livro por preço).";
         }
+        */
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI
         private void RenderBook(BookSnapshot snapshot)
         {
             int levels = _levels;
@@ -1536,22 +1507,22 @@ namespace MarketCore.WPF
                 if (_lastAsk > _lastBid)
                 {
                     decimal spread = (_lastAsk - _lastBid) / 5m;
-                    TbSpread.Text = $"{spread:N0} pts";
+                    TbSpread.Text = $”{spread:N0} pts”;
                 }
                 else
-                    TbSpread.Text = "-- pts"; // filtros/UI ainda inconsistente; motor já normaliza o snapshot
+                    TbSpread.Text = “-- pts”; // filtros/UI ainda inconsistente; motor já normaliza o snapshot
             }
             else
             {
-                TbSpread.Text = "-- pts";
+                TbSpread.Text = “-- pts”;
             }
 
             int pool = bidsWork.Count + asksWork.Count;
             int rows = Math.Max(BidRows.Count, AskRows.Count);
             string diag = _engine?.GetBookDiagnostics(_bookOfferTicker) ?? string.Empty;
             TbDepth.Text = ActiveFilters.Count == 0
-                ? $"AGG {pool} níveis | {rows}/{levels} grid | {diag}"
-                : $"AGG filt {visibleInPool}/{pool} | {rows}/{levels} | {diag}";
+                ? $”AGG {pool} níveis | {rows}/{levels} grid | {diag}”
+                : $”AGG filt {visibleInPool}/{pool} | {rows}/{levels} | {diag}”;
 
             if (_lastBid > 0)
             {
@@ -1560,12 +1531,13 @@ namespace MarketCore.WPF
             }
             else
             {
-                TbLastPrice.Text = "--";
+                TbLastPrice.Text = “--”;
             }
 
-            TbFooterBid.Text = _lastBid > 0 ? BookSnapshotAggregation.FormatBookPrice(_lastBid) : "--";
-            TbFooterAsk.Text = _lastAsk > 0 ? BookSnapshotAggregation.FormatBookPrice(_lastAsk) : "--";
+            TbFooterBid.Text = _lastBid > 0 ? BookSnapshotAggregation.FormatBookPrice(_lastBid) : “--”;
+            TbFooterAsk.Text = _lastAsk > 0 ? BookSnapshotAggregation.FormatBookPrice(_lastAsk) : “--”;
         }
+        */
 
         private void RebuildBookSideRowIndexMap(ObservableCollection<BookSideRowViewModel> rows)
         {
@@ -1778,7 +1750,8 @@ namespace MarketCore.WPF
 
         private void UiPulseTickCore()
         {
-            FlushPendingTape();
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // FlushPendingTape();
             RefreshTradeLatencyHud();
 
             long delta = Interlocked.Read(ref _delta);
@@ -1787,12 +1760,15 @@ namespace MarketCore.WPF
             {
                 _lastDeltaText = deltaStr;
                 TbDelta.Text = deltaStr;
-                TbFooterDelta.Text = deltaStr;
+                // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+                // TbFooterDelta.Text = deltaStr;
                 var brush = delta >= 0 ? TbDeltaPositiveBrush : TbDeltaNegativeBrush;
                 TbDelta.Foreground = brush;
-                TbFooterDelta.Foreground = brush;
+                // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+                // TbFooterDelta.Foreground = brush;
             }
 
+            /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI (pressão, contadores, janelas móveis, barras)
             long buyA = Interlocked.Read(ref _buyAggression);
             long sellA = Interlocked.Read(ref _sellAggression);
             long total = buyA + sellA;
@@ -1811,8 +1787,10 @@ namespace MarketCore.WPF
             TbSpoofCount.Text      = _spoofCount.ToString();
             TbIcebergCount.Text    = _icebergCount.ToString();
             TbRenewableCount.Text  = _renewableCount.ToString();
+            */
             TbExhaustionCount.Text = _exhaustionCount.ToString();
 
+            /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI (janelas móveis 1 e 2)
             long wb2, ws2;
             lock (_aggressionWindow2)
             {
@@ -1861,6 +1839,7 @@ namespace MarketCore.WPF
 
             TbTradesPerSec.Text = $"{_tradesLastSec}/s";
             TbBooksPerSec.Text  = $"{_booksLastSec}/s";
+            */
 
             long tc = Interlocked.Read(ref _tradeCount);
             string tcStr = tc.ToString();
@@ -1870,19 +1849,20 @@ namespace MarketCore.WPF
                 TbTradeCount.Text = tcStr;
             }
 
-            long bc = Interlocked.Read(ref _bookCount);
-            string bcStr = bc.ToString();
-            if (_lastBookCountText != bcStr)
-            {
-                _lastBookCountText = bcStr;
-                TbBookCount.Text = bcStr;
-            }
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // long bc = Interlocked.Read(ref _bookCount);
+            // string bcStr = bc.ToString();
+            // if (_lastBookCountText != bcStr)
+            // {
+            //     _lastBookCountText = bcStr;
+            //     TbBookCount.Text = bcStr;
+            // }
 
             long d = Interlocked.Read(ref _delta);
             TbLastPrice.Foreground = d >= 0 ? TbDeltaPositiveBrush : TbDeltaNegativeBrush;
 
-            // Repinte do livro também no pulso ~33Hz (além do mailbox) — evita esperar só o timer ~70ms quando o throttle segurou.
-            TryRenderBookThrottled();
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // TryRenderBookThrottled();
         }
 
         private void UiTimer_Tick(object? sender, EventArgs e)
@@ -1903,16 +1883,19 @@ namespace MarketCore.WPF
 
             FlushPendingFlowCandle();
 
-            TryRenderBookThrottled();
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // TryRenderBookThrottled();
 
-            if ((_uiTicks & 31) == 0 || _uiTicks <= 2)
-                TbHeapMb.Text = $"{GC.GetTotalMemory(false) / 1024.0 / 1024.0:N1} MB";
+            // [MODO ANÁLISE] removido — painel esquerdo removido da UI
+            // if ((_uiTicks & 31) == 0 || _uiTicks <= 2)
+            //     TbHeapMb.Text = $"{GC.GetTotalMemory(false) / 1024.0 / 1024.0:N1} MB";
         }
 
         // ══════════════════════════════════════════════════════════════════════
         //  DETECTORES
         // ══════════════════════════════════════════════════════════════════════
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI (HandleSpoof, AddSpoofNotification, HandleIceberg)
         private void HandleSpoof(SpoofEvent d)
         {
             if (_spoofMinVol > 0 && d.VolumeBefore < _spoofMinVol) return;
@@ -2017,6 +2000,7 @@ namespace MarketCore.WPF
             }, DispatcherPriority.Background);
             ClearPriceDetectorAfter(key, 2);
         }
+        */
 
         private void HandleExhaustion(ExhaustionEvent d)
         {
@@ -2111,7 +2095,8 @@ namespace MarketCore.WPF
                 AlertItems.RemoveAt(AlertItems.Count - 1);
             }
 
-            AlertsScrollViewer.ScrollToTop();
+            // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
+            // AlertsScrollViewer.ScrollToTop();
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -2246,6 +2231,7 @@ namespace MarketCore.WPF
                 Close();
         }
 
+        /* [MODO ANÁLISE] removido — sem book/tape/alertas na UI (filtros de corretora, configurações de book/tape, alertas)
         private void BtnAddFilter_Click(object sender, RoutedEventArgs e)
         {
             if (_addingBrokerFilter)
@@ -2389,6 +2375,7 @@ namespace MarketCore.WPF
             AlertItems.Clear();
             _alertByKey.Clear();
         }
+        */
 
         protected override void OnClosed(EventArgs e)
         {

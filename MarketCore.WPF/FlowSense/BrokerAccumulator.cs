@@ -31,10 +31,12 @@ namespace MarketCore.FlowSense
 
             lock (_sync)
             {
-                if (!_brokers.ContainsKey(brokerName))
-                    _brokers[brokerName] = new BrokerStats(brokerName);
-
-                _brokers[brokerName].RecordTrade(volume, isBuyAggressor, timestamp);
+                if (!_brokers.TryGetValue(brokerName, out var stats))
+                {
+                    stats = new BrokerStats(brokerName);
+                    _brokers[brokerName] = stats;
+                }
+                stats.RecordTrade(volume, isBuyAggressor, timestamp);
             }
         }
 

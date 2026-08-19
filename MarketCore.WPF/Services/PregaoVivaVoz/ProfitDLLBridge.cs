@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace MarketCore.WPF.Services.PregaoVivaVoz
 {
@@ -65,29 +66,82 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
 
         // Log bruto de callbacks — TODOS os callbacks que chegam no Bridge, com timestamp.
         // Permite correlação independente com o log de narrações.
+        //
+        // OTIMIZAÇÃO: buffer em memória + flush periódico. Antes, cada callback fazia
+        // File.AppendAllText (2× por evento: aqui + UnifiedLog), ou seja 400+ I/O ops/sec
+        // no mesmo thread que processa o book. Agora enfileira e faz flush a cada ~500ms
+        // ou 100 linhas, o que vier primeiro.
         private static readonly string CallbacksLogPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MarketCore",
             "pregao_viva_voz_callbacks.log");
-        private static readonly object _callbackLogGate = new();
+
+        private static readonly System.Collections.Concurrent.ConcurrentQueue<string> _callbackLogBuffer = new();
+        private static volatile int _callbackLogCount;
+        private static long _lastCallbackFlushTicks = DateTime.UtcNow.Ticks;
+        private static readonly object _callbackFlushGate = new();
+        private const int CallbackLogFlushThreshold = 100;
+        private const long CallbackLogFlushIntervalTicks = 5_000_000; // 500ms
 
         private static void AppendCallbackLog(string linha)
         {
+            string linhaFinal = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {linha}";
+            _callbackLogBuffer.Enqueue(linhaFinal);
+            int count = Interlocked.Increment(ref _callbackLogCount);
+
+            long now = DateTime.UtcNow.Ticks;
+            bool shouldFlush = count >= CallbackLogFlushThreshold
+                || (now - Volatile.Read(ref _lastCallbackFlushTicks)) > CallbackLogFlushIntervalTicks;
+
+            if (shouldFlush)
+                FlushCallbackLog();
+        }
+
+        private static void FlushCallbackLog()
+        {
+            if (!Monitor.TryEnter(_callbackFlushGate))
+                return; // outro thread já está flushing
             try
             {
-                var dir = Path.GetDirectoryName(CallbacksLogPath);
-                if (!string.IsNullOrEmpty(dir))
-                    Directory.CreateDirectory(dir);
-                string linhaFinal = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {linha}{Environment.NewLine}";
-                lock (_callbackLogGate)
+                var sb = new System.Text.StringBuilder(4096);
+                while (_callbackLogBuffer.TryDequeue(out var line))
                 {
-                    File.AppendAllText(CallbacksLogPath, linhaFinal);
+                    Interlocked.Decrement(ref _callbackLogCount);
+                    sb.AppendLine(line);
                 }
-            }
-            catch { /* best effort */ }
+                if (sb.Length == 0) return;
 
-            // Também grava no arquivo unificado (callbacks + narrações intercalados).
-            PregaoVivaVozUnifiedLog.Append("CALLBACK", linha);
+                string content = sb.ToString();
+                Volatile.Write(ref _lastCallbackFlushTicks, DateTime.UtcNow.Ticks);
+
+                // [PERF] Disk I/O offloaded para ThreadPool — File.AppendAllText é síncrono e
+                // bloqueava o TradeProcessingLoop por 2-20ms por flush (2× escritas: callbacks.log
+                // + unified.log). Com ~2.5 flushes/s → 5-50ms/s de blocking → 18-180s/hora de
+                // delay acumulado. Agora o thread de trades enfileira e segue; a escrita acontece
+                // em background. O _callbackFlushGate protege contra flush concorrente, e o
+                // conteúdo já foi copiado para 'content' antes do offload.
+                System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        var dir = Path.GetDirectoryName(CallbacksLogPath);
+                        if (!string.IsNullOrEmpty(dir))
+                            Directory.CreateDirectory(dir);
+                        File.AppendAllText(CallbacksLogPath, content);
+                    }
+                    catch { /* best effort */ }
+
+                    try
+                    {
+                        PregaoVivaVozUnifiedLog.AppendBatch("CALLBACK", content);
+                    }
+                    catch { /* best effort */ }
+                });
+            }
+            finally
+            {
+                Monitor.Exit(_callbackFlushGate);
+            }
         }
 
         public ProfitDLLBridge(PregaoVivaVozEngine engine)

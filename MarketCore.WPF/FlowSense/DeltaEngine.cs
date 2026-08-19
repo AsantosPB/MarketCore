@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace MarketCore.FlowSense
 {
@@ -11,6 +10,13 @@ namespace MarketCore.FlowSense
     /// - VWAP: volume weighted average price de sessão
     /// - Stop hunt: detecção de sweep + retorno
     /// - Session timing: multiplicador contextual (abertura/meio/fechamento)
+    ///
+    /// [PERF] v2: listas unbounded (_prices, _buyVolumes, _sellVolumes, _deltaValues)
+    /// substituídas por ring buffers de tamanho fixo. Antes cresciam sem limite (~4M entries
+    /// em 6h de pregão), causando resizes no LOH → GC Gen2 → pauses de 10-50ms que
+    /// bloqueavam o TradeProcessingLoop. CalculateCVDDivergence só usa os últimos 5 entries;
+    /// LINQ (.TakeLast(5).ToList(), .Select().ToList(), .Average()) eliminado — zero alocação
+    /// por trade. _delta1min/_delta3min agora só guardam o último valor (era o único uso).
     /// </summary>
     public class DeltaEngine
     {
@@ -20,19 +26,22 @@ namespace MarketCore.FlowSense
         /// </summary>
         private readonly object _sync = new();
 
-        private List<double> _prices = new List<double>(1000);
-        private List<double> _buyVolumes = new List<double>(1000);
-        private List<double> _sellVolumes = new List<double>(1000);
-        private List<int> _deltaValues = new List<int>(1000);
+        // Ring buffers de tamanho fixo — só os últimos 5 trades (tudo que CalculateCVDDivergence precisa).
+        private const int RingSize = 5;
+        private readonly double[] _recentPrices = new double[RingSize];
+        private readonly int[] _recentDeltas = new int[RingSize];
+        private int _ringIndex;  // próxima posição de escrita (mod RingSize)
+        private int _ringCount;  // quantos foram escritos (capped em RingSize)
 
         // Acumuladores
         private long _cumulativeDelta = 0;
         private double _totalVolume = 0;
         private double _cumulativePriceVolume = 0; // para VWAP
 
-        // Janelas temporais
-        private List<double> _delta1min = new List<double>(60);
-        private List<double> _delta3min = new List<double>(180);
+        // Janelas temporais — antes eram List que cresciam sem limite dentro da janela.
+        // Só o último valor era lido (.Last()). Substituídos por campo simples.
+        private double _currentDelta1min;
+        private double _currentDelta3min;
         private DateTime _last1minReset = DateTime.UtcNow;
         private DateTime _last3minReset = DateTime.UtcNow;
 
@@ -42,13 +51,14 @@ namespace MarketCore.FlowSense
         private int _barsAboveHigh = 0;
         private int _barsBelowLow = 0;
 
-        // RVOL e média de volume
-        private Queue<double> _volumeHistory = new Queue<double>(100);
-        private readonly int _rvolWindowSize = 20; // últimas 20 barras
+        // RVOL — ring buffer manual com soma corrente (elimina LINQ .Average())
+        private const int RvolWindowSize = 20;
+        private readonly double[] _rvolRing = new double[RvolWindowSize];
+        private int _rvolIndex;
+        private int _rvolCount;
+        private double _rvolSum;
 
         // Campos espelhados - escritos só dentro de lock (_sync) em OnTrade
-        private double _currentDelta1min;
-        private double _currentDelta3min;
         private double _cvdDivergence;
         private double _rvol = 1;
         private double _sessionVWAP;
@@ -71,7 +81,8 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Processa um trade - atualiza delta, VWAP, janelas e detectores
+        /// Processa um trade - atualiza delta, VWAP, janelas e detectores.
+        /// Zero alocações de heap (nenhum LINQ, nenhum List resize).
         /// </summary>
         public void OnTrade(double price, double buyVolume, double sellVolume, DateTime timestamp)
         {
@@ -80,10 +91,11 @@ namespace MarketCore.FlowSense
                 double volume = buyVolume + sellVolume;
                 int delta = (int)(buyVolume - sellVolume);
 
-                _prices.Add(price);
-                _buyVolumes.Add(buyVolume);
-                _sellVolumes.Add(sellVolume);
-                _deltaValues.Add(delta);
+                // Ring buffer — sobrescreve o mais antigo
+                _recentPrices[_ringIndex] = price;
+                _recentDeltas[_ringIndex] = delta;
+                _ringIndex = (_ringIndex + 1) % RingSize;
+                if (_ringCount < RingSize) _ringCount++;
 
                 _cumulativeDelta += delta;
                 _totalVolume += volume;
@@ -96,10 +108,14 @@ namespace MarketCore.FlowSense
                 if (price < _sessionLow)
                     _sessionLow = price;
 
-                _volumeHistory.Enqueue(volume);
-                if (_volumeHistory.Count > _rvolWindowSize)
-                    _volumeHistory.Dequeue();
-                CalculateRVOL(volume);
+                // RVOL — ring buffer com soma corrente (zero alloc)
+                if (_rvolCount >= RvolWindowSize)
+                    _rvolSum -= _rvolRing[_rvolIndex]; // subtrai o que vai ser sobrescrito
+                _rvolRing[_rvolIndex] = volume;
+                _rvolSum += volume;
+                _rvolIndex = (_rvolIndex + 1) % RvolWindowSize;
+                if (_rvolCount < RvolWindowSize) _rvolCount++;
+                _rvol = _rvolCount > 0 && _rvolSum > 0 ? volume / (_rvolSum / _rvolCount) : 1.0;
 
                 UpdateTimeWindows(timestamp);
                 CalculateCVDDivergence();
@@ -108,35 +124,20 @@ namespace MarketCore.FlowSense
             }
         }
 
-        private void CalculateRVOL(double currentVolume)
-        {
-            if (_volumeHistory.Count == 0)
-            {
-                _rvol = 1.0;
-                return;
-            }
-
-            double avgVolume = _volumeHistory.Average();
-            _rvol = avgVolume > 0 ? currentVolume / avgVolume : 1.0;
-        }
-
         private void CalculateCVDDivergence()
         {
-            if (_prices.Count < 5)
+            if (_ringCount < RingSize)
             {
                 _cvdDivergence = 0;
                 return;
             }
 
-            // Calcula slope do preço nos ultimos 5 trades
-            var recentPrices = _prices.TakeLast(5).ToList();
-            var recentDeltas = _deltaValues.TakeLast(5).ToList();
+            // Lê os últimos 5 do ring buffer na ordem cronológica (zero alloc).
+            // _ringIndex aponta pro PRÓXIMO slot. O mais antigo é _ringIndex (que já
+            // foi sobrescrito), o mais recente é (_ringIndex - 1 + RingSize) % RingSize.
+            double priceSlope = CalculateSlopeFromRingDouble(_recentPrices);
+            double deltaSlope = CalculateSlopeFromRingInt(_recentDeltas);
 
-            double priceSlope = CalculateSlope(recentPrices);
-            double deltaSlope = CalculateSlope(recentDeltas.Select(d => (double)d).ToList());
-
-            // CVD divergence = quando preço sobe mas delta cai (ou vice versa)
-            // Retorna valor de -100 (maxima divergencia vendedora) a +100 (maxima divergencia compradora)
             if (Math.Abs(priceSlope) < 0.0001)
             {
                 _cvdDivergence = 0;
@@ -147,28 +148,34 @@ namespace MarketCore.FlowSense
             _cvdDivergence = Math.Max(-100, Math.Min(100, _cvdDivergence));
         }
 
-        private double CalculateSlope(List<double> values)
+        /// <summary>Linear regression slope sobre os últimos RingSize itens do ring buffer (double).</summary>
+        private double CalculateSlopeFromRingDouble(double[] ring)
         {
-            if (values.Count < 2)
-                return 0;
-
-            // Linear regression slope
-            int n = values.Count;
-            double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-            for (int i = 0; i < n; i++)
+            // n = RingSize = 5; sumX = 0+1+2+3+4 = 10; sumX2 = 0+1+4+9+16 = 30
+            // denominator = 5*30 - 10*10 = 50 (constante, hardcoded)
+            const double denom = 50.0;
+            double sumY = 0, sumXY = 0;
+            for (int i = 0; i < RingSize; i++)
             {
-                sumX += i;
-                sumY += values[i];
-                sumXY += i * values[i];
-                sumX2 += i * i;
+                double val = ring[(_ringIndex + i) % RingSize]; // cronológico: oldest → newest
+                sumY += val;
+                sumXY += i * val;
             }
+            return (RingSize * sumXY - 10.0 * sumY) / denom;
+        }
 
-            double denominator = (n * sumX2) - (sumX * sumX);
-            if (Math.Abs(denominator) < 0.0001)
-                return 0;
-
-            return ((n * sumXY) - (sumX * sumY)) / denominator;
+        /// <summary>Linear regression slope sobre os últimos RingSize itens do ring buffer (int).</summary>
+        private double CalculateSlopeFromRingInt(int[] ring)
+        {
+            const double denom = 50.0;
+            double sumY = 0, sumXY = 0;
+            for (int i = 0; i < RingSize; i++)
+            {
+                double val = ring[(_ringIndex + i) % RingSize];
+                sumY += val;
+                sumXY += i * val;
+            }
+            return (RingSize * sumXY - 10.0 * sumY) / denom;
         }
 
         private void UpdateTimeWindows(DateTime timestamp)
@@ -176,27 +183,20 @@ namespace MarketCore.FlowSense
             // Delta 1min - reseta a cada minuto
             if ((timestamp - _last1minReset).TotalSeconds >= 60)
             {
-                _delta1min.Clear();
                 _last1minReset = timestamp;
             }
-            _delta1min.Add(_cumulativeDelta);
-            _currentDelta1min = _delta1min.Count > 0 ? _delta1min.Last() : 0;
+            _currentDelta1min = _cumulativeDelta;
 
             // Delta 3min - reseta a cada 3 minutos
             if ((timestamp - _last3minReset).TotalSeconds >= 180)
             {
-                _delta3min.Clear();
                 _last3minReset = timestamp;
             }
-            _delta3min.Add(_cumulativeDelta);
-            _currentDelta3min = _delta3min.Count > 0 ? _delta3min.Last() : 0;
+            _currentDelta3min = _cumulativeDelta;
         }
 
         private void DetectStopHunt(double price)
         {
-            // Stop hunt = rompimento de highs/lows seguido de retorno rapido com delta invertido
-            // Simplificado: detecta quando preço bate o high/low da sessão + reverte em 2 trades
-            
             const double tolerance = 0.0001;
             const int confirmationBars = 2;
 
@@ -220,13 +220,11 @@ namespace MarketCore.FlowSense
                 _barsBelowLow = 0;
             }
 
-            // Se bateu o extremo e reverteu em 2 bars, ativa flag
             _stopHuntDetected = (_barsAboveHigh >= confirmationBars || _barsBelowLow >= confirmationBars);
         }
 
         private void UpdateSessionPhase(DateTime timestamp)
         {
-            // Simplificado: abertura (9h-10h), meio (10h-16h), leilao (16h-16h30)
             int hour = timestamp.Hour;
             int minute = timestamp.Minute;
 
@@ -247,13 +245,16 @@ namespace MarketCore.FlowSense
         {
             lock (_sync)
             {
-                _prices.Clear();
-                _buyVolumes.Clear();
-                _sellVolumes.Clear();
-                _deltaValues.Clear();
-                _delta1min.Clear();
-                _delta3min.Clear();
-                _volumeHistory.Clear();
+                Array.Clear(_recentPrices);
+                Array.Clear(_recentDeltas);
+                _ringIndex = 0;
+                _ringCount = 0;
+
+                Array.Clear(_rvolRing);
+                _rvolIndex = 0;
+                _rvolCount = 0;
+                _rvolSum = 0;
+
                 _barsAboveHigh = 0;
                 _barsBelowLow = 0;
                 _cumulativeDelta = 0;
@@ -274,17 +275,13 @@ namespace MarketCore.FlowSense
         }
 
         /// <summary>
-        /// Retorna delta acumulado de uma barra Renko (em pontos)
-        /// Para uso pelo FlowCandleChart
+        /// [DEAD CODE] Nunca chamado no codebase. Mantido como stub para evitar quebra de compilação
+        /// caso algum assembly externo referencie. Retorna 0 sempre — os dados per-trade não são mais
+        /// mantidos em lista (ring buffer de 5 itens substituiu a lista unbounded).
         /// </summary>
         public long GetDeltaForRenkoBar(int barIndex)
         {
-            lock (_sync)
-            {
-                if (barIndex < 0 || barIndex >= _deltaValues.Count)
-                    return 0;
-                return _deltaValues[barIndex];
-            }
+            return 0;
         }
     }
 

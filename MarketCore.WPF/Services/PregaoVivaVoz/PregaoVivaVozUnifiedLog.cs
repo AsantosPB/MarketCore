@@ -53,5 +53,25 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                 // Log é best-effort — nunca deve quebrar o fluxo de trading.
             }
         }
+
+        /// <summary>
+        /// Grava um batch inteiro de uma vez (chamado pelo flush periódico do ProfitDLLBridge).
+        /// Evita N chamadas File.AppendAllText em favor de uma única escrita.
+        /// </summary>
+        public static void AppendBatch(string tipo, string content)
+        {
+            if (string.IsNullOrEmpty(content)) return;
+            try
+            {
+                var dir = Path.GetDirectoryName(LogPath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+                lock (_gate)
+                {
+                    File.AppendAllText(LogPath, content);
+                }
+            }
+            catch { /* best effort */ }
+        }
     }
 }

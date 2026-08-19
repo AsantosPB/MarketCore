@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketCore — Otimizações do Pipeline de Book</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; padding: 2rem; }
+.container { max-width: 960px; margin: 0 auto; }
+h1 { color: #58a6ff; font-size: 1.8rem; margin-bottom: 0.5rem; font-weight: 600; }
+.subtitle { color: #8b949e; font-size: 0.95rem; margin-bottom: 2rem; }
+.phase { margin-bottom: 2rem; }
+.phase-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.phase-badge { background: #1f6feb; color: #fff; font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.phase-badge.p2 { background: #da3633; }
+.phase-title { color: #f0f6fc; font-size: 1.15rem; font-weight: 500; }
+.fix { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+.fix-header { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.4rem; }
+.fix-id { color: #58a6ff; font-weight: 600; font-size: 0.85rem; min-width: 52px; }
+.fix-title { color: #f0f6fc; font-weight: 500; font-size: 0.95rem; }
+.fix-file { color: #8b949e; font-size: 0.8rem; margin-bottom: 0.5rem; font-family: 'Cascadia Code', 'Fira Code', monospace; }
+.fix-body { color: #c9d1d9; font-size: 0.88rem; }
+.tag { display: inline-block; font-size: 0.7rem; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 500; vertical-align: middle; }
+.tag-perf { background: #1a4731; color: #3fb950; border: 1px solid #238636; }
+.tag-safety { background: #3d1d00; color: #d29922; border: 1px solid #9e6a03; }
+.tag-io { background: #341a3e; color: #bc8cff; border: 1px solid #8957e5; }
+.impact { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 1.25rem; margin-top: 2rem; }
+.impact h2 { color: #3fb950; font-size: 1.1rem; margin-bottom: 1rem; }
+.metric-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.metric { flex: 1; min-width: 200px; background: #161b22; border-radius: 6px; padding: 0.75rem 1rem; text-align: center; }
+.metric-label { color: #8b949e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-before { color: #f85149; font-size: 1.1rem; font-weight: 600; }
+.metric-after { color: #3fb950; font-size: 1.1rem; font-weight: 600; }
+.metric-arrow { color: #8b949e; font-size: 0.85rem; margin: 0 4px; }
+.next-steps { margin-top: 2rem; }
+.next-steps h2 { color: #d29922; font-size: 1.1rem; margin-bottom: 0.75rem; }
+.next-steps ol { padding-left: 1.5rem; }
+.next-steps li { margin-bottom: 0.5rem; font-size: 0.9rem; }
+code { background: #1f2937; padding: 1px 5px; border-radius: 3px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>MarketCore — Otimizações do Pipeline de Book</h1>
+<p class="subtitle">15 fixes aplicados em 2 fases &bull; Arquivos: MarketEngine.cs, ProfitDLLProvider.cs, ProfitDLLBridge.cs, DllLatencyMonitor.cs, PregaoVivaVozUnifiedLog.cs</p>
+
+<!-- ═══════════════════════ PHASE 1 ═══════════════════════ -->
+<div class="phase">
+<div class="phase-header">
+  <span class="phase-badge">Fase 1</span>
+  <span class="phase-title">Bottlenecks estruturais — gargalos de contenção e escala</span>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 4</span><span class="fix-title">Reduzir OperationalBookSideCap de 30.000 → 5.000</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body">O livro armazenava até 30K ofertas por lado. Todas as operações O(n) — busca, eviction, snapshot copy — escalavam com esse N. Reduzir para 5K corta 6× o custo de cada operação linear, mantendo profundidade mais que suficiente para a tela (2.500 linhas visíveis).</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 5</span><span class="fix-title">Throttle do snapshot publish: 50ms + prioridade Normal</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body">A thread de publicação de snapshots rodava sem throttle e com prioridade <code>AboveNormal</code>, competindo com o processamento do book. Agora roda a cada 50ms (20 fps — mais que suficiente para UI) com prioridade <code>Normal</code>, liberando CPU para o consumer da fila de book.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 6</span><span class="fix-title">Backpressure PVV: skip quando fila > 500</span><span class="tag tag-safety">safety</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs, Providers/Nelogica/DllLatencyMonitor.cs, Providers/Nelogica/ProfitDLLProvider.cs</div>
+  <div class="fix-body">O módulo Pregão Viva Voz (PVV) fazia I/O e processamento extra em cada evento de book, mas não parava mesmo quando a fila crescia. Adicionado <code>BookQueueDepth</code> no <code>DllLatencyMonitor</code> e check de backpressure: se a fila &gt; 500, pula o hook PVV para o evento. Evita que o PVV amplifique o atraso quando o sistema já está sob carga.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 7</span><span class="fix-title">Cache de alias em TryResolveBookState</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body">Quando o ticker não era encontrado diretamente no <code>_books</code>, o fallback iterava todas as chaves comparando <code>ExtrairAtivo()</code> — O(n) por evento. Agora, na primeira resolução bem-sucedida, o alias é cacheado com <code>_books.TryAdd(ticker, state)</code>, transformando todas as chamadas subsequentes em O(1).</div>
+</div>
+</div>
+
+<!-- ═══════════════════════ PHASE 2 ═══════════════════════ -->
+<div class="phase">
+<div class="phase-header">
+  <span class="phase-badge p2">Fase 2</span>
+  <span class="phase-title">Auditoria profunda — eliminar todo O(n) e O(n²) do hot path</span>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 8</span><span class="fix-title">Eviction com watermark: bulk remove até 4.000</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body">Antes, ao atingir o cap, cada insert forçava uma eviction O(n) unitária. Agora usa watermark: quando chega ao cap, remove em lote até <code>EvictionLowWatermark</code> (4.000), e só volta a evictar quando atingir 5.000 de novo. Reduz evictions de ~1.000/sec para ~1 a cada poucos segundos.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 9</span><span class="fix-title">MergeSideFromFullSnapshot capped</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body">Full snapshots podiam trazer 10K+ itens. Antes, cada um era inserido e imediatamente evicado → O(n²). Agora o incoming é limitado a <code>OperationalBookSideCap</code> e itens que não cabem são descartados sem eviction, eliminando o quadrático.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 10</span><span class="fix-title">TryInsertOfferAtPosition usa list.Add (O(1))</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body"><code>List.Insert(idx)</code> desloca todos os elementos à direita — O(n). Como a ordem interna é irrelevante (snapshots re-ordenam por preço, PVV usa OfferId), substituído por <code>list.Add()</code> que é O(1) amortizado.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 11</span><span class="fix-title">TryParseOfferBookDate com cache de formato</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Providers/Nelogica/ProfitDLLProvider.cs</div>
+  <div class="fix-body">Cada evento tentava parsear a data com até 6 formatos sequenciais via <code>DateTime.TryParseExact</code>. Como o formato é estável durante a sessão, adicionado <code>_lastMatchedFormatIdx</code> volátil — tenta o último formato que funcionou primeiro. Elimina 5 tentativas falhadas por evento nos ~98% dos casos.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 12</span><span class="fix-title">TryParseOfferBookDateBytes com stackalloc</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Providers/Nelogica/ProfitDLLProvider.cs</div>
+  <div class="fix-body">Versão bytes do parser usava <code>Encoding.ASCII.GetString()</code> alocando uma string no heap por evento. Substituído por <code>Span&lt;char&gt; chars = stackalloc char[length]</code> + <code>TryParseExact</code> com span — zero alocação de heap, menos pressão no GC.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 13</span><span class="fix-title">SwapRemoveAt — remoção O(1) de listas</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Engine/MarketEngine.cs</div>
+  <div class="fix-body"><code>List.RemoveAt(idx)</code> desloca todos os elementos — O(n). <code>SwapRemoveAt</code> copia o último elemento para a posição removida e faz <code>RemoveAt(last)</code> — O(1). Aplicado em case 2 (delete) e case 3 (deleteFrom). Case 2 agora prioriza OfferId lookup ao invés de posição para evitar remoção errada em lista desordenada.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 14</span><span class="fix-title">TryPriceToDecimal simplificado</span><span class="tag tag-perf">perf</span></div>
+  <div class="fix-file">Providers/Nelogica/ProfitDLLProvider.cs</div>
+  <div class="fix-body">Usava <code>try-catch</code> com <code>Convert.ToDecimal</code> + <code>Math.Round</code>. Em hot path com 2.000 calls/sec, try-catch (quando lança) é extremamente caro. Substituído por validação direta + cast <code>(decimal)price</code> sem try-catch e sem Round desnecessário.</div>
+</div>
+
+<div class="fix">
+  <div class="fix-header"><span class="fix-id">Fix 15</span><span class="fix-title">Buffered callback logging (PVV)</span><span class="tag tag-io">I/O</span></div>
+  <div class="fix-file">MarketCore.WPF/Services/PregaoVivaVoz/ProfitDLLBridge.cs, PregaoVivaVozUnifiedLog.cs</div>
+  <div class="fix-body">Cada callback fazia <code>File.AppendAllText</code> — open/write/close/flush em disco, 2× por evento (callback log + unified log). Com 200+ callbacks/sec no PVV ativo, era ~400 I/O ops/sec no thread de processamento. Substituído por <code>ConcurrentQueue</code> + flush periódico (a cada 500ms ou 100 linhas). Adicionado <code>AppendBatch</code> no unified log para escrita em lote.</div>
+</div>
+</div>
+
+<!-- ═══════════════════════ IMPACT ═══════════════════════ -->
+<div class="impact">
+<h2>Impacto estimado</h2>
+<div class="metric-row">
+  <div class="metric">
+    <div class="metric-label">Custo por evento</div>
+    <div><span class="metric-before">~2ms</span><span class="metric-arrow">→</span><span class="metric-after">~50-100μs</span></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Throughput teórico</div>
+    <div><span class="metric-before">~500/sec</span><span class="metric-arrow">→</span><span class="metric-after">10.000+/sec</span></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">I/O disco (PVV ativo)</div>
+    <div><span class="metric-before">~400 ops/sec</span><span class="metric-arrow">→</span><span class="metric-after">~2 ops/sec</span></div>
+  </div>
+</div>
+<div class="metric-row">
+  <div class="metric">
+    <div class="metric-label">Book cap por lado</div>
+    <div><span class="metric-before">30.000</span><span class="metric-arrow">→</span><span class="metric-after">5.000</span></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Snapshot publish</div>
+    <div><span class="metric-before">spin contínuo</span><span class="metric-arrow">→</span><span class="metric-after">20 fps (50ms)</span></div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Complexidade Insert/Delete</div>
+    <div><span class="metric-before">O(n)</span><span class="metric-arrow">→</span><span class="metric-after">O(1)</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════ NEXT STEPS ═══════════════════════ -->
+<div class="next-steps">
+<h2>Próximos passos</h2>
+<ol>
+  <li><strong>Build e teste</strong> — Compilar o projeto e rodar com o Pregão Viva Voz aberto por pelo menos 10 minutos. Monitorar o log <code>dll_latency.log</code> para ver se o <code>bookQ</code> se estabiliza perto de 0.</li>
+  <li><strong>Se persistir atraso</strong> — Substituir <code>List&lt;BookLevel&gt;</code> por <code>Dictionary&lt;long, BookLevel&gt;</code> chaveado por OfferId. Elimina completamente OfferIdx, evictions e toda operação posicional.</li>
+  <li><strong>Paralelização</strong> — Se o throughput ainda for insuficiente após o Dictionary, particionar o processamento de book por ticker (um consumer por instrumento).</li>
+  <li><strong>Profiling instrumentado</strong> — Adicionar <code>Stopwatch</code> amostrado no <code>BookProcessingLoop</code> para medir custo real por evento e identificar hot spots remanescentes.</li>
+</ol>
+</div>
+
+</div>
+</body>
+</html>

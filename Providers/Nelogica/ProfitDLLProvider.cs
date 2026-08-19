@@ -162,6 +162,9 @@ namespace MarketCore.Providers.Nelogica
             [MarshalAs(UnmanagedType.LPWStr)] string pwcBolsa);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int FreePointer(IntPtr pointer, int nSize);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
         private static extern int SubscribePriceDepth(in TConnectorAssetIdentifier assetID);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
@@ -245,43 +248,61 @@ namespace MarketCore.Providers.Nelogica
         }
 
         /// <summary>Tenta interpretar <paramref name="date"/> do OfferBookCallback (vários layouts já vistos em BMF).</summary>
+        /// <summary>
+        /// Cached format index: a DLL da Nelogica manda quase sempre o mesmo formato
+        /// ("HH:mm:ss.fff" tipicamente). Em vez de tentar 6 formatos a cada callback
+        /// (2.000/s), lembramos qual formato funcionou da última vez e tentamos esse
+        /// primeiro. Se acertar — caso comum — é um único TryParseExact.
+        /// Thread-safety: escrita/leitura de int é atômica em x64; volatile garante visibilidade.
+        /// </summary>
+        private static volatile int _lastMatchedFormatIdx = 0;
+        private static readonly string[] DateFormats =
+        [
+            "dd/MM/yyyy HH:mm:ss.fff",
+            "dd/MM/yyyy HH:mm:ss",
+            "yyyy-MM-dd HH:mm:ss.fff",
+            "yyyy-MM-dd HH:mm:ss",
+            "HH:mm:ss.fff",
+            "HH:mm:ss"
+        ];
+        private static readonly System.Globalization.CultureInfo PtBrCulture =
+            System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+
         private static bool TryParseOfferBookDate(string? date, out DateTime utc)
         {
             utc = default;
             if (string.IsNullOrWhiteSpace(date)) return false;
             string s = date.Trim();
 
-            // IMPORTANTE: a ordem aqui importa. A DLL da Nelogica manda datas em
-            // formato brasileiro (DMY: "11/08/2026" = 11 de agosto). Se caírmos em
-            // DateTime.TryParse(InvariantCulture) PRIMEIRO, ele interpreta como MDY
-            // (padrão US) e "11/08/2026" vira 8 de novembro — 89 dias no futuro.
-            // Bug real observado no dll_latency.log: tradeAge/bookAge apareciam
-            // negativos em ~89 dias porque a data era parseada com o mês/dia trocados.
-            // Solução: tentar formatos EXATOS primeiro (todos DMY), depois pt-BR,
-            // e só como último recurso a InvariantCulture (que raramente veremos).
-            ReadOnlySpan<string> formats =
-            [
-                "dd/MM/yyyy HH:mm:ss.fff",
-                "dd/MM/yyyy HH:mm:ss",
-                "yyyy-MM-dd HH:mm:ss.fff",
-                "yyyy-MM-dd HH:mm:ss",
-                "HH:mm:ss.fff",
-                "HH:mm:ss"
-            ];
+            // Fast path: tenta o último formato que funcionou PRIMEIRO.
+            // Em regime estável, ~100% dos callbacks usam o mesmo formato.
+            int lastIdx = _lastMatchedFormatIdx;
             DateTime dt;
-
-            foreach (var f in formats)
+            if (lastIdx >= 0 && lastIdx < DateFormats.Length
+                && DateTime.TryParseExact(s, DateFormats[lastIdx],
+                       System.Globalization.CultureInfo.InvariantCulture,
+                       System.Globalization.DateTimeStyles.AssumeLocal, out dt))
             {
-                if (DateTime.TryParseExact(s, f, System.Globalization.CultureInfo.InvariantCulture,
+                utc = DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
+                return true;
+            }
+
+            // Slow path: tenta todos os formatos.
+            for (int i = 0; i < DateFormats.Length; i++)
+            {
+                if (i == lastIdx) continue; // já tentamos
+                if (DateTime.TryParseExact(s, DateFormats[i],
+                        System.Globalization.CultureInfo.InvariantCulture,
                         System.Globalization.DateTimeStyles.AssumeLocal, out dt))
                 {
+                    _lastMatchedFormatIdx = i;
                     utc = DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
                     return true;
                 }
             }
 
             // Fallbacks livres — tenta pt-BR PRIMEIRO (DMY), invariant só se pt-BR falhar.
-            if (DateTime.TryParse(s, System.Globalization.CultureInfo.GetCultureInfo("pt-BR"),
+            if (DateTime.TryParse(s, PtBrCulture,
                     System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowWhiteSpaces, out dt)
                 || DateTime.TryParse(s, System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.AssumeLocal | System.Globalization.DateTimeStyles.AllowWhiteSpaces, out dt))
@@ -293,17 +314,57 @@ namespace MarketCore.Providers.Nelogica
             return false;
         }
 
+        /// <summary>
+        /// Versão sem alocação: converte bytes direto para <c>Span&lt;char&gt;</c> via stackalloc,
+        /// evitando <c>new StringBuilder</c> + <c>ToString()</c> por entrada do full book
+        /// (até 10.000 entradas por refresh = 10.000 alocações eliminadas).
+        /// </summary>
         private static bool TryParseOfferBookDateBytes(byte[] data, int start, int length, out DateTime utc)
         {
             utc = default;
             if (length <= 0 || start < 0 || start + length > data.Length)
                 return false;
 
-            var text = new System.Text.StringBuilder(length);
-            for (int i = start; i < start + length; i++)
-                text.Append((char)data[i]);
+            // stackalloc: zero GC. OfferBookMaxDateBytes = 256, cabe na stack.
+            Span<char> chars = stackalloc char[length];
+            for (int i = 0; i < length; i++)
+                chars[i] = (char)data[start + i];
 
-            return TryParseOfferBookDate(text.ToString(), out utc);
+            // Trim trailing nulls/whitespace
+            int end = length;
+            while (end > 0 && (chars[end - 1] == '\0' || char.IsWhiteSpace(chars[end - 1])))
+                end--;
+            if (end <= 0) return false;
+
+            var span = chars[..end];
+
+            // Try the cached format first (same optimization as TryParseOfferBookDate)
+            int lastIdx = _lastMatchedFormatIdx;
+            DateTime dt;
+            if (lastIdx >= 0 && lastIdx < DateFormats.Length
+                && DateTime.TryParseExact(span, DateFormats[lastIdx].AsSpan(),
+                       System.Globalization.CultureInfo.InvariantCulture,
+                       System.Globalization.DateTimeStyles.AssumeLocal, out dt))
+            {
+                utc = DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
+                return true;
+            }
+
+            for (int i = 0; i < DateFormats.Length; i++)
+            {
+                if (i == lastIdx) continue;
+                if (DateTime.TryParseExact(span, DateFormats[i].AsSpan(),
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.AssumeLocal, out dt))
+                {
+                    _lastMatchedFormatIdx = i;
+                    utc = DateTime.SpecifyKind(dt, DateTimeKind.Local).ToUniversalTime();
+                    return true;
+                }
+            }
+
+            // Fallback: precisa de string para TryParse com CultureInfo
+            return TryParseOfferBookDate(span.ToString(), out utc);
         }
 
         /// <summary>Fila única: delta incremental ou substituição completa (ordem preservada).</summary>
@@ -344,6 +405,113 @@ namespace MarketCore.Providers.Nelogica
                 => new(true, default, ticker, null, null, rawSell, rawBuy);
         }
 
+        /// <summary>
+        /// Tracker leve dos 4 melhores preços por lado (bid/ask) para o Pregão Viva Voz.
+        /// Elimina necessidade do BookState completo — determina o nível de preço
+        /// (1=boca, 2=segundo, 3=terceiro, 4=quarto) direto no callback da DLL.
+        ///
+        /// Auto-reset a cada 30s para limpar preços obsoletos (ordens canceladas, preço
+        /// que saiu do top). Os ~800 callbacks/s repopulam o tracker em &lt;100ms.
+        /// </summary>
+        private sealed class PvvPriceTracker
+        {
+            private readonly double[] _bids = new double[4]; // descending (highest = boca)
+            private readonly double[] _asks = new double[4]; // ascending  (lowest  = boca)
+            private int _bidCount;
+            private int _askCount;
+            private long _lastResetTicks = DateTime.UtcNow.Ticks;
+            private const long ResetIntervalTicks = 30 * TimeSpan.TicksPerSecond;
+
+            /// <summary>
+            /// Registra um preço e retorna o rank (1-4) se estiver nos 4 melhores.
+            /// Retorna 0 se o preço está fora dos top 4.
+            /// side: 0 = bid, 1 = ask.
+            /// </summary>
+            public int RegisterAndGetRank(int side, double price)
+            {
+                long now = DateTime.UtcNow.Ticks;
+                if (now - _lastResetTicks > ResetIntervalTicks)
+                {
+                    Reset();
+                    _lastResetTicks = now;
+                }
+                return side == 0 ? RegisterBid(price) : RegisterAsk(price);
+            }
+
+            public void Reset()
+            {
+                _bidCount = 0;
+                _askCount = 0;
+                Array.Clear(_bids);
+                Array.Clear(_asks);
+            }
+
+            private int RegisterBid(double price)
+            {
+                // Preço já existe? Retorna rank.
+                for (int i = 0; i < _bidCount; i++)
+                    if (Math.Abs(_bids[i] - price) < 0.001) return i + 1;
+
+                // Ponto de inserção (descending — maior preço primeiro).
+                int pos = _bidCount;
+                for (int i = 0; i < _bidCount; i++)
+                {
+                    if (price > _bids[i]) { pos = i; break; }
+                }
+
+                if (pos >= 4) return 0; // fora do top 4
+
+                int newCount = Math.Min(_bidCount + 1, 4);
+                for (int i = newCount - 1; i > pos; i--)
+                    _bids[i] = _bids[i - 1];
+                _bids[pos] = price;
+                _bidCount = newCount;
+                return pos + 1;
+            }
+
+            private int RegisterAsk(double price)
+            {
+                for (int i = 0; i < _askCount; i++)
+                    if (Math.Abs(_asks[i] - price) < 0.001) return i + 1;
+
+                int pos = _askCount;
+                for (int i = 0; i < _askCount; i++)
+                {
+                    if (price < _asks[i]) { pos = i; break; }
+                }
+
+                if (pos >= 4) return 0;
+
+                int newCount = Math.Min(_askCount + 1, 4);
+                for (int i = newCount - 1; i > pos; i--)
+                    _asks[i] = _asks[i - 1];
+                _asks[pos] = price;
+                _askCount = newCount;
+                return pos + 1;
+            }
+        }
+
+        /// <summary>
+        /// Candidato PVV pré-filtrado no callback (rank já calculado).
+        /// Struct leve (~40 bytes) — enfileirado no callback, drenado no TradeProcessingLoop.
+        /// Isso mantém o callback da DLL em ~1µs, evitando bloquear trades.
+        /// </summary>
+        private readonly struct PvvBookCandidate
+        {
+            public readonly string Ticker;
+            public readonly int Agent;
+            public readonly int Side;   // 0=bid, 1=ask
+            public readonly int Rank;   // 1-4
+            public readonly int Volume;
+            public readonly DateTime? ExchangeTime;
+
+            public PvvBookCandidate(string ticker, int agent, int side, int rank, int volume, DateTime? exchangeTime)
+            {
+                Ticker = ticker; Agent = agent; Side = side;
+                Rank = rank; Volume = volume; ExchangeTime = exchangeTime;
+            }
+        }
+
         private readonly struct RawDepth
         {
             public readonly byte Side;
@@ -362,8 +530,15 @@ namespace MarketCore.Providers.Nelogica
 
         // Filas lock-free (sem Count máximo imposto — crescem com o ritmo da DLL até a memória aguentar).
         private readonly ConcurrentQueue<RawTrade> _tradeQueue = new();
+        private readonly ManualResetEventSlim _tradeSignal = new(false);
         private readonly ConcurrentQueue<BookWorkItem> _bookQueue  = new();
         private readonly ConcurrentQueue<RawDepth> _depthQueue = new();
+
+        // PVV: tracker leve de 4 níveis de preço (substitui BookState+queue completo).
+        private readonly PvvPriceTracker _pvvPriceTracker = new();
+        // PVV: candidatos pré-filtrados — callback só enfileira struct leve (~1µs),
+        // drenagem com broker lookup + PVV hook roda no TradeProcessingLoop (~idle path).
+        private readonly ConcurrentQueue<PvvBookCandidate> _pvvBookQueue = new();
 
         // Cache de corretoras (concurrent: threads separadas de livro e negócios).
         private readonly ConcurrentDictionary<int, string> _brokerCache = new();
@@ -495,19 +670,20 @@ namespace MarketCore.Providers.Nelogica
         private void StartProcessingThread()
         {
             _processingRunning = true;
-            _bookProcessingThread = new Thread(BookProcessingLoop)
-            {
-                IsBackground = true,
-                Name = "ProfitDLL-Book",
-                Priority = ThreadPriority.AboveNormal
-            };
+            // [PERF] BookProcessingLoop desativado — subscription de book cortada, thread ociosa consumia CPU.
+            // _bookProcessingThread = new Thread(BookProcessingLoop)
+            // {
+            //     IsBackground = true,
+            //     Name = "ProfitDLL-Book",
+            //     Priority = ThreadPriority.AboveNormal
+            // };
             _tradeProcessingThread = new Thread(TradeProcessingLoop)
             {
                 IsBackground = true,
                 Name = "ProfitDLL-Trades",
                 Priority = ThreadPriority.AboveNormal
             };
-            _bookProcessingThread.Start();
+            // _bookProcessingThread.Start();
             _tradeProcessingThread.Start();
 
             // Monitor de latência: amostra a cada 1s idade dos callbacks + tamanho das filas.
@@ -534,6 +710,10 @@ namespace MarketCore.Providers.Nelogica
                     bookSlice++;
                     if ((bookSlice & 4095) == 0)
                         Thread.Sleep(0);
+
+                    // Atualiza profundidade da fila para backpressure do PVV (a cada 256 eventos, barato).
+                    if ((bookSlice & 255) == 0)
+                        DllLatencyMonitor.BookQueueDepth = _bookQueue.Count;
 
                     // Diagnostic de latência: contabiliza processed + idade do último processado.
                     Interlocked.Increment(ref DllLatencyMonitor.BooksProcessedTotal);
@@ -651,6 +831,9 @@ namespace MarketCore.Providers.Nelogica
                     catch (Exception ex) { _logger.Log($"Erro ProcessBook: {ex.Message}"); }
                 }
 
+                // Atualiza profundidade final (0 se drenou tudo; count real se yield).
+                DllLatencyMonitor.BookQueueDepth = _bookQueue.Count;
+
                 if (bookSlice > 0)
                 {
                     DrainBrokerResolveQueue(32);
@@ -744,14 +927,57 @@ namespace MarketCore.Providers.Nelogica
 
                 while (_depthQueue.TryDequeue(out _)) { }
 
+                // PVV book: drena candidatos enfileirados pelo callback (broker lookup + hook).
+                DrainPvvBookCandidates(hadWork ? 64 : 256);
+
                 if (!hadWork)
                 {
                     DrainBrokerResolveQueue(128);
-                    if (_brokerResolveQueue.IsEmpty)
-                        Thread.Sleep(1);
+                    if (_brokerResolveQueue.IsEmpty && _pvvBookQueue.IsEmpty)
+                    {
+                        _tradeSignal.Wait(5); // wake-up sub-ms quando trade chega (vs ~15ms do Sleep(1))
+                        _tradeSignal.Reset();
+                    }
                 }
                 else
                     Thread.Sleep(0);
+            }
+        }
+
+        /// <summary>
+        /// Drena candidatos PVV de book enfileirados pelo callback da DLL.
+        /// Roda no TradeProcessingLoop — nunca no thread da DLL.
+        /// Faz: broker cache lookup → ShortBrokerLabel → callbackInfo → PVV hook.
+        /// </summary>
+        private void DrainPvvBookCandidates(int maxItems)
+        {
+            for (int i = 0; i < maxItems && _pvvBookQueue.TryDequeue(out var c); i++)
+            {
+                try
+                {
+                    var pvvHook = PregaoVivaVozHook.OnBookUpdate;
+                    if (pvvHook == null) continue;
+
+                    if (!_brokerCache.TryGetValue(c.Agent, out var brokerName) ||
+                        string.IsNullOrWhiteSpace(brokerName))
+                        continue;
+
+                    string shortLabel = ShortBrokerLabel(brokerName);
+                    if (string.IsNullOrWhiteSpace(shortLabel)) continue;
+
+                    string lado = c.Side == 0 ? "compra" : "venda";
+                    string bolsa = c.ExchangeTime.HasValue
+                        ? c.ExchangeTime.Value.ToLocalTime().ToString("HH:mm:ss.fff")
+                        : "--:--:--.---";
+                    string callbackInfo =
+                        $"BOOK  bolsa={bolsa} ticker={c.Ticker} agent={shortLabel} lado={lado} nivel={c.Rank} qtd={c.Volume}";
+
+                    pvvHook(c.Ticker, shortLabel, lado, c.Rank, c.Volume, callbackInfo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log($"Erro DrainPvvBook: {ex.Message}");
+                }
             }
         }
 
@@ -827,22 +1053,21 @@ namespace MarketCore.Providers.Nelogica
             return token2.Trim().ToUpperInvariant();
         }
 
+        /// <summary>
+        /// Converte double→decimal. O range check elimina a necessidade de try-catch
+        /// para OverflowException (decimal max = ±7.9×10²⁸, nosso teto é 10M).
+        /// O <c>decimal.Round(raw, 10)</c> foi removido: preços da B3 já vêm com
+        /// precisão adequada do double; Round(10) não alterava o valor mas custava ~50ns.
+        /// </summary>
         private static bool TryPriceToDecimal(double price, out decimal value)
         {
             value = 0;
             if (price <= 0 || price > 10_000_000 || double.IsNaN(price) || double.IsInfinity(price))
                 return false;
 
-            try
-            {
-                decimal raw = (decimal)price;
-                value = decimal.Round(raw, 10, MidpointRounding.ToEven);
-                return true;
-            }
-            catch (OverflowException)
-            {
-                return false;
-            }
+            // Range já validado acima — (decimal)price não pode dar overflow.
+            value = (decimal)price;
+            return true;
         }
 
         private string FormatBookBroker(int agentId)
@@ -1240,6 +1465,7 @@ namespace MarketCore.Providers.Nelogica
             _tradeQueue.Enqueue(new RawTrade(
                 assetId.Ticker ?? string.Empty,
                 price, qtd, buyAgent, sellAgent, tradeType, exUtc));
+            _tradeSignal.Set(); // wake-up imediato da thread de processamento
 
             // Diagnostic de latência: idade do último trade recebido (bolsa vs now).
             Interlocked.Increment(ref DllLatencyMonitor.TradesReceivedTotal);
@@ -1275,134 +1501,76 @@ namespace MarketCore.Providers.Nelogica
             string date,
             IntPtr pArraySell, IntPtr pArrayBuy)
         {
-            string? ticker = assetId.Ticker;
-            if (string.IsNullOrWhiteSpace(ticker))
-                ticker = Volatile.Read(ref _primaryBookTicker);
-            if (string.IsNullOrWhiteSpace(ticker))
-                return;
+            // ═══════════════════════════════════════════════════════════════
+            // CALLBACK ULTRA-LEVE PARA PVV — ~1µs por chamada.
+            //
+            // O thread de callback da DLL é COMPARTILHADO com trades.
+            // Qualquer processamento aqui atrasa entrega de trades.
+            // 800 callbacks/s × 50µs = 40ms/s → 144s de atraso em 1h.
+            //
+            // Solução: callback faz só validate + tracker + enqueue struct.
+            // Broker lookup, string formatting e PVV hook rodam no
+            // TradeProcessingLoop (DrainPvvBookCandidates).
+            // ═══════════════════════════════════════════════════════════════
 
-            if (EnableRawOfferBookLog && _rawLogCount < RAW_LOG_MAX)
-            {
-                lock (_rawLogLock)
-                {
-                    if (_rawLogCount < RAW_LOG_MAX)
-                    {
-                        _rawBookLog?.WriteLine(
-                            $"{DateTime.Now:HH:mm:ss.fff} | {ticker} | act={nAction} | pos={nPosition} | side={side} | qtd={nQtd} | agent={nAgent} | offerID={nOfferID} | price={sPrice:F2} | hasP={bHasPrice} | hasQ={bHasQtd} | hasOID={bHasOfferID} | hasA={bHasAgent}");
-                        _rawLogCount++;
-                        if (_rawLogCount == RAW_LOG_MAX)
-                            _rawBookLog?.WriteLine("=== LIMITE DE LOG ATINGIDO ===");
-                    }
-                }
-            }
-
-
-            // nAction=4 (atFullBook): cópia mínima dos arrays no callback; parse na thread de livro.
+            // nAction=4 (atFullBook): libera memória nativa, reseta price tracker.
             if (nAction == 4)
             {
-                _bookQueue.Enqueue(BookWorkItem.FromFullRaw(
-                    ticker,
-                    SnapshotOfferBookArray(pArraySell),
-                    SnapshotOfferBookArray(pArrayBuy)));
+                int sellSize = pArraySell != IntPtr.Zero ? Marshal.ReadInt32(pArraySell, 4) : 0;
+                int buySize  = pArrayBuy  != IntPtr.Zero ? Marshal.ReadInt32(pArrayBuy, 4)  : 0;
+
+                if (pArraySell != IntPtr.Zero && sellSize > 0)
+                    FreePointer(pArraySell, sellSize);
+                if (pArrayBuy != IntPtr.Zero && buySize > 0)
+                    FreePointer(pArrayBuy, buySize);
+
+                _pvvPriceTracker.Reset();
                 return;
             }
 
-            // nAction 2–3 — espelhar manual/exemplo Nelogica (remoções position-based).
-            if (nAction == 2 || nAction == 3)
-            {
-                if (nPosition < 0)
-                    return;
-
-                int agentDelete = bHasAgent != 0 ? nAgent : 0;
-                long offerDelete = bHasOfferID != 0 ? nOfferID : 0;
-                DateTime? exchangeDelete = null;
-                if (bHasDate != 0 && TryParseOfferBookDate(date, out DateTime parsedExDel))
-                    exchangeDelete = parsedExDel;
-
-                double priceDelete = 0;
-                if (bHasPrice != 0
-                    && (sPrice <= 0 || sPrice > 10_000_000 ||
-                        double.IsNaN(sPrice) || double.IsInfinity(sPrice)))
-                {
-                    return;
-                }
-
-                if (bHasPrice != 0)
-                    priceDelete = sPrice;
-
-                _bookQueue.Enqueue(BookWorkItem.FromDelta(
-                    new RawBook(
-                        ticker,
-                        nAction,
-                        nPosition,
-                        side,
-                        priceDelete,
-                        0,
-                        agentDelete,
-                        offerDelete,
-                        exchangeDelete,
-                        hasQuantityUpdate: false)));
-
-                Interlocked.Increment(ref DllLatencyMonitor.BooksReceivedTotal);
-                if (exchangeDelete.HasValue)
-                    Interlocked.Exchange(ref DllLatencyMonitor.LastBookExchangeTicks, exchangeDelete.Value.ToLocalTime().Ticks);
+            // nAction=2/3 (delete) e desconhecidos: descarta.
+            if (nAction != 0 && nAction != 1)
                 return;
-            }
 
-            // nAction=0 (atAdd), 1 (atEdit)
-            int volume = 0;
+            // Validar preço e quantidade.
             if (nAction == 0)
             {
-                if (bHasQtd == 0 || nQtd <= 0)
-                    return;
-                volume = nQtd > int.MaxValue ? int.MaxValue : (int)nQtd;
-            }
-            else if (nAction == 1 && bHasQtd != 0)
-            {
-                if (nQtd == 0)
-                    return;
-                volume = nQtd > int.MaxValue ? int.MaxValue : (int)nQtd;
-            }
-
-            if (nAction == 0)
-            {
+                if (bHasQtd == 0 || nQtd <= 0) return;
                 if (bHasPrice == 0 || sPrice <= 0 || sPrice > 10_000_000 ||
                     double.IsNaN(sPrice) || double.IsInfinity(sPrice)) return;
             }
-            else if (nAction == 1)
+            else // nAction == 1
             {
-                if (bHasPrice == 0 && bHasQtd == 0)
-                    return;
+                if (bHasPrice == 0 && bHasQtd == 0) return;
                 if (bHasPrice != 0 && (sPrice <= 0 || sPrice > 10_000_000 ||
-                    double.IsNaN(sPrice) || double.IsInfinity(sPrice)))
-                    return;
+                    double.IsNaN(sPrice) || double.IsInfinity(sPrice))) return;
+                if (bHasQtd == 0 || nQtd <= 0) return;
             }
 
-            // IMPORTANTE: nPosition é contado do FINAL da lista (manual Nelogica)
-            // índice_real = size - nPosition - 1
-            // O BookState lida com isso na lógica de inserção/deleção
+            // Registrar preço no tracker → rank (1-4), ou 0 se fora do top 4.
+            int rank = _pvvPriceTracker.RegisterAndGetRank(side, sPrice);
+            if (rank < 1 || rank > 4) return;
+
+            // PVV hook ativo?
+            if (PregaoVivaVozHook.OnBookUpdate == null) return;
+
+            // Filtro de agent: sem agent, sem narração.
             int agent = bHasAgent != 0 ? nAgent : 0;
-            long offerId = bHasOfferID != 0 ? nOfferID : 0;
+            if (agent <= 0) return;
+
+            // Parse exchange time (leve — sem alocação se bHasDate == 0).
             DateTime? exchangeTime = null;
             if (bHasDate != 0 && TryParseOfferBookDate(date, out DateTime parsedExchange))
                 exchangeTime = parsedExchange;
 
-            _bookQueue.Enqueue(BookWorkItem.FromDelta(
-                new RawBook(
-                    ticker,
-                    nAction,
-                    nPosition,
-                    side,
-                    sPrice,
-                    volume,
-                    agent,
-                    offerId,
-                    exchangeTime,
-                    hasQuantityUpdate: nAction == 1 && bHasQtd != 0)));
+            // Ticker: captura rápido pra struct.
+            string ticker = assetId.Ticker ?? Volatile.Read(ref _primaryBookTicker) ?? string.Empty;
 
-            Interlocked.Increment(ref DllLatencyMonitor.BooksReceivedTotal);
-            if (exchangeTime.HasValue)
-                Interlocked.Exchange(ref DllLatencyMonitor.LastBookExchangeTicks, exchangeTime.Value.ToLocalTime().Ticks);
+            int volume = nQtd > int.MaxValue ? int.MaxValue : (int)nQtd;
+
+            // Enfileira struct leve — broker lookup + PVV hook rodam no TradeProcessingLoop.
+            _pvvBookQueue.Enqueue(new PvvBookCandidate(ticker, agent, side, rank, volume, exchangeTime));
+            _tradeSignal.Set(); // acorda TradeProcessingLoop para drenar candidatos PVV
         }
 
         /// <summary>Máximo de linhas lidas de um snapshot <c>atFullBook</c> (array da DLL), não é limite da <c>_bookQueue</c>.</summary>
@@ -1413,14 +1581,18 @@ namespace MarketCore.Providers.Nelogica
         private const int OfferBookFullRowStrideV2 = 53;
 
         /// <summary>Copia o array TOfferBook no callback nativo; o parse pesado roda na thread de livro.</summary>
-        private static byte[]? SnapshotOfferBookArray(IntPtr arrayPtr)
+        private static byte[]? SnapshotOfferBookArray(IntPtr arrayPtr, out int nativeSize)
         {
+            nativeSize = 0;
             if (arrayPtr == IntPtr.Zero)
                 return null;
 
             try
             {
                 int Q = Marshal.ReadInt32(arrayPtr, 0);
+                // Segundo Int32 do header: tamanho do buffer nativo alocado pela DLL
+                // (para ser usado em FreePointer conforme manual Nelogica)
+                nativeSize = Marshal.ReadInt32(arrayPtr, 4);
                 if (Q <= 0)
                 {
                     var emptyHeader = new byte[8];
@@ -1724,37 +1896,41 @@ namespace MarketCore.Providers.Nelogica
                     FeedType = 0
                 };
 
-                int subscribeSeq = Interlocked.Increment(ref _offerBookSubscribeSeq);
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-                        if (!_processingRunning || !_initialized || _disposed)
-                            return;
-                        if (subscribeSeq != Volatile.Read(ref _offerBookSubscribeSeq))
-                            return;
-
-                        bool stillSubscribed;
-                        lock (_lock)
-                            stillSubscribed = _subscribedTickers.Contains(ticker);
-                        if (!stillSubscribed)
-                            return;
-
-                        _logger.Log($"SubscribeOfferBook a iniciar: {ticker}/{EXCHANGE_BMF}");
-                        int r2 = SubscribeOfferBook(ticker, EXCHANGE_BMF);
-                        _logger.Log($"SubscribeOfferBook {ticker}/{EXCHANGE_BMF}: {r2}");
-                        if (r2 != 0)
-                        {
-                            r2 = SubscribeOfferBook(ticker, EXCHANGE_BVMF);
-                            _logger.Log($"SubscribeOfferBook {ticker}/{EXCHANGE_BVMF} (fallback): {r2}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Log($"✗ InternalSubscribe offer book {ticker}: {ex.Message}");
-                    }
-                });
+                // ══ BOOK DESATIVADO — modo análise (só trades) ══
+                // SubscribeOfferBook removido: sem dados de book, o BookProcessingLoop
+                // fica ocioso, snapshot/detector threads não consomem CPU, e o pipeline
+                // de trades opera sem contenção. Para reativar, descomentar o bloco abaixo.
+                //
+                // int subscribeSeq = Interlocked.Increment(ref _offerBookSubscribeSeq);
+                // _ = Task.Run(async () =>
+                // {
+                //     try
+                //     {
+                //         await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                //         if (!_processingRunning || !_initialized || _disposed)
+                //             return;
+                //         if (subscribeSeq != Volatile.Read(ref _offerBookSubscribeSeq))
+                //             return;
+                //         bool stillSubscribed;
+                //         lock (_lock)
+                //             stillSubscribed = _subscribedTickers.Contains(ticker);
+                //         if (!stillSubscribed)
+                //             return;
+                //         _logger.Log($"SubscribeOfferBook a iniciar: {ticker}/{EXCHANGE_BMF}");
+                //         int r2 = SubscribeOfferBook(ticker, EXCHANGE_BMF);
+                //         _logger.Log($"SubscribeOfferBook {ticker}/{EXCHANGE_BMF}: {r2}");
+                //         if (r2 != 0)
+                //         {
+                //             r2 = SubscribeOfferBook(ticker, EXCHANGE_BVMF);
+                //             _logger.Log($"SubscribeOfferBook {ticker}/{EXCHANGE_BVMF} (fallback): {r2}");
+                //         }
+                //     }
+                //     catch (Exception ex)
+                //     {
+                //         _logger.Log($"✗ InternalSubscribe offer book {ticker}: {ex.Message}");
+                //     }
+                // });
+                _logger.Log($"[MODO ANÁLISE] SubscribeOfferBook DESATIVADO para {ticker} — só trades ativos");
             }
             catch (Exception ex)
             {
@@ -1806,7 +1982,9 @@ namespace MarketCore.Providers.Nelogica
         {
             if (_disposed) return;
             _disposed = true;
+            _tradeSignal.Set(); // acorda thread para que saia do Wait antes do Join
             StopProcessingThread();
+            _tradeSignal.Dispose();
             lock (_lock)
             {
                 foreach (var ticker in _subscribedTickers.ToArray())
