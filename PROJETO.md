@@ -1,0 +1,187 @@
+# MarketCore Intelligence Engine — Memória do Projeto
+## Estado atual
+- Versão: 1.0.0-alpha
+- Última atualização: 29/08/2026 (Fase 1)
+- Fase atual: Fase 1 concluída — iniciando Fase 2 (SequenceNumber + Channel<T>)
+- Ambiente: C:\Users\Anderson\Downloads\MarketCore
+- Repositório: github.com/AsantosPB/MarketCore
+- Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
+---
+## Decisões arquiteturais tomadas
+### Interface
+- Janela MCIE substitui completamente o FlowSense v4 (tela atual sem valor operacional)
+- Book visual REMOVIDO da tela — capturado internamente para Feature Engine
+- No lugar do book: medidor de pressão + medidor de agressão
+- Janela MCIE: independente, mesmo padrão do Pregão Viva Voz
+- Janela Preço Justo: independente, fase posterior ao MCIE
+### Armazenamento
+- Stack: RAM + binário bruto + DuckDB + SQLite
+- SEM ClickHouse, SEM PostgreSQL, SEM servidor externo
+- Retenção: 10 pregões — rotação automática
+- Volume estimado: ~7 GB para 10 pregões completos
+### Arquitetura
+- Caminho crítico: ProfitDLL → RAM → Features → Agents → Decision → Risk → Order
+- Nenhuma operação de I/O, rede ou banco no caminho crítico
+- Persistência 100% assíncrona via workers em background
+- Calendário econômico: carregado automaticamente às 08h30 via API Investing.com
+### Janelas do sistema
+| Janela | Status | Descrição |
+|--------|--------|-----------|
+| MCIE Principal | Em implementação | Dashboard principal de trading |
+| Preço Justo | Planejada (fase posterior) | Ibovespa teórico via DDE das ações |
+---
+## O que já existe e funciona — NÃO MEXER
+Identificado na auditoria de 29/08/2026:
+- ConcurrentQueue lock-free em todos os callbacks (OnTrade, OnBook)
+- ManualResetEventSlim para wake-up sub-milissegundo no trade
+- FileStream aberto continuamente durante o pregão (sem custo de open/close)
+- Filtro TTL 15s no OnTradeCallbackCore (proteção contra replay histórico)
+- Cache de formato de data (_lastMatchedFormatIdx) — evita 6 TryParseExact por callback
+- Workers Task.Run em background (conceito correto)
+- _trades.bin, _book.bin, _flowscore.bin já existem
+- _flowscore.bin com registro fixo de 56 bytes (seek direto por índice)
+- Estrutura de pastas {diretorioBase}/{yyyy-MM-dd}/ já implementada
+---
+## O que precisa ser corrigido
+- [x] BookProcessingLoop desativada — reativar independente do PVV
+- [x] OnOfferBookCallbackCore filtra apenas rank 1-4 — gravar todos os 10 níveis
+- [x] _book.bin formato variável — mudar para registro fixo de 272 bytes (seek direto)
+- [ ] Workers com Thread.Sleep polling — substituir por Channel<T>
+- [ ] Sem checksum nos arquivos binários — adicionar no header
+- [ ] Parse de data dentro do callback do trade — mover para thread de processamento
+- [ ] TNewDailyCallback não gravada — dado rico (OHLCV + agressão) sendo descartado
+- [ ] Retorno GravarTradeAsync descartado com _ = — tratar erro silencioso
+---
+## O que será adicionado (novo)
+- [ ] SequenceNumber nas structs RawTradeEvent e RawBookEvent
+- [ ] DuckDB — tabelas: market_snapshots, features, labels
+- [ ] SQLite — tabelas: patterns, decisions, trades, orders, config
+- [ ] Calendar Loader — download automático agenda econômica (08h30 diário)
+- [ ] Detecção automática horário verão/inverno USA
+- [ ] Feature Engine — imbalance, OFI, microprice, delta, absorção, velocidade, aceleração
+- [ ] Event Detector — 10 tipos de eventos relevantes
+- [ ] Regime Detector — TREND_UP, TREND_DOWN, RANGE, HIGH_VOL, BREAKOUT
+- [ ] Pattern Engine — descoberta estatística sem look-ahead bias
+- [ ] Pattern Registry — lifecycle: DISCOVERED → VALIDATING → APPROVED → LIVE → DEPRECATED
+- [ ] Agent Engine — FlowAgent, BookAgent, AbsorptionAgent, OFIAgent, PatternAgent, RegimeAgent
+- [ ] Decision Core — combinação de agentes com modo confirmado (600ms)
+- [ ] Risk Manager — 11 verificações + Kill Switch automático
+- [ ] Order Manager — state machine completa de ordens
+- [ ] Execution Log — latência e slippage por operação
+- [ ] Rotação automática — deletar pregão mais antigo após 10 dias
+- [ ] Janela MCIE Principal (WPF) — substitui FlowSense v4
+- [ ] Janela Preço Justo (WPF) — fase posterior
+---
+## Roadmap de fases
+- [x] Fase 0 — Backup + snapshot git (29/08/2026)
+- [x] Fase 1 — Corrigir BookProcessingLoop + formato fixo _book.bin
+- [ ] Fase 2 — SequenceNumber + Channel<T> nos workers
+- [ ] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
+- [ ] Fase 4 — Calendar Loader (agenda econômica automática)
+- [ ] Fase 5 — Feature Engine
+- [ ] Fase 6 — Event Detector + Regime Detector
+- [ ] Fase 7 — Dataset automático (features + labels no DuckDB)
+- [ ] Fase 8 — Pattern Engine + Pattern Registry
+- [ ] Fase 9 — Replay determinístico
+- [ ] Fase 10 — Backtest com simulador de execução
+- [ ] Fase 11 — Agent Engine (6 agentes)
+- [ ] Fase 12 — Decision Core
+- [ ] Fase 13 — Risk Manager + Kill Switch
+- [ ] Fase 14 — Paper Trading (2 semanas mínimo)
+- [ ] Fase 15 — Live Execution
+- [ ] Fase 16 — Janela MCIE Principal (WPF)
+- [ ] Fase 17 — Janela Preço Justo (WPF)
+---
+## Horários e contexto de mercado
+### Pregão WINFUT
+- Pré-abertura (leilão): 09:00 → 09:05 — NÃO OPERAR
+- Abertura: 09:05
+- Encerramento: 18:00 (call de fechamento 17:55 → 18:00 — NÃO OPERAR)
+### NYSE/NASDAQ em horário de Brasília
+- Horário de verão USA (mar → nov): abre 10h30, fecha 17h00
+- Horário de inverno USA (nov → mar): abre 11h30, fecha 17h00
+- DST 2026: 8 março → 1 novembro
+### Dados econômicos — horário Brasília
+| Dado | Verão USA | Inverno USA | Impacto |
+|------|-----------|-------------|---------|
+| Payroll, CPI, PPI | 09h30 | 10h30 | CRÍTICO |
+| ISM, Confiança | 11h00 | 12h00 | ALTO |
+| FOMC/Fed | 15h00 | 16h00 | CRÍTICO |
+| Copom | Variável | Variável | CRÍTICO |
+| Focus BCB | 08h25 | 08h25 | MÉDIO |
+### Bloqueios automáticos por impacto
+| Impacto | Bloquear antes | Aguardar após |
+|---------|---------------|---------------|
+| CRÍTICO | 30 minutos | 5 segundos |
+| ALTO | 15 minutos | 3 segundos |
+| MÉDIO | 5 minutos | 2 segundos |
+---
+## Configurações do sistema
+```json
+{
+  "instrument": "WIN",
+  "storage": {
+    "retention_days": 10,
+    "raw_path": "./data/raw",
+    "db_path": "./data/db"
+  },
+  "calendar": {
+    "load_time": "08:30:00",
+    "countries": ["US", "BR"]
+  },
+  "decision": {
+    "mode": "confirmed",
+    "confirmation_ms": 600,
+    "buy_threshold": 65,
+    "sell_threshold": -65
+  },
+  "risk": {
+    "max_position": 1,
+    "max_daily_loss_brl": 1000,
+    "max_trades_per_day": 20,
+    "block_minutes_before_critical": 30,
+    "wait_seconds_after_critical": 5
+  }
+}
+```
+---
+## Histórico de mudanças
+### 29/08/2026 — Fase 1
+- Arquivos modificados:
+  - Providers/Nelogica/ProfitDLLProvider.cs — BookProcessingLoop reativada (StartProcessingThread); filtros rank/agente/PVV removidos do OnOfferBookCallbackCore; todos os 10 níveis enfileirados em _bookQueue
+  - Engine/Recording/MarketRecorder.cs — _book.bin reescrito com formato fixo 272 bytes (ExchangeTimestamp+ReceiveTimestamp+SequenceNumber+Price+10Bids+10Asks); SequenceNumber Int64 adicionado ao _trades.bin; campos estáticos _tradeSequence e _bookSequence adicionados
+  - PROJETO.md — fase 1 marcada concluída
+- Commit: fase-1 — tag: v0.1.0
+
+### 29/08/2026
+- Auditoria completa do MarketCore existente via Cowork (somente leitura)
+- Backup criado: C:\Users\Anderson\Downloads\Backup\MarketCore_20260829_pre-MCIE\
+- Git commit: 388a82f — tag v-pre-mcie-20260829 criada
+- Push confirmado: github.com/AsantosPB/MarketCore (branch main)
+- Especificação técnica completa gerada (MarketCore_Especificacao_Completa.docx)
+- Layout MCIE aprovado: pressão + agressão + agentes + decisão + posição + event log
+- Decisão: book visual removido da tela (capturado internamente)
+- Decisão: preço justo como janela independente (Fase 17)
+- Decisão: fontes grandes, alto contraste, grade de preço no gráfico
+- PROJETO.md criado
+---
+## Instruções para o Cowork
+### Ao iniciar qualquer sessão de trabalho:
+1. Leia este arquivo PRIMEIRO antes de qualquer ação
+2. Identifique a fase atual e o que está pendente
+3. Nunca refaça o que já está marcado como [x]
+4. Nunca altere decisões arquiteturais sem consultar o Anderson
+### Ao finalizar qualquer implementação:
+1. Marque a fase concluída com [x] no Roadmap
+2. Adicione entrada no Histórico de mudanças com a data
+3. Liste os arquivos criados e modificados
+4. Atualize o campo "Fase atual" no Estado atual
+5. Faça git commit com mensagem descritiva
+6. Atualize a tag ou crie nova tag de versão
+### Formato do commit ao concluir uma fase:
+git commit -m "fase-X: descrição do que foi implementado"
+git tag -a v0.X.0 -m "Fase X concluída — descrição"
+git push origin main --tags
+---
+*Arquivo mantido automaticamente pelo Cowork a cada implementação.*
+*Não editar manualmente exceto em caso de decisão arquitetural nova.*

@@ -732,20 +732,20 @@ namespace MarketCore.Providers.Nelogica
         private void StartProcessingThread()
         {
             _processingRunning = true;
-            // [PERF] BookProcessingLoop desativado — subscription de book cortada, thread ociosa consumia CPU.
-            // _bookProcessingThread = new Thread(BookProcessingLoop)
-            // {
-            //     IsBackground = true,
-            //     Name = "ProfitDLL-Book",
-            //     Priority = ThreadPriority.AboveNormal
-            // };
+            // [FASE 1] BookProcessingLoop reativada — book independente do PVV, drena _bookQueue para Feature Engine.
+            _bookProcessingThread = new Thread(BookProcessingLoop)
+            {
+                IsBackground = true,
+                Name = "ProfitDLL-Book",
+                Priority = ThreadPriority.AboveNormal
+            };
             _tradeProcessingThread = new Thread(TradeProcessingLoop)
             {
                 IsBackground = true,
                 Name = "ProfitDLL-Trades",
                 Priority = ThreadPriority.AboveNormal
             };
-            // _bookProcessingThread.Start();
+            _bookProcessingThread.Start();
             _tradeProcessingThread.Start();
 
             // Monitor de latência: amostra a cada 1s idade dos callbacks + tamanho das filas.
@@ -1947,17 +1947,7 @@ namespace MarketCore.Providers.Nelogica
                 if (bHasQtd == 0 || nQtd <= 0) return;
             }
 
-            // Registrar preço no tracker → rank (1-4), ou 0 se fora do top 4.
-            int rank = _pvvPriceTracker.RegisterAndGetRank(side, sPrice);
-            if (rank < 1 || rank > 4) return;
-
-            // PVV hook ativo?
-            if (PregaoVivaVozHook.OnBookUpdate == null) return;
-
-            // Filtro de agent: sem agent, sem narração.
-            int agent = bHasAgent != 0 ? nAgent : 0;
-            if (agent <= 0) return;
-
+            // [FASE 1] Filtros de rank/agente/PVV removidos — todos os eventos válidos chegam ao Feature Engine.
             // Parse exchange time (leve — sem alocação se bHasDate == 0).
             DateTime? exchangeTime = null;
             if (bHasDate != 0 && TryParseOfferBookDate(date, out DateTime parsedExchange))
@@ -1966,12 +1956,17 @@ namespace MarketCore.Providers.Nelogica
             // Ticker: captura rápido pra struct.
             string ticker = assetId.Ticker ?? Volatile.Read(ref _primaryBookTicker) ?? string.Empty;
 
+            int agent = bHasAgent != 0 ? nAgent : 0;
             int volume = nQtd > int.MaxValue ? int.MaxValue : (int)nQtd;
+            long offerId = bHasOfferID != 0 ? nOfferID : 0L;
 
-            // Enfileira struct leve — broker lookup + PVV hook rodam no TradeProcessingLoop.
-            // Guard: descarta se fila já tem >5.000 entries (TTL de 15s descartaria de qualquer forma).
+            // Enfileira TODOS os níveis (1-10) na fila dedicada do book — BookProcessingLoop drena para Feature Engine.
+            _bookQueue.Enqueue(BookWorkItem.FromDelta(new RawBook(
+                ticker, nAction, nPosition, side, sPrice, volume, agent, offerId, exchangeTime)));
+
+            // PVV: mantém enfileiramento para DrainPvvBookCandidates (rank=0 — filtro removido).
             if (_pvvBookQueue.Count <= 5_000)
-                _pvvBookQueue.Enqueue(new PvvBookCandidate(ticker, agent, side, rank, volume, exchangeTime));
+                _pvvBookQueue.Enqueue(new PvvBookCandidate(ticker, agent, side, 0, volume, exchangeTime));
             _tradeSignal.Set(); // acorda TradeProcessingLoop para drenar candidatos PVV
         }
 

@@ -26,6 +26,8 @@ public sealed class MarketRecorder : IMarketRecorder
     private long _totaisTrades   = 0;
     private long _totaisBooks    = 0;
     private long _bytesGravados  = 0;
+    private static long _tradeSequence = 0; // [FASE 1] contador monotônico por processo
+    private static long _bookSequence  = 0; // [FASE 1] contador monotônico por processo
 
     private Task? _taskProcessamentoTrades;
     private Task? _taskProcessamentoBooks;
@@ -218,6 +220,7 @@ public sealed class MarketRecorder : IMarketRecorder
 
                     var w = writers[ativo];
                     w.Write(trade.Time.Ticks);
+                    w.Write(Interlocked.Increment(ref _tradeSequence)); // [FASE 1] SequenceNumber Int64
                     w.Write(trade.Price);
                     w.Write(trade.Volume);
                     w.Write((byte)trade.Aggressor);
@@ -273,14 +276,34 @@ public sealed class MarketRecorder : IMarketRecorder
 
                     ultimoTimestamp = snapshot.Time;
 
-                    w.Write(snapshot.Time.Ticks);
-                    w.Write(snapshot.Bids.Count);
-                    foreach (var bid in snapshot.Bids) { w.Write(bid.Price); w.Write(bid.Volume); }
-                    w.Write(snapshot.Asks.Count);
-                    foreach (var ask in snapshot.Asks) { w.Write(ask.Price); w.Write(ask.Volume); }
+                    // [FASE 1] Formato fixo 272 bytes por registro (seek direto por índice para Replay Engine).
+                    // Layout: ExchangeTimestamp(8) + ReceiveTimestamp(8) + SequenceNumber(8) + Price(8)
+                    //       + 10×Bid[Price(8)+Qty(4)] + 10×Ask[Price(8)+Qty(4)] = 272 bytes
+                    const int BOOK_LEVELS = 10;
+                    w.Write(snapshot.Time.Ticks);                              // ExchangeTimestamp  8
+                    w.Write(DateTime.UtcNow.Ticks);                            // ReceiveTimestamp   8
+                    w.Write(Interlocked.Increment(ref _bookSequence));         // SequenceNumber     8
+                    w.Write(snapshot.Bids.Count > 0
+                        ? (double)snapshot.Bids[0].Price : 0.0);              // Price (best bid)   8
+
+                    for (int bi = 0; bi < BOOK_LEVELS; bi++)                  // 10 Bid levels     120
+                    {
+                        if (bi < snapshot.Bids.Count)
+                        { w.Write((double)snapshot.Bids[bi].Price); w.Write(snapshot.Bids[bi].Volume); }
+                        else
+                        { w.Write(0.0); w.Write(0); }
+                    }
+
+                    for (int ai = 0; ai < BOOK_LEVELS; ai++)                  // 10 Ask levels     120
+                    {
+                        if (ai < snapshot.Asks.Count)
+                        { w.Write((double)snapshot.Asks[ai].Price); w.Write(snapshot.Asks[ai].Volume); }
+                        else
+                        { w.Write(0.0); w.Write(0); }
+                    }
 
                     Interlocked.Increment(ref _totaisBooks);
-                    Interlocked.Add(ref _bytesGravados, 8 + 4 + (snapshot.Bids.Count * 20) + 4 + (snapshot.Asks.Count * 20));
+                    Interlocked.Add(ref _bytesGravados, 272);
                 }
                 else
                 {
