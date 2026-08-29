@@ -59,6 +59,7 @@ public class FeatureSnapshot
 
     // ── Regime e janela temporal ──────────────────────────────────────────
     public string Regime           { get; set; } = "INDEFINIDO";
+    public double Confidence       { get; set; }  // confiança do RegimeDetector (0-100)
     public string TimeWindow       { get; set; } = string.Empty;
     public bool   HasEconomicEvent { get; set; }
     public int    EventImpact      { get; set; }

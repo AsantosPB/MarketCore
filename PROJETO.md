@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 5)
-- Fase atual: Fase 5 concluída — iniciando Fase 6 (Event Detector + Regime Detector)
+- Última atualização: 29/08/2026 (Fase 6)
+- Fase atual: Fase 6 concluída — iniciando Fase 7 (Dataset automático)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -79,7 +79,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
 - [x] Fase 4 — Calendar Loader (agenda econômica automática)
 - [x] Fase 5 — Feature Engine
-- [ ] Fase 6 — Event Detector + Regime Detector
+- [x] Fase 6 — Event Detector + Regime Detector
 - [ ] Fase 7 — Dataset automático (features + labels no DuckDB)
 - [ ] Fase 8 — Pattern Engine + Pattern Registry
 - [ ] Fase 9 — Replay determinístico
@@ -203,6 +203,18 @@ git push origin main --tags
   - PROJETO.md — fase 3 marcada concluída
 - Pastas criadas: data/db/, data/raw/, data/features/, data/labels/, data/patterns/
 - Commit: fase-3 — tag: v0.3.0
+
+### 29/08/2026 — Fase 6
+- Arquivos criados:
+  - Engine/Detectors/EventDetector.cs — 7 detectores: AggressionSpike (p90 histórico + streak 5 snapshots), BookImbalance (|imb|>0.60), Absorption (|score|>60), PriceAcceleration (|accel|>5 pts/s²), VolumeSpike (p90 histórico), DeltaDivergence (delta vs velocidade), TradeRateSpike (2× média); RingBuffer de histórico 300 amostras
+  - Engine/Detectors/RegimeDetector.cs — 6 classificadores: TrendUp/TrendDown (streak 10+ snapshots + Delta5s + Vwap), Range (streak 20+ + |Delta5s|<200), HighVol/LowVol (p90/p10 volatilidade), Breakout (DistanceHigh/Low < 5 pts + VolumeRate p80); eleição por confiança máxima; detecção de Transition (regime mudou < 30s)
+- Arquivos modificados:
+  - Engine/Detectors/DetectorModels.cs — adicionados enum MarketRegime (8 valores), enum MarketEventType (12 valores), class MarketEvent, class RegimeState
+  - Engine/Features/FeatureSnapshot.cs — campo Confidence adicionado (confiança do RegimeDetector 0-100)
+  - Engine/Features/FeatureEngine.cs — integração: campos _eventDetector/_regimeDetector; eventos OnMarketEvent/OnRegimeChange; propriedade RegimeAtual; init em Inicializar(); chamada dos detectores em CalcularSnapshot()
+  - Engine/MarketEngine.cs — handlers OnMarketEventDetectado/OnRegimeAlterado; wiring em ConnectAsync(); propriedade RegimeAtual
+  - PROJETO.md — fase 6 marcada concluída
+- Commit: fase-6 — tag: v0.6.0
 
 ### 29/08/2026 — Fase 5
 - Arquivos criados:

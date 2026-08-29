@@ -110,6 +110,9 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Último snapshot de features calculado (null antes do primeiro pregão).</summary>
     public FeatureSnapshot? UltimoSnapshot => _featureEngine?.CalcularSnapshot();
 
+    /// <summary>Regime atual do mercado (null antes do primeiro snapshot).</summary>
+    public RegimeState? RegimeAtual => _featureEngine?.RegimeAtual;  // [FASE 6]
+
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
 
@@ -201,6 +204,8 @@ public sealed class MarketEngine : IDisposable
             _featureEngine.Inicializar();
             _snapshotTimer = new SnapshotTimer(_featureEngine, _storageManager);
             _snapshotTimer.Iniciar();
+            _featureEngine.OnMarketEvent  += OnMarketEventDetectado;  // [FASE 6]
+            _featureEngine.OnRegimeChange += OnRegimeAlterado;        // [FASE 6]
 
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
@@ -284,6 +289,20 @@ public sealed class MarketEngine : IDisposable
 
         state = null!;
         return false;
+    }
+
+    // ── Handlers de Feature Engine — Fase 6 ──────────────────────────────
+
+    private void OnMarketEventDetectado(MarketEvent ev)
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss.fff}] {ev.Type} magnitude={ev.Magnitude:F1} — {ev.Detail}");
+    }
+
+    private void OnRegimeAlterado(RegimeState rs)
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss.fff}] Regime: {rs.Previous} → {rs.Regime} (conf: {rs.Confidence:F0}%)");
     }
 
     private void HandleTrade(TradeEvent trade)

@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using MarketCore.Engine.Detectors;
 using MarketCore.Models;
 
 namespace MarketCore.Engine.Features;
@@ -14,6 +15,11 @@ public class FeatureEngine
     // ── Evento ────────────────────────────────────────────────────────────
     /// <summary>Disparado a cada snapshot calculado (pelo SnapshotTimer a cada 100 ms).</summary>
     public event Action<FeatureSnapshot>? OnSnapshot;
+    public event Action<MarketEvent>?    OnMarketEvent;   // [FASE 6]
+    public event Action<RegimeState>?    OnRegimeChange;  // [FASE 6]
+
+    // ── Regime atual ─────────────────────────────────────────────────────
+    public RegimeState? RegimeAtual => _regimeDetector?.Estado;  // [FASE 6]
 
     // ── Ring buffers ─────────────────────────────────────────────────────
     // Capacidade: ~60 s de dados em cenário de alta frequência do WINFUT.
@@ -23,6 +29,10 @@ public class FeatureEngine
 
     // ── Estado escalar (protegido por _stateLock) ─────────────────────────
     private readonly object _stateLock = new();
+
+    // ── Detectores (Fase 6) ──────────────────────────────────────────────
+    private EventDetector?  _eventDetector;   // [FASE 6]
+    private RegimeDetector? _regimeDetector;  // [FASE 6]
 
     private double _lastPrice;
     private double _lastBid;
@@ -47,6 +57,13 @@ public class FeatureEngine
         _trades    = new RingBuffer<TradeEvent>(10_000);
         _bookSnaps = new RingBuffer<BookSnapshot>(3_600);
         _prices    = new RingBuffer<PricePoint>(10_000);
+
+        // [FASE 6] Detectores de evento e regime
+        _eventDetector  = new EventDetector();
+        _regimeDetector = new RegimeDetector();
+        _eventDetector.OnEvent         += ev => OnMarketEvent?.Invoke(ev);
+        _regimeDetector.OnRegimeChange += rs => OnRegimeChange?.Invoke(rs);
+
         ResetarSessao();
     }
 
@@ -207,6 +224,17 @@ public class FeatureEngine
             HasEconomicEvent = false,           // preenchido pelo MarketEngine com CalendarLoader
             EventImpact      = 0,
         };
+
+        // [FASE 6] Detectores de evento e regime
+        if (_eventDetector != null && _regimeDetector != null)
+        {
+            var eventos = _eventDetector.Avaliar(snap);
+            var regime  = _regimeDetector.Avaliar(snap);
+            snap.Regime     = regime.Regime.ToString();
+            snap.Confidence = regime.Confidence;
+            foreach (var ev in eventos)
+                OnMarketEvent?.Invoke(ev);
+        }
 
         return snap;
     }
