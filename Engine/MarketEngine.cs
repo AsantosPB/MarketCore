@@ -6,6 +6,7 @@ using System.Threading;
 using MarketCore.Contracts;
 using MarketCore.Engine.Detectors;
 using MarketCore.Engine.Recording;
+using MarketCore.Engine.Storage;
 using MarketCore.Models;
 
 namespace MarketCore.Engine;
@@ -72,6 +73,8 @@ public sealed class MarketEngine : IDisposable
     public readonly ExhaustionDetector Exhaustion = new();
 
     private IMarketRecorder? _recorder;
+    private StorageManager?  _storageManager;  // [FASE 3]
+    private string?          _dbPath;           // [FASE 3] base path para data/db
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -100,6 +103,7 @@ public sealed class MarketEngine : IDisposable
             diretorioBase = System.IO.Path.Combine(diretorioBase, "_SIM");
 
         _recorder = new MarketRecorder(diretorioBase);
+        _dbPath   = System.IO.Path.Combine(diretorioBase, "..", "data", "db"); // [FASE 3]
 
         _recorder.ErroGravacao += (s, e) =>
         {
@@ -123,6 +127,7 @@ public sealed class MarketEngine : IDisposable
     {
         _recordingEnabled = false;
         _recorder?.Dispose();
+        _storageManager?.Dispose(); // [FASE 3]
         _recorder = null;
         Console.WriteLine("[RECORDER] Gravação desabilitada");
     }
@@ -147,6 +152,8 @@ public sealed class MarketEngine : IDisposable
         if (_recordingEnabled && _recorder != null)
         {
             var hoje = DateOnly.FromDateTime(DateTime.Now);
+            _storageManager = new StorageManager(); // [FASE 3]
+            await _storageManager.InicializarAsync(_dbPath ?? System.IO.Path.Combine("data", "db"));
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
@@ -166,6 +173,8 @@ public sealed class MarketEngine : IDisposable
             Console.WriteLine($"\n[RECORDER] Pregão {status.PregaoAtivo} finalizado. " +
                               $"Trades: {status.TotaisTrades}, Books: {status.TotaisBooks}");
             await _recorder.FinalizarPregaoAsync();
+            _storageManager?.Dispose(); // [FASE 3]
+            _storageManager = null;
         }
 
         await _provider.DisconnectAsync();
@@ -587,6 +596,7 @@ public sealed class MarketEngine : IDisposable
         _provider.Dispose();
         _cts.Dispose();
         _recorder?.Dispose();
+        _storageManager?.Dispose(); // [FASE 3]
     }
 }
 

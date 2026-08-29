@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 2)
-- Fase atual: Fase 2 concluída — iniciando Fase 3 (DuckDB + SQLite)
+- Última atualização: 29/08/2026 (Fase 3)
+- Fase atual: Fase 3 concluída — iniciando Fase 4 (Calendar Loader)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -76,7 +76,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 0 — Backup + snapshot git (29/08/2026)
 - [x] Fase 1 — Corrigir BookProcessingLoop + formato fixo _book.bin
 - [x] Fase 2 — SequenceNumber + Channel<T> nos workers
-- [ ] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
+- [x] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
 - [ ] Fase 4 — Calendar Loader (agenda econômica automática)
 - [ ] Fase 5 — Feature Engine
 - [ ] Fase 6 — Event Detector + Regime Detector
@@ -191,3 +191,15 @@ git push origin main --tags
   - Engine/Recording/MarketRecorder.cs — 4 ConcurrentQueue + Thread.Sleep workers substituídos por Channel<T> (UnboundedChannelOptions SingleReader=true, SingleWriter=false; await foreach ReadAllAsync); Writer.Complete() em todos os 4 channels no FinalizarPregaoAsync; header de 64 bytes adicionado em todos os arquivos binários (trades.bin, book.bin, flowscore.bin); CRC32 gravado nos bytes 60-63 do header via System.IO.Hashing.Crc32; método estático VerificarIntegridade(string) adicionado
   - PROJETO.md — fase 2 marcada concluída
 - Commit: fase-2 — tag: v0.2.0
+
+### 29/08/2026 — Fase 3
+- Arquivos criados:
+  - Engine/Storage/StorageModels.cs — MarketSnapshot (29 campos), DecisionRecord, TradeRecord
+  - Engine/Storage/StorageManager.cs — InicializarAsync, schemas DuckDB (market_snapshots + labels) e SQLite (decisions, trades, patterns, config), GravarSnapshotAsync, GravarDecisionAsync, GravarTradeOperacionalAsync, ConsultarSnapshotsAsync, ConsultarDecisionsAsync
+- Arquivos modificados:
+  - MarketCore.csproj — PackageReference DuckDB.NET.Data.Full 1.2.0, Microsoft.Data.Sqlite 9.0.0
+  - Engine/MarketEngine.cs — campo _storageManager + _dbPath; InicializarAsync em ConnectAsync; Dispose em DisconnectAsync e Dispose()
+  - .gitignore — data/raw/, data/db/, data/features/, data/labels/, data/patterns/ adicionados
+  - PROJETO.md — fase 3 marcada concluída
+- Pastas criadas: data/db/, data/raw/, data/features/, data/labels/, data/patterns/
+- Commit: fase-3 — tag: v0.3.0
