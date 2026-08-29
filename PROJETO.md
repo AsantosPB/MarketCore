@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 4)
-- Fase atual: Fase 4 concluída — iniciando Fase 5 (Feature Engine)
+- Última atualização: 29/08/2026 (Fase 5)
+- Fase atual: Fase 5 concluída — iniciando Fase 6 (Event Detector + Regime Detector)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -78,7 +78,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 2 — SequenceNumber + Channel<T> nos workers
 - [x] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
 - [x] Fase 4 — Calendar Loader (agenda econômica automática)
-- [ ] Fase 5 — Feature Engine
+- [x] Fase 5 — Feature Engine
 - [ ] Fase 6 — Event Detector + Regime Detector
 - [ ] Fase 7 — Dataset automático (features + labels no DuckDB)
 - [ ] Fase 8 — Pattern Engine + Pattern Registry
@@ -203,6 +203,17 @@ git push origin main --tags
   - PROJETO.md — fase 3 marcada concluída
 - Pastas criadas: data/db/, data/raw/, data/features/, data/labels/, data/patterns/
 - Commit: fase-3 — tag: v0.3.0
+
+### 29/08/2026 — Fase 5
+- Arquivos criados:
+  - Engine/Features/RingBuffer.cs — buffer circular pré-alocado, thread-safe, capacidades: trades=10000, bookSnaps=3600, prices=10000
+  - Engine/Features/FeatureSnapshot.cs — 37 campos de microestrutura; método ToMarketSnapshot() para persistência no DuckDB
+  - Engine/Features/FeatureEngine.cs — motor de features incremental em memória: BookImbalance, Microprice, Delta(100ms/500ms/1s/2s/5s), OFI(100ms/500ms/1s), TradeRate, VolumeRate, AggressionRatio, Velocity, Acceleration, Volatility30s, VWAP, DistanceVwap/High/Low, AbsorptionScore, Stacking/Pulling, TimeWindow, Regime
+  - Engine/Features/SnapshotTimer.cs — timer 100ms; escrita fire-and-forget no DuckDB via ContinueWith; contador SnapshotCount
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — integração FeatureEngine (_featureEngine, _snapshotTimer, UltimoSnapshot); OnTrade→_featureEngine.OnTrade; PublishDirtyBookSnapshots→_featureEngine.OnBook; Inicializar/Parar/Dispose
+  - PROJETO.md — fase 5 marcada concluída
+- Commit: fase-5 — tag: v0.5.0
 
 ### 29/08/2026 — Fase 4
 - Arquivos criados:

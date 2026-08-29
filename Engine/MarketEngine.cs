@@ -8,6 +8,7 @@ using MarketCore.Engine.Detectors;
 using MarketCore.Engine.Recording;
 using MarketCore.Engine.Storage;
 using MarketCore.Engine.Calendar;
+using MarketCore.Engine.Features;
 using MarketCore.Models;
 
 namespace MarketCore.Engine;
@@ -79,6 +80,8 @@ public sealed class MarketEngine : IDisposable
     private CalendarLoader?  _calendarLoader;  // [FASE 4]
     private CalendarTimer?   _calendarTimer;   // [FASE 4]
     private CalendarDay?     _calendarioHoje;  // [FASE 4] snapshot do dia atual
+    private FeatureEngine?   _featureEngine;   // [FASE 5]
+    private SnapshotTimer?   _snapshotTimer;   // [FASE 5]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -103,6 +106,9 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Minutos até o início do próximo bloqueio (int.MaxValue se não houver).</summary>
     public int MinutosAteProximoBloqueio
         => _calendarLoader?.MinutosAteProximoBloqueio(DateTime.Now) ?? int.MaxValue;
+
+    /// <summary>Último snapshot de features calculado (null antes do primeiro pregão).</summary>
+    public FeatureSnapshot? UltimoSnapshot => _featureEngine?.CalcularSnapshot();
 
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
@@ -191,6 +197,11 @@ public sealed class MarketEngine : IDisposable
             _calendarTimer.Iniciar();
             _ = _calendarLoader.CarregarAsync(DateTime.Today); // carga inicial sem bloquear ConnectAsync
 
+            _featureEngine = new FeatureEngine(); // [FASE 5]
+            _featureEngine.Inicializar();
+            _snapshotTimer = new SnapshotTimer(_featureEngine, _storageManager);
+            _snapshotTimer.Iniciar();
+
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
@@ -208,6 +219,9 @@ public sealed class MarketEngine : IDisposable
         _calendarTimer?.Dispose();
         _calendarLoader = null;
         _calendarTimer  = null;
+
+        _snapshotTimer?.Parar();        // [FASE 5] para timer antes de fechar
+        _featureEngine?.ResetarSessao();
 
         if (_recordingEnabled && _recorder != null)
         {
@@ -288,6 +302,8 @@ public sealed class MarketEngine : IDisposable
 
             try { _analiseQuantSink?.OnTrade(trade); }
             catch (Exception subEx) { LogEngineFault(nameof(HandleTrade) + ".AnaliseSink", subEx); }
+
+            _featureEngine?.OnTrade(trade); // [FASE 5]
         }
         catch (Exception ex)
         {
@@ -460,6 +476,8 @@ public sealed class MarketEngine : IDisposable
 
             if (_recordingEnabled && _recorder != null)
                 _ = _recorder.GravarBookAsync(ExtrairAtivo(snap.Ticker), snap);
+
+            _featureEngine?.OnBook(snap); // [FASE 5]
 
             _uiQueue.Enqueue(snap);
         }
@@ -640,6 +658,7 @@ public sealed class MarketEngine : IDisposable
         _recorder?.Dispose();
         _storageManager?.Dispose(); // [FASE 3]
         _calendarTimer?.Dispose();  // [FASE 4]
+        _snapshotTimer?.Dispose();  // [FASE 5]
     }
 }
 
