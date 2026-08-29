@@ -1,11 +1,12 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Hashing;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using MarketCore.Contracts;
 using MarketCore.Models;
@@ -18,10 +19,12 @@ public sealed class MarketRecorder : IMarketRecorder
     private string? _diretorioPregao;
     private DateOnly? _pregaoAtivo = null;
 
-    private readonly ConcurrentQueue<(string ativo, TradeEvent trade)>          _filaTrades     = new();
-    private readonly ConcurrentQueue<(string ativo, BookSnapshot snapshot)>     _filaBooks      = new();
-    private readonly ConcurrentQueue<(string mensagem, DateTime timestamp)>     _filaEventos    = new();
-    private readonly ConcurrentQueue<FlowScoreRecord>                           _filaFlowScore  = new();
+    // [FASE 2] Channel<T> substituindo ConcurrentQueue + Thread.Sleep polling
+    // Recriados a cada IniciarPregaoAsync para suportar múltiplos pregões por instância
+    private Channel<(string ativo, TradeEvent trade)>?       _tradeChannel;
+    private Channel<(string ativo, BookSnapshot snapshot)>?  _bookChannel;
+    private Channel<(string mensagem, DateTime timestamp)>?  _eventosChannel;
+    private Channel<FlowScoreRecord>?                        _flowScoreChannel;
 
     private long _totaisTrades   = 0;
     private long _totaisBooks    = 0;
@@ -34,6 +37,10 @@ public sealed class MarketRecorder : IMarketRecorder
     private Task? _taskProcessamentoEventos;
     private Task? _taskProcessamentoFlowScore;
     private CancellationTokenSource? _cts;
+
+    // [FASE 2] Rastreia arquivos binários abertos para finalização do CRC32
+    private readonly List<string> _arquivosBinarios     = new();
+    private readonly object       _arquivosBinariosLock  = new();
 
     public event EventHandler<RecorderErrorEventArgs>?   ErroGravacao;
     public event EventHandler<RecorderWarningEventArgs>? AvisoGravacao;
@@ -53,8 +60,8 @@ public sealed class MarketRecorder : IMarketRecorder
     {
         PregaoAtivo    = _pregaoAtivo,
         EspacoLivreGB  = ObterEspacoLivreGB(),
-        FilaTrades     = _filaTrades.Count,
-        FileBook       = _filaBooks.Count,
+        FilaTrades     = _tradeChannel?.Reader.Count ?? 0,   // [FASE 2]
+        FileBook       = _bookChannel?.Reader.Count ?? 0,    // [FASE 2]
         TotaisTrades   = _totaisTrades,
         TotaisBooks    = _totaisBooks,
         BytesGravados  = _bytesGravados
@@ -94,12 +101,22 @@ public sealed class MarketRecorder : IMarketRecorder
             _totaisTrades  = 0;
             _totaisBooks   = 0;
             _bytesGravados = 0;
+            lock (_arquivosBinariosLock) _arquivosBinarios.Clear();
+
+            // [FASE 2] Novos channels a cada pregão (channels anteriores foram Complete'd)
+            var opts = new UnboundedChannelOptions { SingleReader = true, SingleWriter = false };
+            _tradeChannel     = Channel.CreateUnbounded<(string, TradeEvent)>(opts);
+            _bookChannel      = Channel.CreateUnbounded<(string, BookSnapshot)>(opts);
+            _eventosChannel   = Channel.CreateUnbounded<(string, DateTime)>(opts);
+            _flowScoreChannel = Channel.CreateUnbounded<FlowScoreRecord>(opts);
 
             _cts = new CancellationTokenSource();
-            _taskProcessamentoTrades     = Task.Run(() => ProcessarFilaTrades(_cts.Token));
-            _taskProcessamentoBooks      = Task.Run(() => ProcessarFilaBooks(_cts.Token));
-            _taskProcessamentoEventos    = Task.Run(() => ProcessarFilaEventos(_cts.Token));
-            _taskProcessamentoFlowScore  = Task.Run(() => ProcessarFilaFlowScore(_cts.Token));
+
+            // [FASE 2] Workers async com await foreach ReadAllAsync — sem Thread.Sleep
+            _taskProcessamentoTrades    = Task.Run(async () => await ProcessarFilaTrades(_cts.Token));
+            _taskProcessamentoBooks     = Task.Run(async () => await ProcessarFilaBooks(_cts.Token));
+            _taskProcessamentoEventos   = Task.Run(async () => await ProcessarFilaEventos(_cts.Token));
+            _taskProcessamentoFlowScore = Task.Run(async () => await ProcessarFilaFlowScore(_cts.Token));
 
             GravarEventoAsync("PREGAO_INICIADO", DateTime.UtcNow).Wait();
             DispararAviso($"Pregão {data:yyyy-MM-dd} iniciado. Espaço livre: {espacoLivre:F2} GB");
@@ -125,7 +142,11 @@ public sealed class MarketRecorder : IMarketRecorder
         {
             GravarEventoAsync("PREGAO_FINALIZANDO", DateTime.UtcNow).Wait();
 
-            _cts?.Cancel();
+            // [FASE 2] Sinaliza fim de escrita; workers drenam itens restantes e encerram
+            _tradeChannel!.Writer.Complete();
+            _bookChannel!.Writer.Complete();
+            _eventosChannel!.Writer.Complete();
+            _flowScoreChannel!.Writer.Complete();
 
             Task.WaitAll(
                 new[] {
@@ -136,6 +157,12 @@ public sealed class MarketRecorder : IMarketRecorder
                 }.Where(t => t != null).ToArray()!,
                 TimeSpan.FromSeconds(10)
             );
+
+            // [FASE 2] Finaliza CRC32 em cada arquivo binário gravado neste pregão
+            List<string> binarios;
+            lock (_arquivosBinariosLock) binarios = new List<string>(_arquivosBinarios);
+            foreach (var path in binarios)
+                FinalizarCRC32(path);
 
             SalvarMetadata();
 
@@ -159,28 +186,28 @@ public sealed class MarketRecorder : IMarketRecorder
     public Task<bool> GravarTradeAsync(string ativo, TradeEvent trade)
     {
         if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
-        _filaTrades.Enqueue((ativo, trade));
+        _tradeChannel!.Writer.TryWrite((ativo, trade));    // [FASE 2]
         return Task.FromResult(true);
     }
 
     public Task<bool> GravarBookAsync(string ativo, BookSnapshot snapshot)
     {
         if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
-        _filaBooks.Enqueue((ativo, snapshot));
+        _bookChannel!.Writer.TryWrite((ativo, snapshot));  // [FASE 2]
         return Task.FromResult(true);
     }
 
     public Task<bool> GravarEventoAsync(string mensagem, DateTime timestamp)
     {
         if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
-        _filaEventos.Enqueue((mensagem, timestamp));
+        _eventosChannel!.Writer.TryWrite((mensagem, timestamp)); // [FASE 2]
         return Task.FromResult(true);
     }
 
     /// <summary>
     /// Grava um snapshot do FlowScore no arquivo WIN_flowscore.bin.
     /// Chamado a cada 1 segundo pelo timer do FlowScoreEngine.
-    /// 56 bytes por registro.
+    /// 56 bytes por registro (+ 64 bytes de header na Fase 2).
     /// </summary>
     public Task<bool> GravarFlowScoreAsync(
         string ativo, double preco, double scoreTotal,
@@ -188,53 +215,55 @@ public sealed class MarketRecorder : IMarketRecorder
     {
         if (!_pregaoAtivo.HasValue) return Task.FromResult(false);
 
-        _filaFlowScore.Enqueue(new FlowScoreRecord(
+        _flowScoreChannel!.Writer.TryWrite(new FlowScoreRecord( // [FASE 2]
             ativo, DateTime.UtcNow, preco, scoreTotal,
             brokerFlow, fluxoDireto, book, detectores));
 
         return Task.FromResult(true);
     }
 
-    // ── Processamento de filas ────────────────────────────────────────────
+    // ── Processamento de channels ──────────────────────────────────────────
 
-    private void ProcessarFilaTrades(CancellationToken ct)
+    private async Task ProcessarFilaTrades(CancellationToken ct)
     {
         var arquivos = new Dictionary<string, FileStream>();
         var writers  = new Dictionary<string, BinaryWriter>();
 
         try
         {
-            while (!ct.IsCancellationRequested || !_filaTrades.IsEmpty)
+            // [FASE 2] await foreach drena o channel sem Thread.Sleep
+            await foreach (var (ativo, trade) in _tradeChannel!.Reader.ReadAllAsync(ct))
             {
-                if (_filaTrades.TryDequeue(out var item))
+                if (!writers.ContainsKey(ativo))
                 {
-                    var (ativo, trade) = item;
-
-                    if (!writers.ContainsKey(ativo))
+                    var path = Path.Combine(_diretorioPregao!, $"{ativo}_trades.bin");
+                    var fs   = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+                    if (fs.Length == 0)
                     {
-                        var path = Path.Combine(_diretorioPregao!, $"{ativo}_trades.bin");
-                        var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
-                        arquivos[ativo] = fs;
-                        writers[ativo] = new BinaryWriter(fs);
+                        // [FASE 2] Header de 64 bytes — bytes 60-63 reservados para CRC32
+                        fs.Write(new byte[64]);
                     }
-
-                    var w = writers[ativo];
-                    w.Write(trade.Time.Ticks);
-                    w.Write(Interlocked.Increment(ref _tradeSequence)); // [FASE 1] SequenceNumber Int64
-                    w.Write(trade.Price);
-                    w.Write(trade.Volume);
-                    w.Write((byte)trade.Aggressor);
-                    var brokerBytes = Encoding.UTF8.GetBytes(trade.Broker ?? "");
-                    w.Write((byte)brokerBytes.Length);
-                    w.Write(brokerBytes);
-
-                    Interlocked.Increment(ref _totaisTrades);
-                    Interlocked.Add(ref _bytesGravados, 30 + brokerBytes.Length);
+                    else
+                    {
+                        fs.Seek(0, SeekOrigin.End);
+                    }
+                    arquivos[ativo] = fs;
+                    writers[ativo]  = new BinaryWriter(fs);
+                    lock (_arquivosBinariosLock) _arquivosBinarios.Add(path);
                 }
-                else
-                {
-                    Thread.Sleep(5);
-                }
+
+                var w = writers[ativo];
+                w.Write(trade.Time.Ticks);
+                w.Write(Interlocked.Increment(ref _tradeSequence)); // [FASE 1] SequenceNumber Int64
+                w.Write(trade.Price);
+                w.Write(trade.Volume);
+                w.Write((byte)trade.Aggressor);
+                var brokerBytes = Encoding.UTF8.GetBytes(trade.Broker ?? "");
+                w.Write((byte)brokerBytes.Length);
+                w.Write(brokerBytes);
+
+                Interlocked.Increment(ref _totaisTrades);
+                Interlocked.Add(ref _bytesGravados, 30 + brokerBytes.Length);
             }
         }
         finally
@@ -244,7 +273,7 @@ public sealed class MarketRecorder : IMarketRecorder
         }
     }
 
-    private void ProcessarFilaBooks(CancellationToken ct)
+    private async Task ProcessarFilaBooks(CancellationToken ct)
     {
         var arquivos = new Dictionary<string, FileStream>();
         var writers  = new Dictionary<string, BinaryWriter>();
@@ -252,63 +281,65 @@ public sealed class MarketRecorder : IMarketRecorder
 
         try
         {
-            while (!ct.IsCancellationRequested || !_filaBooks.IsEmpty)
+            // [FASE 2] await foreach drena o channel sem Thread.Sleep
+            await foreach (var (ativo, snapshot) in _bookChannel!.Reader.ReadAllAsync(ct))
             {
-                if (_filaBooks.TryDequeue(out var item))
+                if (!writers.ContainsKey(ativo))
                 {
-                    var (ativo, snapshot) = item;
-
-                    if (!writers.ContainsKey(ativo))
+                    var path = Path.Combine(_diretorioPregao!, $"{ativo}_book.bin");
+                    var fs   = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+                    if (fs.Length == 0)
                     {
-                        var path = Path.Combine(_diretorioPregao!, $"{ativo}_book.bin");
-                        var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
-                        arquivos[ativo] = fs;
-                        writers[ativo] = new BinaryWriter(fs);
+                        // [FASE 2] Header de 64 bytes — bytes 60-63 reservados para CRC32
+                        fs.Write(new byte[64]);
                     }
-
-                    var w = writers[ativo];
-
-                    if (ultimoTimestamp.HasValue && (snapshot.Time - ultimoTimestamp.Value).TotalSeconds > 2)
+                    else
                     {
-                        var gap = (snapshot.Time - ultimoTimestamp.Value).TotalSeconds;
-                        _ = GravarEventoAsync($"GAP_BOOK_{ativo}: {gap:F1}s", snapshot.Time);
+                        fs.Seek(0, SeekOrigin.End);
                     }
-
-                    ultimoTimestamp = snapshot.Time;
-
-                    // [FASE 1] Formato fixo 272 bytes por registro (seek direto por índice para Replay Engine).
-                    // Layout: ExchangeTimestamp(8) + ReceiveTimestamp(8) + SequenceNumber(8) + Price(8)
-                    //       + 10×Bid[Price(8)+Qty(4)] + 10×Ask[Price(8)+Qty(4)] = 272 bytes
-                    const int BOOK_LEVELS = 10;
-                    w.Write(snapshot.Time.Ticks);                              // ExchangeTimestamp  8
-                    w.Write(DateTime.UtcNow.Ticks);                            // ReceiveTimestamp   8
-                    w.Write(Interlocked.Increment(ref _bookSequence));         // SequenceNumber     8
-                    w.Write(snapshot.Bids.Count > 0
-                        ? (double)snapshot.Bids[0].Price : 0.0);              // Price (best bid)   8
-
-                    for (int bi = 0; bi < BOOK_LEVELS; bi++)                  // 10 Bid levels     120
-                    {
-                        if (bi < snapshot.Bids.Count)
-                        { w.Write((double)snapshot.Bids[bi].Price); w.Write(snapshot.Bids[bi].Volume); }
-                        else
-                        { w.Write(0.0); w.Write(0); }
-                    }
-
-                    for (int ai = 0; ai < BOOK_LEVELS; ai++)                  // 10 Ask levels     120
-                    {
-                        if (ai < snapshot.Asks.Count)
-                        { w.Write((double)snapshot.Asks[ai].Price); w.Write(snapshot.Asks[ai].Volume); }
-                        else
-                        { w.Write(0.0); w.Write(0); }
-                    }
-
-                    Interlocked.Increment(ref _totaisBooks);
-                    Interlocked.Add(ref _bytesGravados, 272);
+                    arquivos[ativo] = fs;
+                    writers[ativo]  = new BinaryWriter(fs);
+                    lock (_arquivosBinariosLock) _arquivosBinarios.Add(path);
                 }
-                else
+
+                var w = writers[ativo];
+
+                if (ultimoTimestamp.HasValue && (snapshot.Time - ultimoTimestamp.Value).TotalSeconds > 2)
                 {
-                    Thread.Sleep(10);
+                    var gap = (snapshot.Time - ultimoTimestamp.Value).TotalSeconds;
+                    _ = GravarEventoAsync($"GAP_BOOK_{ativo}: {gap:F1}s", snapshot.Time);
                 }
+
+                ultimoTimestamp = snapshot.Time;
+
+                // [FASE 1] Formato fixo 272 bytes por registro (seek direto por índice para Replay Engine).
+                // Layout: ExchangeTimestamp(8) + ReceiveTimestamp(8) + SequenceNumber(8) + Price(8)
+                //       + 10xBid[Price(8)+Qty(4)] + 10xAsk[Price(8)+Qty(4)] = 272 bytes
+                const int BOOK_LEVELS = 10;
+                w.Write(snapshot.Time.Ticks);                              // ExchangeTimestamp  8
+                w.Write(DateTime.UtcNow.Ticks);                            // ReceiveTimestamp   8
+                w.Write(Interlocked.Increment(ref _bookSequence));         // SequenceNumber     8
+                w.Write(snapshot.Bids.Count > 0
+                    ? (double)snapshot.Bids[0].Price : 0.0);              // Price (best bid)   8
+
+                for (int bi = 0; bi < BOOK_LEVELS; bi++)                  // 10 Bid levels     120
+                {
+                    if (bi < snapshot.Bids.Count)
+                    { w.Write((double)snapshot.Bids[bi].Price); w.Write(snapshot.Bids[bi].Volume); }
+                    else
+                    { w.Write(0.0); w.Write(0); }
+                }
+
+                for (int ai = 0; ai < BOOK_LEVELS; ai++)                  // 10 Ask levels     120
+                {
+                    if (ai < snapshot.Asks.Count)
+                    { w.Write((double)snapshot.Asks[ai].Price); w.Write(snapshot.Asks[ai].Volume); }
+                    else
+                    { w.Write(0.0); w.Write(0); }
+                }
+
+                Interlocked.Increment(ref _totaisBooks);
+                Interlocked.Add(ref _bytesGravados, 272);
             }
         }
         finally
@@ -318,7 +349,7 @@ public sealed class MarketRecorder : IMarketRecorder
         }
     }
 
-    private void ProcessarFilaEventos(CancellationToken ct)
+    private async Task ProcessarFilaEventos(CancellationToken ct)
     {
         var path = Path.Combine(_diretorioPregao!, "events.log");
 
@@ -327,17 +358,11 @@ public sealed class MarketRecorder : IMarketRecorder
             using var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
             using var w  = new StreamWriter(fs, Encoding.UTF8);
 
-            while (!ct.IsCancellationRequested || !_filaEventos.IsEmpty)
+            // [FASE 2] await foreach drena o channel sem Thread.Sleep
+            await foreach (var (mensagem, timestamp) in _eventosChannel!.Reader.ReadAllAsync(ct))
             {
-                if (_filaEventos.TryDequeue(out var item))
-                {
-                    w.WriteLine($"[{item.timestamp:yyyy-MM-dd HH:mm:ss.fff}] {item.mensagem}");
-                    w.Flush();
-                }
-                else
-                {
-                    Thread.Sleep(10);
-                }
+                w.WriteLine($"[{timestamp:yyyy-MM-dd HH:mm:ss.fff}] {mensagem}");
+                w.Flush();
             }
         }
         catch (Exception ex)
@@ -346,41 +371,45 @@ public sealed class MarketRecorder : IMarketRecorder
         }
     }
 
-    private void ProcessarFilaFlowScore(CancellationToken ct)
+    private async Task ProcessarFilaFlowScore(CancellationToken ct)
     {
         var arquivos = new Dictionary<string, FileStream>();
         var writers  = new Dictionary<string, BinaryWriter>();
 
         try
         {
-            while (!ct.IsCancellationRequested || !_filaFlowScore.IsEmpty)
+            // [FASE 2] await foreach drena o channel sem Thread.Sleep
+            await foreach (var item in _flowScoreChannel!.Reader.ReadAllAsync(ct))
             {
-                if (_filaFlowScore.TryDequeue(out var item))
+                if (!writers.ContainsKey(item.Ativo))
                 {
-                    if (!writers.ContainsKey(item.Ativo))
+                    var path = Path.Combine(_diretorioPregao!, $"{item.Ativo}_flowscore.bin");
+                    var fs   = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+                    if (fs.Length == 0)
                     {
-                        var path = Path.Combine(_diretorioPregao!, $"{item.Ativo}_flowscore.bin");
-                        var fs = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
-                        arquivos[item.Ativo] = fs;
-                        writers[item.Ativo]  = new BinaryWriter(fs);
+                        // [FASE 2] Header de 64 bytes — bytes 60-63 reservados para CRC32
+                        fs.Write(new byte[64]);
                     }
-
-                    var w = writers[item.Ativo];
-                    // 56 bytes por registro
-                    w.Write(item.Timestamp.Ticks);  // 8
-                    w.Write(item.Preco);             // 8
-                    w.Write(item.ScoreTotal);        // 8
-                    w.Write(item.BrokerFlow);        // 8
-                    w.Write(item.FluxoDireto);       // 8
-                    w.Write(item.Book);              // 8
-                    w.Write(item.Detectores);        // 8
-
-                    Interlocked.Add(ref _bytesGravados, 56);
+                    else
+                    {
+                        fs.Seek(0, SeekOrigin.End);
+                    }
+                    arquivos[item.Ativo] = fs;
+                    writers[item.Ativo]  = new BinaryWriter(fs);
+                    lock (_arquivosBinariosLock) _arquivosBinarios.Add(path);
                 }
-                else
-                {
-                    Thread.Sleep(50); // FlowScore a cada 1s — pode dormir mais
-                }
+
+                var w = writers[item.Ativo];
+                // 56 bytes por registro
+                w.Write(item.Timestamp.Ticks);  // 8
+                w.Write(item.Preco);             // 8
+                w.Write(item.ScoreTotal);        // 8
+                w.Write(item.BrokerFlow);        // 8
+                w.Write(item.FluxoDireto);       // 8
+                w.Write(item.Book);              // 8
+                w.Write(item.Detectores);        // 8
+
+                Interlocked.Add(ref _bytesGravados, 56);
             }
         }
         finally
@@ -389,6 +418,60 @@ public sealed class MarketRecorder : IMarketRecorder
             foreach (var f in arquivos.Values) f?.Dispose();
         }
     }
+
+    // ── CRC32 [FASE 2] ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Calcula o CRC32 do corpo do arquivo (bytes 64 em diante) e grava
+    /// nos bytes 60-63 do header de 64 bytes. Chamado após os workers encerrarem.
+    /// </summary>
+    private static void FinalizarCRC32(string caminhoArquivo)
+    {
+        try
+        {
+            using var fs = new FileStream(caminhoArquivo, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            if (fs.Length < 64) return;
+
+            fs.Seek(64, SeekOrigin.Begin);
+            var body = new byte[fs.Length - 64];
+            _ = fs.Read(body, 0, body.Length);
+
+            var hashBytes = Crc32.Hash(body);   // 4 bytes little-endian
+            fs.Seek(60, SeekOrigin.Begin);
+            fs.Write(hashBytes, 0, 4);
+        }
+        catch { /* arquivo pode não ter sido criado se ativo não teve dados no pregão */ }
+    }
+
+    /// <summary>
+    /// Verifica a integridade de um arquivo binário comparando o CRC32 armazenado
+    /// no header (bytes 60-63) com o CRC32 calculado sobre o corpo (bytes 64 ate EOF).
+    /// </summary>
+    /// <returns>true se checksum bate; false se arquivo invalido ou checksum diverge.</returns>
+    public static bool VerificarIntegridade(string caminhoArquivo)
+    {
+        try
+        {
+            using var fs = new FileStream(caminhoArquivo, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (fs.Length < 64) return false;
+
+            fs.Seek(60, SeekOrigin.Begin);
+            var storedBytes = new byte[4];
+            _ = fs.Read(storedBytes, 0, 4);
+            uint storedCrc = BitConverter.ToUInt32(storedBytes, 0);
+
+            fs.Seek(64, SeekOrigin.Begin);
+            var body = new byte[fs.Length - 64];
+            _ = fs.Read(body, 0, body.Length);
+
+            uint computedCrc = BitConverter.ToUInt32(Crc32.Hash(body), 0);
+
+            return storedCrc == computedCrc;
+        }
+        catch { return false; }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
 
     private void SalvarMetadata()
     {

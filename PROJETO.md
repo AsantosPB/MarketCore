@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 1)
-- Fase atual: Fase 1 concluída — iniciando Fase 2 (SequenceNumber + Channel<T>)
+- Última atualização: 29/08/2026 (Fase 2)
+- Fase atual: Fase 2 concluída — iniciando Fase 3 (DuckDB + SQLite)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -46,8 +46,8 @@ Identificado na auditoria de 29/08/2026:
 - [x] BookProcessingLoop desativada — reativar independente do PVV
 - [x] OnOfferBookCallbackCore filtra apenas rank 1-4 — gravar todos os 10 níveis
 - [x] _book.bin formato variável — mudar para registro fixo de 272 bytes (seek direto)
-- [ ] Workers com Thread.Sleep polling — substituir por Channel<T>
-- [ ] Sem checksum nos arquivos binários — adicionar no header
+- [x] Workers com Thread.Sleep polling — substituir por Channel<T>
+- [x] Sem checksum nos arquivos binários — adicionar no header
 - [ ] Parse de data dentro do callback do trade — mover para thread de processamento
 - [ ] TNewDailyCallback não gravada — dado rico (OHLCV + agressão) sendo descartado
 - [ ] Retorno GravarTradeAsync descartado com _ = — tratar erro silencioso
@@ -75,7 +75,7 @@ Identificado na auditoria de 29/08/2026:
 ## Roadmap de fases
 - [x] Fase 0 — Backup + snapshot git (29/08/2026)
 - [x] Fase 1 — Corrigir BookProcessingLoop + formato fixo _book.bin
-- [ ] Fase 2 — SequenceNumber + Channel<T> nos workers
+- [x] Fase 2 — SequenceNumber + Channel<T> nos workers
 - [ ] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
 - [ ] Fase 4 — Calendar Loader (agenda econômica automática)
 - [ ] Fase 5 — Feature Engine
@@ -185,3 +185,9 @@ git push origin main --tags
 ---
 *Arquivo mantido automaticamente pelo Cowork a cada implementação.*
 *Não editar manualmente exceto em caso de decisão arquitetural nova.*
+
+### 29/08/2026 — Fase 2
+- Arquivos modificados:
+  - Engine/Recording/MarketRecorder.cs — 4 ConcurrentQueue + Thread.Sleep workers substituídos por Channel<T> (UnboundedChannelOptions SingleReader=true, SingleWriter=false; await foreach ReadAllAsync); Writer.Complete() em todos os 4 channels no FinalizarPregaoAsync; header de 64 bytes adicionado em todos os arquivos binários (trades.bin, book.bin, flowscore.bin); CRC32 gravado nos bytes 60-63 do header via System.IO.Hashing.Crc32; método estático VerificarIntegridade(string) adicionado
+  - PROJETO.md — fase 2 marcada concluída
+- Commit: fase-2 — tag: v0.2.0
