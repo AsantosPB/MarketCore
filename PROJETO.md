@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 6 concluída — iniciando Fase 7 (Dataset automático)
+- Fase atual: Fase 7 concluída — iniciando Fase 8
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -80,7 +80,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 4 — Calendar Loader (agenda econômica automática)
 - [x] Fase 5 — Feature Engine
 - [x] Fase 6 — Event Detector + Regime Detector
-- [ ] Fase 7 — Dataset automático (features + labels no DuckDB)
+- [x] Fase 7 — Dataset automático (features + labels no DuckDB)
 - [ ] Fase 8 — Pattern Engine + Pattern Registry
 - [ ] Fase 9 — Replay determinístico
 - [ ] Fase 10 — Backtest com simulador de execução
@@ -238,3 +238,15 @@ git push origin main --tags
   - MarketCore.csproj — PackageReference HtmlAgilityPack 1.11.67
   - PROJETO.md — fase 4 marcada concluída
 - Commit: fase-4 — tag: v0.4.0
+
+### 29/08/2026 — Fase 7
+- Arquivos criados:
+  - Engine/Dataset/DatasetModels.cs — LabelRecord (FutureReturn 100ms/250ms/500ms/1s/2s/5s/10s, MFE/MAE 5s, TimeTo20Pts, TimeToStop), DatasetRecord, DatasetStats
+  - Engine/Dataset/DatasetBuilder.cs — BuildAsync (labels sem look-ahead bias: j > i estrito), BuildRangeAsync; cálculo RetornoFuturo por interpolação de snapshots; MFE/MAE via janela 5s; TimeTo20Pts/TimeToStop via loop forward
+  - Engine/Dataset/DatasetTimer.cs — timer 60s; disparo automático entre 18h04–18h06; flags _rodouHoje/_ultimaData para evitar duplicata diária; DispararManualAsync para testes
+- Arquivos modificados:
+  - Engine/Storage/StorageManager.cs — tabela dataset_stats no DuckDB; SalvarLabelsAsync, ConsultarDatasetAsync (JOIN market_snapshots+labels), SalvarDatasetStatsAsync, DiaTemLabelsAsync
+  - Engine/MarketEngine.cs — campos _datasetBuilder/_datasetTimer; init em ConnectAsync; handler OnDatasetPronto; propriedade DatasetBuilder; ConstruirDatasetManualAsync; Dispose
+  - PROJETO.md — fase 7 marcada concluída
+- REGRA ABSOLUTA LOOK-AHEAD BIAS: labels usam apenas index j > i (timestamp > T0). Comentado no código.
+- Commit: fase-7 — tag: v0.7.0

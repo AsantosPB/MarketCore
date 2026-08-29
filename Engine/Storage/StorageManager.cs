@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using DuckDB.NET.Data;
 using Microsoft.Data.Sqlite;
 using MarketCore.Engine.Calendar;
+using MarketCore.Engine.Dataset;
 
 namespace MarketCore.Engine.Storage;
 
@@ -97,6 +98,22 @@ CREATE TABLE IF NOT EXISTS labels (
     mae_5s                  DOUBLE,
     time_to_20pts           INTEGER,
     time_to_stop            INTEGER
+);";
+        cmd.ExecuteNonQuery();
+
+        // [FASE 7] Estatísticas do Dataset Builder
+        cmd.CommandText = @"
+CREATE TABLE IF NOT EXISTS dataset_stats (
+    date                VARCHAR NOT NULL,
+    total_snapshots     INTEGER,
+    labeled_snapshots   INTEGER,
+    avg_return_1s       DOUBLE,
+    std_return_1s       DOUBLE,
+    skewness_return_1s  DOUBLE,
+    up_moves            INTEGER,
+    down_moves          INTEGER,
+    neutral             INTEGER,
+    build_time          VARCHAR
 );";
         cmd.ExecuteNonQuery();
 
@@ -490,6 +507,176 @@ ORDER  BY time_brasilia";
         }
 
         return day;
+    }
+
+
+    // ── Dataset Builder — Fase 7 ──────────────────────────────────────────
+
+    /// <summary>Salva os labels calculados pelo DatasetBuilder na tabela labels do DuckDB.</summary>
+    public async Task SalvarLabelsAsync(List<LabelRecord> labels)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (labels.Count == 0) return;
+
+        await Task.Run(() =>
+        {
+            using var tx  = _duckDb!.BeginTransaction();
+            using var cmd = _duckDb.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = @"
+INSERT INTO labels VALUES (
+    $ts, $r100, $r250, $r500, $r1s, $r2s, $r5s, $r10s,
+    $mfe, $mae, $t20, $tstop
+)";
+            foreach (var l in labels)
+            {
+                cmd.Parameters.Clear();
+                cmd.Parameters.Add(new DuckDBParameter("ts",    l.Timestamp));
+                cmd.Parameters.Add(new DuckDBParameter("r100",  l.FutureReturn100ms));
+                cmd.Parameters.Add(new DuckDBParameter("r250",  l.FutureReturn250ms));
+                cmd.Parameters.Add(new DuckDBParameter("r500",  l.FutureReturn500ms));
+                cmd.Parameters.Add(new DuckDBParameter("r1s",   l.FutureReturn1s));
+                cmd.Parameters.Add(new DuckDBParameter("r2s",   l.FutureReturn2s));
+                cmd.Parameters.Add(new DuckDBParameter("r5s",   l.FutureReturn5s));
+                cmd.Parameters.Add(new DuckDBParameter("r10s",  l.FutureReturn10s));
+                cmd.Parameters.Add(new DuckDBParameter("mfe",   l.Mfe5s));
+                cmd.Parameters.Add(new DuckDBParameter("mae",   l.Mae5s));
+                cmd.Parameters.Add(new DuckDBParameter("t20",   l.TimeTo20Pts));
+                cmd.Parameters.Add(new DuckDBParameter("tstop", l.TimeToStop));
+                cmd.ExecuteNonQuery();
+            }
+            tx.Commit();
+        });
+    }
+
+    /// <summary>Consulta o dataset completo (features + labels) para análise e pattern mining.</summary>
+    public async Task<List<DatasetRecord>> ConsultarDatasetAsync(DateTime inicio, DateTime fim)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var result = new List<DatasetRecord>();
+        await Task.Run(() =>
+        {
+            using var cmd = _duckDb!.CreateCommand();
+            cmd.CommandText = @"
+SELECT s.*, l.*
+FROM market_snapshots s
+JOIN labels l ON s.timestamp = l.timestamp
+WHERE s.timestamp >= $ini AND s.timestamp <= $fim
+ORDER BY s.timestamp";
+            cmd.Parameters.Add(new DuckDBParameter("ini", inicio.Ticks));
+            cmd.Parameters.Add(new DuckDBParameter("fim", fim.Ticks));
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                // Colunas 0-28: market_snapshots (29 colunas)
+                var snap = new MarketSnapshot
+                {
+                    Timestamp        = reader.GetInt64(0),
+                    SessionDate      = reader.GetString(1),
+                    Price            = reader.GetDouble(2),
+                    Bid              = reader.GetDouble(3),
+                    Ask              = reader.GetDouble(4),
+                    Spread           = reader.GetDouble(5),
+                    BookImbalance    = reader.GetDouble(6),
+                    Microprice       = reader.GetDouble(7),
+                    Delta100ms       = reader.GetInt64(8),
+                    Delta500ms       = reader.GetInt64(9),
+                    Delta1s          = reader.GetInt64(10),
+                    Delta5s          = reader.GetInt64(11),
+                    Ofi100ms         = reader.GetDouble(12),
+                    Ofi500ms         = reader.GetDouble(13),
+                    Ofi1s            = reader.GetDouble(14),
+                    TradeRate        = reader.GetDouble(15),
+                    VolumeRate       = reader.GetDouble(16),
+                    Volatility30s    = reader.GetDouble(17),
+                    Vwap             = reader.GetDouble(18),
+                    DistanceVwap     = reader.GetDouble(19),
+                    AbsorptionScore  = reader.GetDouble(20),
+                    StackingScore    = reader.GetDouble(21),
+                    PullingScore     = reader.GetDouble(22),
+                    Velocity         = reader.GetDouble(23),
+                    Acceleration     = reader.GetDouble(24),
+                    Regime           = reader.GetString(25),
+                    TimeWindow       = reader.GetString(26),
+                    HasEconomicEvent = reader.GetBoolean(27),
+                    EventImpact      = reader.GetInt32(28),
+                };
+                // Colunas 29-40: labels (12 colunas)
+                var label = new LabelRecord
+                {
+                    Timestamp         = reader.GetInt64(29),
+                    FutureReturn100ms = reader.GetDouble(30),
+                    FutureReturn250ms = reader.GetDouble(31),
+                    FutureReturn500ms = reader.GetDouble(32),
+                    FutureReturn1s    = reader.GetDouble(33),
+                    FutureReturn2s    = reader.GetDouble(34),
+                    FutureReturn5s    = reader.GetDouble(35),
+                    FutureReturn10s   = reader.GetDouble(36),
+                    Mfe5s             = reader.GetDouble(37),
+                    Mae5s             = reader.GetDouble(38),
+                    TimeTo20Pts       = reader.GetInt32(39),
+                    TimeToStop        = reader.GetInt32(40),
+                };
+                result.Add(new DatasetRecord { Features = snap, Labels = label });
+            }
+        });
+
+        return result;
+    }
+
+    /// <summary>Salva estatísticas de um dataset gerado pelo DatasetBuilder.</summary>
+    public async Task SalvarDatasetStatsAsync(DatasetStats stats)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await Task.Run(() =>
+        {
+            using var cmd = _duckDb!.CreateCommand();
+            // DELETE + INSERT (upsert simplificado)
+            cmd.CommandText = "DELETE FROM dataset_stats WHERE date = $date";
+            cmd.Parameters.Add(new DuckDBParameter("date", stats.Date.ToString("yyyy-MM-dd")));
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = @"
+INSERT INTO dataset_stats VALUES (
+    $date, $total, $labeled, $avg, $std, $skew,
+    $up, $down, $neutral, $bt
+)";
+            cmd.Parameters.Clear();
+            cmd.Parameters.Add(new DuckDBParameter("date",    stats.Date.ToString("yyyy-MM-dd")));
+            cmd.Parameters.Add(new DuckDBParameter("total",   stats.TotalSnapshots));
+            cmd.Parameters.Add(new DuckDBParameter("labeled", stats.LabeledSnapshots));
+            cmd.Parameters.Add(new DuckDBParameter("avg",     stats.AvgReturn1s));
+            cmd.Parameters.Add(new DuckDBParameter("std",     stats.StdReturn1s));
+            cmd.Parameters.Add(new DuckDBParameter("skew",    stats.SkewnessReturn1s));
+            cmd.Parameters.Add(new DuckDBParameter("up",      stats.UpMoves));
+            cmd.Parameters.Add(new DuckDBParameter("down",    stats.DownMoves));
+            cmd.Parameters.Add(new DuckDBParameter("neutral", stats.Neutral));
+            cmd.Parameters.Add(new DuckDBParameter("bt",      stats.BuildTime.ToString("yyyy-MM-dd HH:mm:ss")));
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    /// <summary>Verifica se o dia já tem labels calculados (evita duplicação).</summary>
+    public async Task<bool> DiaTemLabelsAsync(DateTime date)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        long ini = date.Date.Ticks;
+        long fim = date.Date.AddDays(1).Ticks;
+
+        return await Task.Run(() =>
+        {
+            using var cmd = _duckDb!.CreateCommand();
+            cmd.CommandText =
+                "SELECT COUNT(*) FROM labels WHERE timestamp >= $ini AND timestamp < $fim";
+            cmd.Parameters.Add(new DuckDBParameter("ini", ini));
+            cmd.Parameters.Add(new DuckDBParameter("fim", fim));
+            var count = cmd.ExecuteScalar();
+            return count is long l ? l > 0 : false;
+        });
     }
 
     // ── Dispose ───────────────────────────────────────────────────────────

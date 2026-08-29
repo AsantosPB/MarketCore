@@ -8,6 +8,7 @@ using MarketCore.Engine.Detectors;
 using MarketCore.Engine.Recording;
 using MarketCore.Engine.Storage;
 using MarketCore.Engine.Calendar;
+using MarketCore.Engine.Dataset;
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -82,6 +83,8 @@ public sealed class MarketEngine : IDisposable
     private CalendarDay?     _calendarioHoje;  // [FASE 4] snapshot do dia atual
     private FeatureEngine?   _featureEngine;   // [FASE 5]
     private SnapshotTimer?   _snapshotTimer;   // [FASE 5]
+    private DatasetBuilder?  _datasetBuilder;  // [FASE 7]
+    private DatasetTimer?    _datasetTimer;    // [FASE 7]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -112,6 +115,13 @@ public sealed class MarketEngine : IDisposable
 
     /// <summary>Regime atual do mercado (null antes do primeiro snapshot).</summary>
     public RegimeState? RegimeAtual => _featureEngine?.RegimeAtual;  // [FASE 6]
+
+    /// <summary>DatasetBuilder para construção manual de datasets.</summary>
+    public DatasetBuilder? DatasetBuilder => _datasetBuilder;  // [FASE 7]
+
+    /// <summary>Constrói o dataset manualmente para a data informada.</summary>
+    public async Task<DatasetStats?> ConstruirDatasetManualAsync(DateTime date)
+        => _datasetBuilder != null ? await _datasetBuilder.BuildAsync(date) : null;  // [FASE 7]
 
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
@@ -207,6 +217,11 @@ public sealed class MarketEngine : IDisposable
             _featureEngine.OnMarketEvent  += OnMarketEventDetectado;  // [FASE 6]
             _featureEngine.OnRegimeChange += OnRegimeAlterado;        // [FASE 6]
 
+            _datasetBuilder = new DatasetBuilder(_storageManager!);  // [FASE 7]
+            _datasetTimer   = new DatasetTimer(_datasetBuilder);
+            _datasetTimer.OnDatasetPronto += OnDatasetPronto;
+            _datasetTimer.Iniciar();
+
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
@@ -289,6 +304,16 @@ public sealed class MarketEngine : IDisposable
 
         state = null!;
         return false;
+    }
+
+    // ── Handler de Dataset Builder — Fase 7 ─────────────────────────────
+
+    private void OnDatasetPronto(DatasetStats stats)
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] Dataset pronto: {stats.LabeledSnapshots} snapshots rotulados. "
+            + $"Up: {stats.UpMoves} Down: {stats.DownMoves} Neutral: {stats.Neutral} "
+            + $"AvgReturn1s: {stats.AvgReturn1s:F2} pts");
     }
 
     // ── Handlers de Feature Engine — Fase 6 ──────────────────────────────
@@ -678,6 +703,7 @@ public sealed class MarketEngine : IDisposable
         _storageManager?.Dispose(); // [FASE 3]
         _calendarTimer?.Dispose();  // [FASE 4]
         _snapshotTimer?.Dispose();  // [FASE 5]
+        _datasetTimer?.Dispose();   // [FASE 7]
     }
 }
 
