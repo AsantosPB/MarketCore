@@ -16,6 +16,10 @@ namespace MarketCore.Providers.Nelogica;
 /// (o "último callback" era sobrescrito por callbacks mais recentes antes da narração
 /// chegar ao arquivo de log).
 ///
+/// O parâmetro <c>exchangeTime</c> (UTC) carrega o timestamp do negócio na bolsa —
+/// usado pelo agregador CASO 1 do PVV para agrupar callbacks que ocorreram no
+/// MESMO milissegundo exato. Pode ser null quando a DLL não enviou o horário.
+///
 /// Zero overhead quando ninguém está escutando (delegate == null).
 /// </summary>
 public static class PregaoVivaVozHook
@@ -23,13 +27,25 @@ public static class PregaoVivaVozHook
     /// <summary>
     /// Trade real: ticker, nome do agressor comprador, nome do agressor vendedor,
     /// qtd, tradeType (1 = compra-agressor, 2 = venda-agressor), callbackInfo
-    /// (string pré-formatada com bolsa=HH:mm:ss.fff e demais campos).
+    /// (string pré-formatada com bolsa=HH:mm:ss.fff e demais campos), exchangeTime
+    /// (UTC, timestamp do negócio na bolsa — usado pelo agregador de bloco).
     /// </summary>
-    public static System.Action<string, string, string, int, int, string>? OnTradeReceived;
+    public static System.Action<string, string, string, int, int, string, System.DateTime?>? OnTradeReceived;
 
     /// <summary>
     /// Book real: ticker, nome da corretora, lado ("compra"|"venda"), nível (1..N),
-    /// qtd, callbackInfo (string pré-formatada com bolsa=HH:mm:ss.fff e demais campos).
+    /// qtd, callbackInfo (string pré-formatada com bolsa=HH:mm:ss.fff e demais campos),
+    /// exchangeTime (UTC, timestamp do evento na bolsa).
     /// </summary>
-    public static System.Action<string, string, string, int, int, string>? OnBookUpdate;
+    public static System.Action<string, string, string, int, int, string, System.DateTime?>? OnBookUpdate;
+
+    /// <summary>
+    /// Resolve o nome de uma corretora a partir do ID numérico do agente.
+    /// Delegate registrado pelo <c>ProfitDLLProvider</c> no seu construtor;
+    /// chamado exclusivamente pelo worker do <c>ProfitDLLBridge</c>
+    /// (thread separada da DLL, portanto SEGURO para chamar GetAgentName).
+    /// Retorna o nome curto (ex.: "GOLDMAN", "JPM", "XP") ou o próprio ID
+    /// numérico como string quando a DLL ainda não resolveu.
+    /// </summary>
+    public static System.Func<int, string>? ResolveAgentName;
 }

@@ -500,6 +500,11 @@ namespace MarketCore.WPF
             }
 
             _profitBookProvider = provider as ProfitDLLProvider;
+
+            // Health Monitor: conecta o provider ao HUD de 4 indicadores da barra superior.
+            // Idempotente — chamar 2x ao trocar de provider não duplica handlers.
+            AttachHealthMonitor(_profitBookProvider);
+
             _engine = new MarketEngine(provider);
 
             var uiDetect = FlowsenseUiSettings.Load();
@@ -1748,6 +1753,254 @@ namespace MarketCore.WPF
             TbDataLatency.Text = line;
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        //  HEALTH MONITOR — 4 indicadores da barra superior
+        //  (Threads DLL · Feed Market Data · Latência DLL+Motor · Status de Atualização)
+        //  Timer de 500 ms cobre 1/3/4. Feed é event-driven (OnFeedStateChanged).
+        // ══════════════════════════════════════════════════════════════════════
+
+        private DispatcherTimer? _healthMonitorTimer;
+        private ProfitDLLProvider? _healthMonitorAttachedProvider;
+        private DateTime _healthMonitorSessionStartUtc = DateTime.MinValue;
+        private double _healthMonitorPeakDllToMotorMs = 0;
+        private int _healthMonitorLastFeedResult = -1;   // ainda desconectado
+        private ProfitDLLProvider.DllHealthStatus _healthMonitorLastHealth =
+            ProfitDLLProvider.DllHealthStatus.Unknown;
+        private double _healthMonitorLastDllToMotorMs = double.NaN;
+
+        private static readonly Brush BrushDotGreen  = new SolidColorBrush(Color.FromRgb(0x00, 0xC8, 0x53));
+        private static readonly Brush BrushDotYellow = new SolidColorBrush(Color.FromRgb(0xFF, 0xD6, 0x00));
+        private static readonly Brush BrushDotRed    = new SolidColorBrush(Color.FromRgb(0xFF, 0x17, 0x44));
+        private static readonly Brush BrushDotGray   = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66));
+
+        private void AttachHealthMonitor(ProfitDLLProvider? provider)
+        {
+            // Desliga handlers do provider antigo (se houver) — evita leak ao trocar de provider.
+            if (_healthMonitorAttachedProvider != null)
+            {
+                _healthMonitorAttachedProvider.OnHealthChanged -= HealthMonitor_OnHealthChanged;
+                _healthMonitorAttachedProvider.OnFeedStateChanged -= HealthMonitor_OnFeedStateChanged;
+            }
+            _healthMonitorAttachedProvider = provider;
+            if (provider != null)
+            {
+                provider.OnHealthChanged += HealthMonitor_OnHealthChanged;
+                provider.OnFeedStateChanged += HealthMonitor_OnFeedStateChanged;
+            }
+
+            _healthMonitorSessionStartUtc = DateTime.UtcNow;
+            _healthMonitorPeakDllToMotorMs = 0;
+
+            if (_healthMonitorTimer == null)
+            {
+                _healthMonitorTimer = new DispatcherTimer(DispatcherPriority.Background)
+                {
+                    Interval = TimeSpan.FromMilliseconds(500)
+                };
+                _healthMonitorTimer.Tick += HealthMonitorTimer_Tick;
+            }
+            if (!_healthMonitorTimer.IsEnabled) _healthMonitorTimer.Start();
+
+            // Primeira renderização síncrona para não deixar cards com "--" até o primeiro tick.
+            RefreshHealthMonitor();
+        }
+
+        private void HealthMonitor_OnHealthChanged(object? sender, ProfitDLLProvider.DllHealthStatus status)
+        {
+            // Callback vem da thread da DLL — marshal para UI.
+            _healthMonitorLastHealth = status;
+            try { Dispatcher.BeginInvoke(new Action(RefreshHealthMonitor)); } catch { /* shutdown */ }
+        }
+
+        private void HealthMonitor_OnFeedStateChanged(object? sender, int result)
+        {
+            _healthMonitorLastFeedResult = result;
+            try { Dispatcher.BeginInvoke(new Action(RefreshHealthMonitor)); } catch { /* shutdown */ }
+        }
+
+        private void HealthMonitorTimer_Tick(object? sender, EventArgs e)
+        {
+            try { RefreshHealthMonitor(); }
+            catch (Exception ex) { App.AppendCrashLog(nameof(HealthMonitorTimer_Tick), ex); }
+        }
+
+        private void RefreshHealthMonitor()
+        {
+            var provider = _healthMonitorAttachedProvider;
+
+            // ── 1) Threads DLL ──
+            // Confirma via polling do GetHealthStatus (barato: 1 P/Invoke). O callback
+            // também atualiza _healthMonitorLastHealth quando dispara — usamos o valor
+            // mais fresco entre os dois.
+            ProfitDLLProvider.DllHealthStatus threadStatus =
+                provider != null ? provider.QueryHealthStatus() : ProfitDLLProvider.DllHealthStatus.Unknown;
+            if (threadStatus == ProfitDLLProvider.DllHealthStatus.Unknown &&
+                _healthMonitorLastHealth != ProfitDLLProvider.DllHealthStatus.Unknown)
+            {
+                threadStatus = _healthMonitorLastHealth;
+            }
+
+            switch (threadStatus)
+            {
+                case ProfitDLLProvider.DllHealthStatus.Responsive:
+                    HmDotThreads.Fill = BrushDotGreen; HmTxtThreads.Text = "THR OK"; break;
+                case ProfitDLLProvider.DllHealthStatus.Frozen:
+                    HmDotThreads.Fill = BrushDotRed;   HmTxtThreads.Text = "THR FROZEN"; break;
+                default:
+                    HmDotThreads.Fill = BrushDotGray;  HmTxtThreads.Text = "THR --"; break;
+            }
+
+            // ── 2) Feed de Market Data (0/4/5/6, -1 = ainda desconectado) ──
+            switch (_healthMonitorLastFeedResult)
+            {
+                case 4:
+                    HmDotFeed.Fill = BrushDotGreen;  HmTxtFeed.Text = "FEED OK"; break;
+                case 5:
+                    HmDotFeed.Fill = BrushDotYellow; HmTxtFeed.Text = "FEED LENTO"; break;
+                case 6:
+                    HmDotFeed.Fill = BrushDotRed;    HmTxtFeed.Text = "FEED PARADO"; break;
+                case 0:
+                    HmDotFeed.Fill = BrushDotGray;   HmTxtFeed.Text = "FEED --"; break;
+                default:
+                    HmDotFeed.Fill = BrushDotGray;   HmTxtFeed.Text = "FEED --"; break;
+            }
+
+            // ── 3) Latência DLL+Motor ──
+            // Mesmo valor calculado por RefreshTradeLatencyHud (formato do rodapé "DLL+motor Xms").
+            DateTime? ex, rx;
+            lock (_tradeLagSync)
+            {
+                ex = _tradeExchangeUtcSnap;
+                rx = _tradeReceivedUtcSnap;
+            }
+
+            if (ex.HasValue && rx.HasValue)
+            {
+                double dllToMotorMs = Math.Max(0, (rx.Value - ex.Value).TotalMilliseconds);
+                _healthMonitorLastDllToMotorMs = dllToMotorMs;
+                if (dllToMotorMs > _healthMonitorPeakDllToMotorMs)
+                    _healthMonitorPeakDllToMotorMs = dllToMotorMs;
+
+                if (dllToMotorMs < 200)
+                {
+                    HmDotLatency.Fill = BrushDotGreen;
+                    HmTxtLatency.Text = $"DLL {dllToMotorMs:F0}ms";
+                }
+                else if (dllToMotorMs < 1000)
+                {
+                    HmDotLatency.Fill = BrushDotYellow;
+                    HmTxtLatency.Text = $"DLL {dllToMotorMs:F0}ms";
+                }
+                else
+                {
+                    HmDotLatency.Fill = BrushDotRed;
+                    HmTxtLatency.Text = $"DLL {(dllToMotorMs / 1000.0):F1}s";
+                }
+            }
+            else
+            {
+                HmDotLatency.Fill = BrushDotGray;
+                HmTxtLatency.Text = "DLL --";
+            }
+
+            // ── 4) Status de Atualização ──
+            // Compara UltimoTradeRecebidoUtc (provider) com relógio local.
+            DateTime lastTradeUtc = provider?.UltimoTradeRecebidoUtc ?? DateTime.MinValue;
+            if (lastTradeUtc == DateTime.MinValue)
+            {
+                HmDotUpdate.Fill = BrushDotGray;
+                HmTxtUpdate.Text = "Sem dados";
+            }
+            else
+            {
+                double ageMs = Math.Max(0, (DateTime.UtcNow - lastTradeUtc).TotalMilliseconds);
+                if (ageMs < 200)
+                {
+                    HmDotUpdate.Fill = BrushDotGreen;
+                    HmTxtUpdate.Text = "Atualizado";
+                }
+                else if (ageMs < 1000)
+                {
+                    HmDotUpdate.Fill = BrushDotYellow;
+                    HmTxtUpdate.Text = $"Delay {(ageMs / 1000.0):F1}s";
+                }
+                else
+                {
+                    HmDotUpdate.Fill = BrushDotRed;
+                    HmTxtUpdate.Text = $"Delay {(ageMs / 1000.0):F1}s";
+                }
+            }
+
+            // Popup só recalcula se estiver aberto — pouparia CPU mas é irrelevante aqui.
+            if (PopupHealthDetails.IsOpen) RefreshHealthMonitorDetails(provider, threadStatus, lastTradeUtc);
+        }
+
+        private void RefreshHealthMonitorDetails(
+            ProfitDLLProvider? provider,
+            ProfitDLLProvider.DllHealthStatus threadStatus,
+            DateTime lastTradeUtc)
+        {
+            HmDetailThreads.Text = threadStatus switch
+            {
+                ProfitDLLProvider.DllHealthStatus.Responsive => "shsResponsive (0) — respondendo",
+                ProfitDLLProvider.DllHealthStatus.Frozen     => "shsFrozen (1) — thread travada",
+                _ => "estado desconhecido (DLL antiga ou sem callback)"
+            };
+
+            HmDetailFeed.Text = _healthMonitorLastFeedResult switch
+            {
+                4 => "MARKET_CONNECTED (4)",
+                5 => "MARKET_PERFORMANCE_WARNING (5) — feed lento",
+                6 => "MARKET_PARTIAL_CONNECTED (6) — feed parcial",
+                0 => "MARKET_DISCONNECTED (0)",
+                _ => "aguardando primeiro TStateCallback…"
+            };
+
+            HmDetailLatency.Text = double.IsNaN(_healthMonitorLastDllToMotorMs)
+                ? "--"
+                : $"{_healthMonitorLastDllToMotorMs:F0} ms (DLL → motor)";
+
+            HmDetailLatencyPeak.Text = _healthMonitorPeakDllToMotorMs > 0
+                ? $"{_healthMonitorPeakDllToMotorMs:F0} ms (nesta sessão)"
+                : "--";
+
+            if (lastTradeUtc == DateTime.MinValue)
+            {
+                HmDetailLastTrade.Text = "nenhum trade recebido ainda";
+            }
+            else
+            {
+                DateTime lastLocal = lastTradeUtc.ToLocalTime();
+                double ageS = Math.Max(0, (DateTime.UtcNow - lastTradeUtc).TotalSeconds);
+                HmDetailLastTrade.Text = $"{lastLocal:HH:mm:ss.fff} ({ageS:F1}s atrás)";
+            }
+
+            if (_healthMonitorSessionStartUtc == DateTime.MinValue)
+            {
+                HmDetailUptime.Text = "--";
+            }
+            else
+            {
+                TimeSpan up = DateTime.UtcNow - _healthMonitorSessionStartUtc;
+                HmDetailUptime.Text = up.TotalHours >= 1
+                    ? $"{(int)up.TotalHours}h {up.Minutes:D2}m {up.Seconds:D2}s"
+                    : $"{up.Minutes:D2}m {up.Seconds:D2}s";
+            }
+        }
+
+        private void HealthMonitorPanel_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            // Toggle do popup.
+            PopupHealthDetails.IsOpen = !PopupHealthDetails.IsOpen;
+            if (PopupHealthDetails.IsOpen)
+            {
+                var provider = _healthMonitorAttachedProvider;
+                var threadStatus = provider != null ? provider.QueryHealthStatus() : _healthMonitorLastHealth;
+                var lastTradeUtc = provider?.UltimoTradeRecebidoUtc ?? DateTime.MinValue;
+                RefreshHealthMonitorDetails(provider, threadStatus, lastTradeUtc);
+            }
+        }
+
         private void UiPulseTickCore()
         {
             // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
@@ -2023,6 +2276,9 @@ namespace MarketCore.WPF
         {
             lock (_detectorsByPrice)
             {
+                // Cap: ignora novos detectors quando já há 500 preços monitorados.
+                // ClearPriceDetectorAfter limpará as entradas antigas em 30s.
+                if (_detectorsByPrice.Count >= 500) return;
                 if (!_detectorsByPrice.ContainsKey(priceKey)) _detectorsByPrice[priceKey] = 0;
                 _detectorsByPrice[priceKey] |= (1 << bit);
             }

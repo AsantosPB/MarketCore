@@ -19,6 +19,16 @@ namespace MarketCore.Providers.Nelogica
         private const string DLL_PATH      = @"ProfitDLL64.dll";
         private const string EXCHANGE_BMF  = "F";
         private const string EXCHANGE_BVMF = "B";
+
+        /// <summary>
+        /// TTL de entrada para trades: eventos com exchangeTime mais antigo que este valor
+        /// são descartados imediatamente em <see cref="OnTradeCallbackCore"/> antes de entrar
+        /// na fila. Protege contra replay histórico pós-PARTIAL_CONNECTED (callbacks com
+        /// timestamps de 20–30s atrás que encheriam a fila com dados obsoletos).
+        /// Eventos sem exchangeTime (null) passam normalmente — fallback seguro.
+        /// </summary>
+        private static readonly TimeSpan TtlEntrada = TimeSpan.FromSeconds(15);
+
         #endregion
 
         #region Structs e Delegates da Nelogica
@@ -56,6 +66,11 @@ namespace MarketCore.Providers.Nelogica
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private delegate void TStateCallback(int nResult, int result);
+
+        // ProfitDLL 4.0.0.41+ — callback disparado quando o estado das threads da DLL
+        // muda entre "responsive" (0) e "frozen" (1). Novo em 4.0.0.41.
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate void THealthCallback(int nHealthStatus);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode)]
         private delegate void TTradeCallback(
@@ -179,20 +194,57 @@ namespace MarketCore.Providers.Nelogica
             in TConnectorAssetIdentifier assetID,
             byte side, int position, ref TConnectorPriceGroup priceGroup);
 
+        // ProfitDLL 4.0.0.41 (conforme Exemplo C# oficial da Nelogica, arquivo
+        // ProfitFunctions.cs linhas 310 e 313):
+        //   int GetAgentNameLength(int a_AgentID, AgentNameFlags a_nShortName)
+        //   int GetAgentName(int a_AgentLen, int a_AgentID, StringBuilder AgentName, AgentNameFlags a_nShortName)
+        //
+        // AgentNameFlags é enum : uint  { CM_NONE = 0, CM_IS_SHORT_NAME = 1 }.
+        // Passamos uint diretamente — o CLR marshalla igual ao enum. No stdcall
+        // int/uint têm o mesmo layout (4 bytes), então o parâmetro é ABI-compat
+        // com a assinatura antiga (int nShortName). Trocamos para uint apenas
+        // para casar exatamente com o exemplo oficial.
+        //
+        // MUDANÇA DE COMPORTAMENTO 4.0.0.36+ (changelog Nelogica):
+        // - GetAgentNameLength retorna o TAMANHO do buffer necessário (>0 sucesso; <0 erro).
+        // - GetAgentName retorna o TAMANHO realmente COPIADO (>0 sucesso; <0 erro).
+        // Antes (<= 4.0.0.35) GetAgentName retornava NL_OK (0) para sucesso.
+        // GetBrokerNameSafe e ResolveAgentNameForPvv foram atualizados para
+        // interpretar o novo retorno corretamente.
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
-        private static extern int GetAgentNameLength(int nAgentID, int nShortName);
+        private static extern int GetAgentNameLength(int a_AgentID, uint a_nShortName);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
         private static extern int GetAgentName(
-            int nCount, int nAgentID,
-            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pwcAgent,
-            int nShortName);
+            int a_AgentLen, int a_AgentID,
+            [MarshalAs(UnmanagedType.LPWStr)] StringBuilder AgentName,
+            uint a_nShortName);
 
         [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall, EntryPoint = "GetAgentName")]
         private static extern int GetAgentNamePtr(
-            int nCount, int nAgentID,
+            int a_AgentLen, int a_AgentID,
             IntPtr pwcAgent,
-            int nShortName);
+            uint a_nShortName);
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  ProfitDLL 4.0.0.41 — HEALTH MONITORING
+        // ══════════════════════════════════════════════════════════════════════
+        //  Manual da Nelogica:
+        //    int GetHealthStatus(ref int nState)
+        //      - Retorno: NL_OK (0) em sucesso; NL_NOT_INITIALIZED / outro erro caso contrário.
+        //      - nState (saída): 0 = shsResponsive (threads OK) · 1 = shsFrozen (thread travada)
+        //    int SetHealthCallback(THealthCallback callback)
+        //      - Registra callback disparado APENAS quando o estado muda.
+        //      - Se a DLL nunca sair de Responsive, o callback nunca dispara — por isso
+        //        o MainWindow também precisa fazer polling ativo via GetHealthStatus.
+        //  Se a DLL instalada for antiga (< 4.0.0.41), essas duas funções não existirão
+        //  no export table — o P/Invoke lança EntryPointNotFoundException na primeira
+        //  chamada, o que é tratado em QueryHealthStatus/TryRegisterHealthCallback.
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int GetHealthStatus(ref int nState);
+
+        [DllImport(DLL_PATH, CallingConvention = CallingConvention.StdCall)]
+        private static extern int SetHealthCallback(THealthCallback callback);
 
         #endregion
 
@@ -528,7 +580,10 @@ namespace MarketCore.Providers.Nelogica
         private readonly List<string> _subscribedTickers = new();
         private volatile string? _primaryBookTicker;
 
-        // Filas lock-free (sem Count máximo imposto — crescem com o ritmo da DLL até a memória aguentar).
+        // _tradeQueue: fila lock-free. Protegida por TTL na entrada (OnTradeCallbackCore):
+        // eventos com exchangeTime > 15s são descartados antes de chegar aqui — replay
+        // histórico pós-PARTIAL_CONNECTED nunca enche a fila nem chega a subsistemas.
+        // _tradeSignal mantido para wake-up sub-ms do TradeProcessingLoop (pattern síncrono preservado).
         private readonly ConcurrentQueue<RawTrade> _tradeQueue = new();
         private readonly ManualResetEventSlim _tradeSignal = new(false);
         private readonly ConcurrentQueue<BookWorkItem> _bookQueue  = new();
@@ -556,6 +611,7 @@ namespace MarketCore.Providers.Nelogica
 
         // GC protection dos delegates
         private TStateCallback?               _stateCallback;
+        private THealthCallback?              _healthCallback;
         private TTradeCallback?               _tradeCallback;
         private TNewDailyCallback?            _dailyCallback;
         private TPriceBookCallback?           _priceBookCallback;
@@ -635,6 +691,12 @@ namespace MarketCore.Providers.Nelogica
         {
             _logger = new ConnectionLogger();
             _logger.Log($"{ProviderName} inicializado");
+
+            // Registra o resolver do PVV. O worker do Bridge (thread separada
+            // da DLL) invoca este delegate — chamada SEGURA para GetAgentName.
+            // O bloco do pvvHook no TradeProcessingLoop NÃO deve chamar isso
+            // (roda na ConnectorThread da DLL — reentrância proibida).
+            PregaoVivaVozHook.ResolveAgentName = ResolveAgentNameForPvv;
 
             string raizMarketCore = System.IO.Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -902,6 +964,18 @@ namespace MarketCore.Providers.Nelogica
                         //
                         // Bridge espera: 1 = agressor comprou; 2 = agressor vendeu.
                         var pvvHook = PregaoVivaVozHook.OnTradeReceived;
+
+                        // OBS: os PvvDebugFileLog.Write que existiam AQUI foram REMOVIDOS.
+                        // Motivo (ver relatório de diagnóstico): PvvDebugFileLog usa
+                        // lock(Gate) + File.AppendAllText síncrono. Rodando na
+                        // TradeProcessingLoop, qualquer I/O bloqueado (antivírus,
+                        // OneDrive segurando o AppData, disco lento) congelava a
+                        // thread inteira → parava também a fita de trades do
+                        // MarketCore principal. Diagnóstico agora fica só nas threads
+                        // seguras: Bridge worker e Engine worker.
+                        // Contador _pvvHookLogCount ainda existe (compat), sem uso aqui.
+                        System.Threading.Interlocked.Increment(ref _pvvHookLogCount);
+
                         if (pvvHook != null)
                         {
                             int pvvTradeType = raw.TradeType == 2 ? 1   // Nelogica 2 = compra-agr → PVV 1
@@ -909,16 +983,18 @@ namespace MarketCore.Providers.Nelogica
                                              : 0;
                             if (pvvTradeType != 0)
                             {
-                                string buyName  = FormatBookBroker(raw.BuyAgent);
-                                string sellName = FormatBookBroker(raw.SellAgent);
-                                // callbackInfo já formatada, viaja pareada com o evento até o log.
-                                // Se a DLL não enviou horário da bolsa (bHasDate=false), mostra "--:--:--.---".
+                                // Passa apenas o agentId como string numérica — o worker do Bridge
+                                // (thread segura) resolve o nome real via PregaoVivaVozHook.ResolveAgentName.
+                                string buyName  = raw.BuyAgent.ToString();
+                                string sellName = raw.SellAgent.ToString();
+
                                 string bolsa = raw.ExchangeUtc.HasValue
                                     ? raw.ExchangeUtc.Value.ToLocalTime().ToString("HH:mm:ss.fff")
                                     : "--:--:--.---";
                                 string callbackInfo =
-                                    $"TRADE bolsa={bolsa} ticker={raw.Ticker} buy={buyName} sell={sellName} qtd={raw.Qtd} tradeType={raw.TradeType}";
-                                pvvHook(raw.Ticker ?? string.Empty, buyName, sellName, raw.Qtd, pvvTradeType, callbackInfo);
+                                    $"TRADE bolsa={bolsa} ticker={raw.Ticker} buyId={buyName} sellId={sellName} qtd={raw.Qtd} tradeType={raw.TradeType}";
+
+                                pvvHook(raw.Ticker ?? string.Empty, buyName, sellName, raw.Qtd, pvvTradeType, callbackInfo, raw.ExchangeUtc);
                             }
                         }
                     }
@@ -972,7 +1048,7 @@ namespace MarketCore.Providers.Nelogica
                     string callbackInfo =
                         $"BOOK  bolsa={bolsa} ticker={c.Ticker} agent={shortLabel} lado={lado} nivel={c.Rank} qtd={c.Volume}";
 
-                    pvvHook(c.Ticker, shortLabel, lado, c.Rank, c.Volume, callbackInfo);
+                    pvvHook(c.Ticker, shortLabel, lado, c.Rank, c.Volume, callbackInfo, c.ExchangeTime);
                 }
                 catch (Exception ex)
                 {
@@ -1094,7 +1170,14 @@ namespace MarketCore.Providers.Nelogica
                 {
                     string label = ShortBrokerLabel(cached);
                     if (offerId > 0 && label.Length > 0)
+                    {
                         _offerBrokerCache[offerId] = label;
+                        if (_offerBrokerCache.Count > 10_000)
+                        {
+                            _offerBrokerCache.Clear();
+                            _brokerLastResolveAttemptTicks.Clear();
+                        }
+                    }
                     return label;
                 }
 
@@ -1120,46 +1203,175 @@ namespace MarketCore.Providers.Nelogica
             return ShortBrokerLabel(GetBrokerNameSafe(agentId));
         }
 
-        private string GetBrokerNameSafe(int agentId)
+        // ══════════════════════════════════════════════════════════════════════
+        //  RESOLUÇÃO DE AGENTE PARA O PREGÃO VIVA VOZ (com retry rate-limited)
+        // ══════════════════════════════════════════════════════════════════════
+        //  Problema histórico: quando a DLL ainda não carregou o catálogo de
+        //  agentes (primeiros segundos após conexão, ou catálogo parcial), o
+        //  GetAgentName retorna string vazia. O GetBrokerNameSafe original
+        //  cacheava o fallback numérico ("88", "3", "85") PERMANENTEMENTE →
+        //  todos os callbacks subsequentes daquele agente vinham como número
+        //  para o PVV, que não achava match no players_catalogo.json.
+        //
+        //  Solução: cache com retry. Se o cache tem nome REAL, devolve.
+        //  Se tem só o fallback numérico, tenta a DLL de novo (rate-limited
+        //  a 1 tentativa/2s por agente, para não sobrecarregar). Tenta as
+        //  duas variantes de GetAgentName: nShortName=0 (nome completo) e
+        //  nShortName=1 (nome curto) — algumas versões da DLL só respondem
+        //  em uma delas.
+
+        private readonly ConcurrentDictionary<int, long> _brokerLastResolveAttemptTicks = new();
+        private const long BrokerRetryIntervalTicks = 20_000_000; // 2 segundos
+
+        /// <summary>
+        /// Resolve o nome do agente para o Pregão Viva Voz. Se o cache já tem um
+        /// nome real (não é apenas o ID numérico), devolve imediatamente. Caso
+        /// contrário, tenta consultar a DLL (rate-limitado a 1 tentativa/2s por
+        /// agente). Tenta nome completo (<c>nShortName=0</c>) e curto
+        /// (<c>nShortName=1</c>) para cobrir diferenças entre versões da DLL.
+        /// </summary>
+        public string ResolveAgentNameForPvv(int agentId)
         {
             if (agentId <= 0) return string.Empty;
-            if (_brokerCache.TryGetValue(agentId, out var cached)) return cached ?? agentId.ToString();
 
+            string numericFallback = agentId.ToString();
+
+            // Cache tem nome REAL (não apenas o ID numérico)?
+            if (_brokerCache.TryGetValue(agentId, out var cached)
+                && !string.IsNullOrEmpty(cached)
+                && !cached.Equals(numericFallback, StringComparison.Ordinal))
+            {
+                return ShortBrokerLabel(cached);
+            }
+
+            // Rate-limit: 1 tentativa a cada 2s por agente.
+            long now = DateTime.UtcNow.Ticks;
+            long lastAttempt = _brokerLastResolveAttemptTicks.TryGetValue(agentId, out var t) ? t : 0L;
+            if (lastAttempt > 0 && (now - lastAttempt) < BrokerRetryIntervalTicks)
+            {
+                // Muito cedo — devolve o que temos (fallback numérico).
+                return string.IsNullOrEmpty(cached) ? numericFallback : ShortBrokerLabel(cached);
+            }
+            _brokerLastResolveAttemptTicks[agentId] = now;
+
+            // Retry: chama a DLL usando o novo contrato 4.0.0.36+ (padrão do exemplo
+            // oficial da Nelogica). Tenta nome completo (CM_NONE=0), depois curto
+            // (CM_IS_SHORT_NAME=1) — algumas corretoras só tem uma variante.
             try
             {
-                int bufSize = 256;
-                IntPtr buf = Marshal.AllocHGlobal(bufSize * 2);
-                try
+                string? name = TryGetAgentName(agentId, 0u);      // CM_NONE
+                if (string.IsNullOrWhiteSpace(name))
+                    name = TryGetAgentName(agentId, 1u);           // CM_IS_SHORT_NAME
+
+                if (!string.IsNullOrWhiteSpace(name)
+                    && !name.Equals(numericFallback, StringComparison.Ordinal))
                 {
-                    int result = GetAgentNamePtr(bufSize, agentId, buf, 0);
-                    string name;
-                    if (result == 0)
-                    {
-                        name = Marshal.PtrToStringUni(buf)?.Trim() ?? agentId.ToString();
-                        if (string.IsNullOrWhiteSpace(name)) name = agentId.ToString();
-                    }
-                    else
-                    {
-                        name = agentId.ToString();
-                    }
                     _brokerCache[agentId] = name;
-                    // Log único por corretora nova (não por negócio) — permite conferir no log qual nome
-                    // legal completo a ProfitDLL devolveu para cada agentId e qual token curto o
-                    // ShortBrokerLabel gerou a partir dele. Essencial para diagnosticar corretoras cujo nome
-                    // legal não se reduz do jeito esperado (ex.: "J.P. MORGAN..." pode virar só "J" se o nome
-                    // tiver um ponto logo após a primeira letra, nunca batendo com o token "JPM" da Leitura de Fluxo).
-                    _logger.Log($"[BrokerResolve] agentId={agentId} rawName=\"{name}\" shortToken=\"{ShortBrokerLabel(name)}\"");
-                    return name;
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(buf);
+                    _logger.Log($"[BrokerResolve][PVV-retry] agentId={agentId} rawName=\"{name}\" shortToken=\"{ShortBrokerLabel(name)}\"");
+                    MarketCore.Providers.Nelogica.PvvDebugFileLog.Write(
+                        $"[PROVIDER-RESOLVE] agentId={agentId} → \"{name}\" (shortToken=\"{ShortBrokerLabel(name)}\") — RESOLVIDO");
+                    return ShortBrokerLabel(name);
                 }
             }
             catch
             {
-                _brokerCache[agentId] = agentId.ToString();
-                return agentId.ToString();
+                /* devolve fallback abaixo */
+            }
+
+            // DLL ainda não sabe o nome. NÃO cacheia (permite retry na próxima janela
+            // do _brokerLastResolveAttemptTicks). Devolve o número.
+            MarketCore.Providers.Nelogica.PvvDebugFileLog.Write(
+                $"[PROVIDER-RESOLVE] agentId={agentId} → DLL não resolveu (fallback \"{numericFallback}\"), retry em 2s");
+            return numericFallback;
+        }
+
+        /// <summary>
+        /// Chama GetAgentNameLength + GetAgentName conforme padrão oficial 4.0.0.41
+        /// (Exemplo C# Nelogica, Program.cs::DoGetAgentName). Retorna null se a DLL
+        /// não resolver o agente (length<=0 ou copied<=0).
+        /// </summary>
+        private static string? TryGetAgentName(int agentId, uint nShortName)
+        {
+            int neededLen = GetAgentNameLength(agentId, nShortName);
+            if (neededLen <= 0) return null;
+
+            var sb = new StringBuilder(neededLen + 1);
+            int copied = GetAgentName(neededLen + 1, agentId, sb, nShortName);
+            if (copied <= 0) return null;
+
+            string name = sb.ToString(0, Math.Min(copied, sb.Length)).Trim();
+            return string.IsNullOrEmpty(name) ? null : name;
+        }
+
+        // ProfitDLL 4.0.0.36+ mudou a semântica de GetAgentName:
+        //   ANTES (<= 4.0.0.35):  retornava NL_OK (0) em sucesso, buffer com string null-terminated
+        //   AGORA (4.0.0.36+):    retorna o TAMANHO REALMENTE COPIADO (>0 = sucesso; <0 = erro)
+        //
+        // Padrão oficial (Exemplo C# Nelogica, Program.cs::DoGetAgentName):
+        //   int len = GetAgentNameLength(agentId, flags);   // >0 = ok
+        //   var sb = new StringBuilder(len);
+        //   int copied = GetAgentName(len, agentId, sb, flags);   // >0 = ok, copiou N chars
+        //   string name = sb.ToString(0, copied);
+        //
+        // POLÍTICA DE CACHE (pipeline principal — fita, book, OnTrade?.Invoke):
+        //
+        // Cacheamos o fallback numérico (agentId.ToString()) quando a DLL não
+        // resolve. Isso impede retry storm — DrainBrokerResolveQueue verifica
+        // ContainsKey e nunca mais chama a DLL para aquele agente, mantendo o
+        // TradeProcessingLoop responsivo. Custo: pipeline principal fica com
+        // "88" para agents que a DLL não conhece.
+        //
+        // A rota do Pregão Viva Voz é INDEPENDENTE: ResolveAgentNameForPvv
+        // detecta o fallback numérico no cache (cached.Equals(numericFallback))
+        // e retenta a DLL usando seu próprio rate-limit (_brokerLastResolveAttemptTicks,
+        // 2s por agente). Se o catálogo carregar depois, o PVV atualiza o cache
+        // com o nome real e o pipeline principal passa a usar o nome também.
+        private string GetBrokerNameSafe(int agentId)
+        {
+            if (agentId <= 0) return string.Empty;
+            if (_brokerCache.TryGetValue(agentId, out var cached) && !string.IsNullOrEmpty(cached))
+                return cached;
+
+            string numericFallback = agentId.ToString();
+
+            try
+            {
+                // 1) Descobre o tamanho necessário via GetAgentNameLength.
+                int neededLen = GetAgentNameLength(agentId, 0u);   // 0 = CM_NONE (nome completo)
+                if (neededLen <= 0)
+                {
+                    // DLL não sabe o agente ou catálogo ainda não carregou. CACHEIA o
+                    // fallback numérico para evitar retry storm no TradeProcessingLoop.
+                    // A rota do PVV (ResolveAgentNameForPvv) retenta com rate-limit próprio.
+                    _brokerCache[agentId] = numericFallback;
+                    return numericFallback;
+                }
+
+                // 2) Aloca buffer exato + 1 (margem para eventual null-terminator).
+                var sb = new StringBuilder(neededLen + 1);
+                int copied = GetAgentName(neededLen + 1, agentId, sb, 0u);
+                if (copied <= 0)
+                {
+                    _brokerCache[agentId] = numericFallback;
+                    return numericFallback;
+                }
+
+                string name = sb.ToString(0, Math.Min(copied, sb.Length)).Trim();
+                if (string.IsNullOrEmpty(name))
+                {
+                    _brokerCache[agentId] = numericFallback;
+                    return numericFallback;
+                }
+
+                _brokerCache[agentId] = name;
+                _logger.Log($"[BrokerResolve] agentId={agentId} rawName=\"{name}\" shortToken=\"{ShortBrokerLabel(name)}\" (len={copied})");
+                return name;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"[BrokerResolve] agentId={agentId} EXCEÇÃO: {ex.Message}");
+                _brokerCache[agentId] = numericFallback;
+                return numericFallback;
             }
         }
 
@@ -1377,6 +1589,150 @@ namespace MarketCore.Providers.Nelogica
             }
         }
 
+        // ══════════════════════════════════════════════════════════════════════
+        //  HEALTH MONITOR (ProfitDLL 4.0.0.41+) — API pública para o MainWindow
+        // ══════════════════════════════════════════════════════════════════════
+
+        /// <summary>Estados de thread da DLL (retorno de GetHealthStatus + payload de SetHealthCallback).</summary>
+        public enum DllHealthStatus
+        {
+            /// <summary>Threads da DLL respondendo normalmente (shsResponsive = 0).</summary>
+            Responsive = 0,
+            /// <summary>Ao menos uma thread da DLL travou (shsFrozen = 1).</summary>
+            Frozen = 1,
+            /// <summary>Estado desconhecido (DLL antiga sem a função, ou erro).</summary>
+            Unknown = -1
+        }
+
+        private long _ultimoTradeRecebidoUtcTicks;
+
+        // [PVV-DEBUG] Contador para rate-limit do log do pvvHook (não bloqueia
+        // o fluxo — apenas serve para o Anderson conferir se o hook é invocado).
+        private static long _pvvHookLogCount;
+        private volatile int _lastHealthStatus = (int)DllHealthStatus.Unknown;
+        private volatile bool _healthCallbackRegistered = false;
+
+        /// <summary>
+        /// Timestamp UTC do último trade recebido no callback da DLL.
+        /// Consumido pelo indicador "Status de Atualização" do MainWindow para
+        /// calcular delay vs relógio local. Retorna <see cref="DateTime.MinValue"/>
+        /// enquanto nenhum trade chegou nesta sessão.
+        /// </summary>
+        public DateTime UltimoTradeRecebidoUtc
+        {
+            get
+            {
+                long t = Interlocked.Read(ref _ultimoTradeRecebidoUtcTicks);
+                return t <= 0 ? DateTime.MinValue : new DateTime(t, DateTimeKind.Utc);
+            }
+        }
+
+        /// <summary>
+        /// Estado corrente das threads da DLL. Consulta em tempo real via
+        /// GetHealthStatus (polling ativo — necessário porque o callback só
+        /// dispara em MUDANÇA de estado; se a DLL iniciou já em Responsive
+        /// e nunca travou, o callback nunca fira).
+        ///
+        /// Contrato do manual (4.0.0.41):
+        ///   int GetHealthStatus(ref int nState)
+        ///     retorno: 0 = NL_OK (nState válido); outro = erro (ignorar nState)
+        ///     nState:  0 = shsResponsive; 1 = shsFrozen
+        ///
+        /// Se a DLL for anterior à 4.0.0.41, retorna Unknown (EntryPointNotFoundException).
+        /// Se a DLL não estiver inicializada ainda, retorna Unknown (rc != 0).
+        /// </summary>
+        public DllHealthStatus QueryHealthStatus()
+        {
+            try
+            {
+                int state = 0;
+                int rc = GetHealthStatus(ref state);
+                if (rc != 0)
+                {
+                    // NL_NOT_INITIALIZED ou outro erro — indicador fica "--".
+                    return DllHealthStatus.Unknown;
+                }
+                _lastHealthStatus = state;
+                return state == 0 ? DllHealthStatus.Responsive
+                     : state == 1 ? DllHealthStatus.Frozen
+                     : DllHealthStatus.Unknown;
+            }
+            catch (EntryPointNotFoundException)
+            {
+                // DLL antiga (< 4.0.0.41): função não existe no export table.
+                return DllHealthStatus.Unknown;
+            }
+            catch
+            {
+                return DllHealthStatus.Unknown;
+            }
+        }
+
+        /// <summary>
+        /// Disparado quando a DLL notifica mudança de estado das threads
+        /// (shsResponsive ↔ shsFrozen). Handler roda na thread da DLL — o
+        /// consumidor (MainWindow) deve marshallar para a UI via Dispatcher.
+        /// </summary>
+        public event EventHandler<DllHealthStatus>? OnHealthChanged;
+
+        /// <summary>
+        /// Disparado a cada TStateCallback com <c>nConnStateType == 2</c>.
+        /// Payload é o <c>result</c> bruto: 0=desconectado, 4=conectado,
+        /// 5=PERFORMANCE_WARNING (4.0.0.41+), 6=PARTIAL_CONNECTED (4.0.0.41+).
+        /// </summary>
+        public event EventHandler<int>? OnFeedStateChanged;
+
+        /// <summary>
+        /// Registra o SetHealthCallback na DLL (idempotente). Chamado após o
+        /// login bem-sucedido. Se a DLL for antiga, apenas loga e segue —
+        /// o MainWindow ainda pode usar QueryHealthStatus() via polling.
+        /// </summary>
+        private void TryRegisterHealthCallback()
+        {
+            if (_healthCallbackRegistered) return;
+            try
+            {
+                _healthCallback = OnHealthCallback;    // GC-protection
+                int rc = SetHealthCallback(_healthCallback);
+                _healthCallbackRegistered = true;
+                _logger.Log($"[HealthCallback] Registrado (rc={rc})");
+            }
+            catch (EntryPointNotFoundException)
+            {
+                _logger.Log("[HealthCallback] DLL antiga (< 4.0.0.41), sem SetHealthCallback — usando apenas polling.");
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"[HealthCallback] Falha ao registrar: {ex.Message}");
+            }
+
+            // Poll IMEDIATO após conectar: dispara OnHealthChanged com o estado atual.
+            // Sem isso, se a DLL iniciar em Responsive e nunca travar, o callback
+            // nunca fira → o card THR ficaria "--" para sempre no MainWindow (embora
+            // o timer de 500ms também polle, o HUD ganha um valor inicial imediato).
+            try
+            {
+                var initial = QueryHealthStatus();
+                if (initial != DllHealthStatus.Unknown)
+                {
+                    OnHealthChanged?.Invoke(this, initial);
+                    _logger.Log($"[HealthCallback] Estado inicial polled: {initial}");
+                }
+            }
+            catch { /* best effort */ }
+        }
+
+        private void OnHealthCallback(int nHealthStatus)
+            => SafeDllCallback(nameof(OnHealthCallback), () =>
+            {
+                _lastHealthStatus = nHealthStatus;
+                var status = nHealthStatus == 0 ? DllHealthStatus.Responsive
+                           : nHealthStatus == 1 ? DllHealthStatus.Frozen
+                           : DllHealthStatus.Unknown;
+                _logger.Log($"[HealthCallback] status={status}");
+                try { OnHealthChanged?.Invoke(this, status); } catch { /* handler externo */ }
+            });
+
         private void OnStateCallback(int nConnStateType, int result)
             => SafeDllCallback(nameof(OnStateCallback), () => OnStateCallbackCore(nConnStateType, result));
 
@@ -1402,6 +1758,9 @@ namespace MarketCore.Providers.Nelogica
                     break;
 
                 case 2:
+                    // Notifica o feed HUD do MainWindow (health monitor) sobre qualquer mudança.
+                    try { OnFeedStateChanged?.Invoke(this, result); } catch { /* handler externo */ }
+
                     switch (result)
                     {
                         case 0:
@@ -1425,6 +1784,34 @@ namespace MarketCore.Providers.Nelogica
                                 foreach (var ticker in pendentes)
                                     InternalSubscribe(ticker);
                             }
+                            // Health monitor (4.0.0.41+): registra o callback assim que
+                            // o market estiver conectado. É idempotente — chamar 2x é seguro.
+                            //
+                            // CRÍTICO: NÃO chamar TryRegisterHealthCallback() de forma síncrona
+                            // aqui. Estamos DENTRO do state callback da DLL, que segura o mutex
+                            // interno da Nelogica. TryRegisterHealthCallback re-entra na DLL
+                            // (SetHealthCallback + GetHealthStatus) e produz DEADLOCK — a mesma
+                            // thread também é usada por outras callbacks (trade/book), então
+                            // todo o fluxo do Pregão Viva Voz congela junto.
+                            //
+                            // Fix: despachar para ThreadPool. O state callback retorna imediato,
+                            // a DLL libera o mutex, e a registration/poll do health roda depois
+                            // em thread livre.
+                            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                            {
+                                try { TryRegisterHealthCallback(); }
+                                catch (Exception ex) { _logger.Log($"[HealthCallback] worker: {ex.Message}"); }
+                            });
+                            break;
+                        case 5:
+                            // ProfitDLL 4.0.0.41+ : MARKET_PERFORMANCE_WARNING
+                            // Feed conectado, mas com sinal de degradação.
+                            _logger.Log("[Market] PERFORMANCE_WARNING — feed lento");
+                            break;
+                        case 6:
+                            // ProfitDLL 4.0.0.41+ : MARKET_PARTIAL_CONNECTED
+                            // Feed apenas parcialmente disponível.
+                            _logger.Log("[Market] PARTIAL_CONNECTED — feed parcial/parado");
                             break;
                         default:
                             _logger.Log($"[Market] result={result}");
@@ -1462,6 +1849,15 @@ namespace MarketCore.Providers.Nelogica
             DateTime? exUtc = null;
             if (!string.IsNullOrWhiteSpace(date) && TryParseOfferBookDate(date, out DateTime parsedEx))
                 exUtc = parsedEx;
+            // TTL de entrada: descarta replay histórico pós-PARTIAL_CONNECTED antes de enfileirar.
+            // Nenhum subsistema downstream (MarketDataManager, DeltaEngine, PVV) vê eventos velhos.
+            // Eventos sem exchangeTime (null) passam normalmente — fallback seguro para callbacks sem data.
+            if (exUtc.HasValue && (DateTime.UtcNow - exUtc.Value) > TtlEntrada)
+            {
+                _tradeSignal.Set();
+                return;
+            }
+
             _tradeQueue.Enqueue(new RawTrade(
                 assetId.Ticker ?? string.Empty,
                 price, qtd, buyAgent, sellAgent, tradeType, exUtc));
@@ -1471,6 +1867,10 @@ namespace MarketCore.Providers.Nelogica
             Interlocked.Increment(ref DllLatencyMonitor.TradesReceivedTotal);
             if (exUtc.HasValue)
                 Interlocked.Exchange(ref DllLatencyMonitor.LastTradeExchangeTicks, exUtc.Value.ToLocalTime().Ticks);
+
+            // Health monitor (MainWindow): marca "chegou trade agora" — usado pelo
+            // indicador "Status de Atualização" para calcular delay vs relógio local.
+            Interlocked.Exchange(ref _ultimoTradeRecebidoUtcTicks, DateTime.UtcNow.Ticks);
         }
 
         private void OnPriceBookCallback(
@@ -1569,7 +1969,9 @@ namespace MarketCore.Providers.Nelogica
             int volume = nQtd > int.MaxValue ? int.MaxValue : (int)nQtd;
 
             // Enfileira struct leve — broker lookup + PVV hook rodam no TradeProcessingLoop.
-            _pvvBookQueue.Enqueue(new PvvBookCandidate(ticker, agent, side, rank, volume, exchangeTime));
+            // Guard: descarta se fila já tem >5.000 entries (TTL de 15s descartaria de qualquer forma).
+            if (_pvvBookQueue.Count <= 5_000)
+                _pvvBookQueue.Enqueue(new PvvBookCandidate(ticker, agent, side, rank, volume, exchangeTime));
             _tradeSignal.Set(); // acorda TradeProcessingLoop para drenar candidatos PVV
         }
 
@@ -1696,7 +2098,14 @@ namespace MarketCore.Providers.Nelogica
 
                         string broker = FormatBookBroker(agent);
                         if (offerId > 0 && broker.Length > 0)
+                        {
                             _offerBrokerCache[offerId] = broker;
+                            if (_offerBrokerCache.Count > 10_000)
+                            {
+                                _offerBrokerCache.Clear();
+                                _brokerLastResolveAttemptTicks.Clear();
+                            }
+                        }
 
                         list.Add(new BookLevel(
                             Ticker: ticker,

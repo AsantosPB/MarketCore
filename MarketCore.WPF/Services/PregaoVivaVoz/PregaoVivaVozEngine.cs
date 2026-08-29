@@ -3,7 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using MarketCore.Providers.Nelogica;   // PvvDebugFileLog
 using MarketCore.WPF.Models.PregaoVivaVoz;
 
 namespace MarketCore.WPF.Services.PregaoVivaVoz
@@ -11,31 +13,33 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
     /// <summary>
     /// MOTOR PRINCIPAL do Pregão Viva Voz.
     ///
-    /// PADRÃO: Event Bridge
-    /// - Expõe métodos públicos que qualquer código pode chamar
-    /// - Não conhece diretamente o ProfitDLL nem o Simulator
-    /// - O MarketCore chama estes métodos quando eventos chegam
-    /// - Zero acoplamento com estruturas internas
-    ///
-    /// FLUXO:
-    /// 1. MarketCore recebe callback do ProfitDLL (ou Simulator)
-    /// 2. MarketCore chama: engine.ProcessarAgressao("goldman", "compra", 500)
-    /// 3. Engine agrega callbacks em blocos → verifica filtros → narra via FraseBuilder → AudioPlayback
-    /// 4. AudioPlayback toca (ou loga no console se sem WAV)
+    /// PADRÃO: Event Bridge assíncrono (Objetivo 1).
+    /// - Callbacks entram por ProcessarAgressao/ProcessarBook e são APENAS
+    ///   enfileirados. Um worker task drena a fila e faz todo o trabalho.
+    /// - O caller (Bridge, que já é assíncrono) nunca é bloqueado pela
+    ///   aggregação, narração ou I/O de log.
+    /// - Se o worker cair atrás, o Bridge dropa velhos antes de chegar aqui;
+    ///   este canal interno tem folga curta para absorver microbursts.
     ///
     /// AGREGAÇÃO:
-    /// CASO 1 — Mesmo milissegundo exato: callbacks do mesmo broker+direção cujo
-    ///          timestamp cai no MESMO milissegundo (mesmo segundo E milissegundo)
-    ///          são acumulados. Ao fechar o bloco, verifica filtro por player e narra
-    ///          "bateu/tomou [total]" uma única vez via FraseBuilderService.
-    ///          O total é TAMBÉM alimentado no DetectorRajadaService
-    ///          (via RegistrarAgressao) para players com Rajada.Participa=true.
+    /// CASO 1 — Mesmo milissegundo exato do TIMESTAMP DE BOLSA (Objetivo 2):
+    ///          callbacks do mesmo broker+direção cujo timestamp exchangeTime
+    ///          (segundo + milissegundo) é IDÊNTICO são acumulados. Ao fechar
+    ///          o bloco, verifica filtro por player e narra "bateu/tomou [total]"
+    ///          uma única vez via FraseBuilderService. O total é TAMBÉM alimentado
+    ///          no DetectorRajadaService (via RegistrarAgressao) para players com
+    ///          Rajada.Participa=true, passando o VolumeMinimo do próprio player
+    ///          (Objetivo 3).
     ///
-    /// CASO 2 — Milissegundos diferentes: tratado INTEIRAMENTE pelo
-    ///          DetectorRajadaService, que recebe os totais de bloco via RegistrarAgressao
-    ///          e dispara eventos RajadaIniciada / RajadaParou.
-    ///          O Engine apenas escuta esses eventos e narra "tomando/batendo" e
-    ///          "parou de tomar/bater". Nenhuma lógica de rajada existe neste arquivo.
+    /// CASO 2 — Timestamps diferentes: tratado INTEIRAMENTE pelo
+    ///          DetectorRajadaService, que recebe os totais de bloco via
+    ///          RegistrarAgressao e dispara RajadaIniciada / RajadaParou.
+    ///          O Engine apenas escuta esses eventos e narra "tomando/batendo"
+    ///          e "parou de tomar/bater". Nenhuma lógica de rajada aqui.
+    ///
+    /// FALLBACK: se um callback vem SEM exchangeTime (DateTime? null), o
+    /// agregador usa DateTime.UtcNow como aproximação — evita perder eventos
+    /// quando a DLL ocasionalmente omite bHasDate.
     /// </summary>
     public class PregaoVivaVozEngine : IDisposable
     {
@@ -52,6 +56,44 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         private int _eventosProcessados = 0;
         private int _eventosNarrados = 0;
         private int _rajadasDetectadas = 0;
+        private long _eventosDescartados_FilaCheia = 0;
+
+        // [PVV-DIAG] Contadores para rate-limit dos logs de diagnóstico.
+        private long _diagEngineRecebidos;
+        private long _diagEngineProcessados;
+
+        // ============ FILA INTERNA ASSÍNCRONA (Objetivo 1) ============
+
+        /// <summary>
+        /// Capacidade da fila interna do engine. Absorve microbursts entre
+        /// o Bridge e o worker do engine. Menor que a fila do Bridge — ele
+        /// já protege contra picos maiores.
+        /// </summary>
+        private const int FilaInternaCapacidade = 2048;
+
+        // Não-readonly: pode ser recriado pelo WorkerLoop se completado inesperadamente.
+        private Channel<EventoInterno> _filaInterna = null!;
+        private readonly CancellationTokenSource _cts = new();
+        private Task? _workerTask;
+
+        /// <summary>
+        /// Flag ativa durante narração prioritária de book. Quando <c>true</c>,
+        /// o WorkerLoop descarta eventos normais sem processá-los — o áudio já foi
+        /// limpo por <see cref="AudioPlaybackService.NarrarComPrioridade"/>.
+        /// <c>volatile</c> garante visibilidade imediata entre threads sem lock.
+        /// </summary>
+        private volatile bool _descartarFilaAtePrioritariaTerminar = false;
+
+        /// <summary>
+        /// TTL máximo de um evento de mercado. Eventos com <c>ExchangeTime</c>
+        /// mais antigo que isso são descartados silenciosamente — o momento de
+        /// mercado já passou e a narração não teria valor para o trader.
+        /// Aplica-se APENAS quando <c>ExchangeTime</c> é não-null.
+        /// Eventos sem timestamp (null) são sempre processados como fallback seguro.
+        /// Narração prioritária nunca é afetada (eventos de book chegam com
+        /// ExchangeTime=null — a verificação é no-op para eles).
+        /// </summary>
+        private static readonly TimeSpan TtlMaximo = TimeSpan.FromSeconds(15);
 
         // ============ AGREGADOR DE BLOCOS (CASO 1) ============
 
@@ -62,7 +104,8 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
 
         /// <summary>
         /// Timer que faz polling a cada 20ms para fechar blocos cujo milissegundo
-        /// já ficou no passado (milissegundo atual > milissegundo do bloco).
+        /// de bolsa já ficou no passado (ms atual > ms do bloco).
+        /// Executa no ThreadPool — não bloqueia a thread da DLL.
         /// </summary>
         private Timer? _agregadorTimer;
 
@@ -80,26 +123,28 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
             /// <summary>Volume acumulado do bloco aberto.</summary>
             public int VolumeBloco;
             /// <summary>
-            /// Milissegundo UTC truncado do bloco aberto.
-            /// Calculado como DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond.
-            /// Callbacks com o MESMO valor são agregados; valor diferente = bloco novo.
+            /// Milissegundo do bloco aberto — derivado do TIMESTAMP DE BOLSA
+            /// (exchangeTime.Ticks / TicksPerMillisecond) quando disponível,
+            /// ou de UtcNow como fallback. Callbacks com o MESMO valor são
+            /// agregados; valor diferente = bloco novo.
             /// </summary>
             public long MsBloco;
             /// <summary>Se há um bloco aberto aguardando mais callbacks.</summary>
             public bool BlocoAberto;
+            /// <summary>
+            /// DateTime.UtcNow.Ticks no instante em que o ÚLTIMO callback foi
+            /// agregado a este bloco. Base para o critério de "silêncio" do
+            /// PollAgregador — o bloco só fecha depois de <c>CarenciaFechamentoTicks</c>
+            /// sem novo callback. Antes o critério comparava agora vs. MsBloco
+            /// (timestamp da bolsa), que já era passado no instante de abertura
+            /// → o timer fechava o bloco antes dos late arrivals do mesmo ms.
+            /// </summary>
+            public long UltimoCallbackTicks;
         }
 
         // ============ EVENTOS PÚBLICOS ============
 
-        /// <summary>
-        /// Disparado quando uma narração termina de tocar. Payload traz texto + callback
-        /// original que a gerou (para correlação perfeita no log).
-        /// </summary>
         public event EventHandler<NarracaoInfo>? EventoNarrado;
-
-        /// <summary>
-        /// Disparado com estatísticas periódicas.
-        /// </summary>
         public event EventHandler<string>? EstatisticasAtualizadas;
 
         // ============ PROPRIEDADES ============
@@ -119,10 +164,6 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
             }
         }
 
-        /// <summary>
-        /// Retorna true se o motor está ativo (Iniciar() foi chamado E não está pausado).
-        /// Usado pelo ProfitDLLBridge para descartar eventos quando o motor não está ativo.
-        /// </summary>
         public bool MotorAtivo => _iniciado && !_pausado;
 
         public int VolumeMaster
@@ -134,6 +175,7 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         public int EventosProcessados => _eventosProcessados;
         public int EventosNarrados => _eventosNarrados;
         public int RajadasDetectadas => _rajadasDetectadas;
+        public long EventosDescartados_FilaCheia => Interlocked.Read(ref _eventosDescartados_FilaCheia);
 
         // ============ CONSTRUTOR ============
 
@@ -144,23 +186,29 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         {
             _configRajada = configRajada ?? new ConfigRajadaGlobal();
 
-            // Indexar players por chave pra lookup rápido
             foreach (var p in players)
             {
                 _playersConfig[p.Chave.ToLower()] = p;
             }
 
-            // Serviços dependentes
             _fraseBuilder = new FraseBuilderService(diretorioAudio);
             _audioPlayback = new AudioPlaybackService();
             _detectorRajada = new DetectorRajadaService(_configRajada);
 
-            // Conecta eventos do detector de rajada — handlers PRIMÁRIOS
             _detectorRajada.RajadaIniciada += OnRajadaIniciada;
             _detectorRajada.RajadaParou += OnRajadaParou;
 
-            // Conecta eventos do playback
             _audioPlayback.ItemReproduzido += (s, info) => EventoNarrado?.Invoke(this, info);
+
+            // Fila interna do engine — DropOldest evita bloqueio no caller.
+            var opts = new BoundedChannelOptions(FilaInternaCapacidade)
+            {
+                FullMode = BoundedChannelFullMode.DropOldest,
+                SingleReader = true,
+                SingleWriter = false,
+                AllowSynchronousContinuations = false
+            };
+            _filaInterna = Channel.CreateBounded<EventoInterno>(opts);
         }
 
         // ============ CONTROLE ============
@@ -174,10 +222,17 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
             _audioPlayback.Iniciar();
             _detectorRajada.Iniciar();
 
-            // Timer do agregador: poll a cada 20ms pra fechar blocos de ms passado
+            _workerTask = Task.Run(() => WorkerLoop(_cts.Token));
+
             _agregadorTimer = new Timer(PollAgregador, null, 20, 20);
 
-            Console.WriteLine($"[PregaoVivaVozEngine] Motor iniciado com {_playersConfig.Count} players configurados");
+            int ativos = 0;
+            foreach (var p in _playersConfig.Values) if (p.AtivoHoje) ativos++;
+            PvvDebugFileLog.Write($"[ENGINE] Iniciar() OK — worker + timer + detector iniciados. players={_playersConfig.Count} (ativoHoje={ativos})");
+            if (ativos == 0)
+                PvvDebugFileLog.Write($"[ENGINE] ⚠ NENHUM PLAYER ESTÁ COM ativoHoje=true — nenhuma narração vai ocorrer. Marque players na aba 'Players que estou monitorando' e Salve.");
+
+            Console.WriteLine($"[PregaoVivaVozEngine] Motor iniciado (assíncrono) com {_playersConfig.Count} players");
             EstatisticasAtualizadas?.Invoke(this, $"Motor iniciado · {_playersConfig.Count} players");
         }
 
@@ -188,13 +243,20 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
             _audioPlayback.LimparFila();
             _agregadorTimer?.Change(Timeout.Infinite, Timeout.Infinite);
             _estadosAgressao.Clear();
+
+            try
+            {
+                // ORDEM CRÍTICA: cancelar o CTS PRIMEIRO para que o WorkerLoop saia via
+                // OperationCanceledException (saída limpa). TryComplete() depois — belt+suspenders.
+                _cts.Cancel();
+                _filaInterna.Writer.TryComplete();
+                _workerTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch { /* best effort */ }
+
             Console.WriteLine("[PregaoVivaVozEngine] Motor parado");
         }
 
-        /// <summary>
-        /// Atualiza configuração de um player em tempo real.
-        /// Chame quando o usuário mudar limites na UI.
-        /// </summary>
         public void AtualizarPlayer(PlayerConfig player)
         {
             if (player == null) return;
@@ -202,105 +264,281 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         }
 
         // ============ EVENT BRIDGE - MÉTODOS PÚBLICOS ============
-        // Estes são os métodos que o MarketCore chama depois da integração
+        // APENAS ENFILEIRAM. Retornam em microsegundos. Trabalho pesado no worker.
 
         /// <summary>
-        /// PROCESSA UM TRADE (agressão).
-        /// Chame para CADA trade que chegar do ProfitDLL.
-        ///
-        /// Agrega callbacks cujo timestamp cai no MESMO milissegundo exato
-        /// (mesmo segundo E mesmo milissegundo) e narra o total uma vez.
-        /// Callbacks em milissegundos diferentes geram blocos separados.
-        /// O filtro de volume por player é aplicado no fechamento do bloco.
-        ///
-        /// Parâmetros:
-        /// - nomeCorretora: nome exato como vem do ProfitDLL (ex: "Goldman", "JPM")
-        /// - lado: "compra" (agressão de compra/tomou) ou "venda" (agressão de venda/bateu)
-        /// - quantidade: número de contratos
+        /// PROCESSA UM TRADE (agressão). Apenas enfileira — retorna imediatamente.
+        /// O agregador usa o <paramref name="exchangeTime"/> para agrupar
+        /// callbacks do MESMO milissegundo de bolsa (CASO 1). Se ausente,
+        /// cai em fallback usando UtcNow.
         /// </summary>
-        public void ProcessarAgressao(string nomeCorretora, string lado, int quantidade, string? callbackInfo = null)
+        public void ProcessarAgressao(string nomeCorretora, string lado, int quantidade, string? callbackInfo = null, DateTime? exchangeTime = null)
         {
-            if (_pausado || string.IsNullOrEmpty(nomeCorretora)) return;
+            // [PVV-DIAG] Primeira chamada + rate-limited depois. Confirma que o Bridge
+            // realmente está chamando o Engine (não é só o Bridge que tá "aparentemente" ok).
+            long recN = Interlocked.Increment(ref _diagEngineRecebidos);
+            if (recN <= 20 || (recN % 500) == 0)
+                PvvDebugFileLog.Write($"[ENGINE-IN] ProcessarAgressao #{recN}: nome={nomeCorretora} lado={lado} qtd={quantidade} pausado={_pausado} iniciado={_iniciado}");
 
-            _eventosProcessados++;
+            if (_pausado || string.IsNullOrEmpty(nomeCorretora))
+            {
+                if (recN <= 5)
+                    PvvDebugFileLog.Write($"[ENGINE-IN] SAINDO cedo: pausado={_pausado} nomeVazio={string.IsNullOrEmpty(nomeCorretora)}");
+                return;
+            }
 
-            // Identificar o player
-            var player = IdentificarPlayer(nomeCorretora);
-            if (player == null || !player.AtivoHoje) return;
-
-            // Verificar se agressão está ativa para este player
-            if (!player.Agressao.Ativo) return;
-
-            // Alimenta o agregador — filtro de volume aplicado no fechamento do bloco
-            AlimentarAgregador(player, lado, quantidade);
+            if (!_filaInterna.Writer.TryWrite(new EventoInterno
+            {
+                Tipo = TipoEventoInterno.Agressao,
+                NomeCorretora = nomeCorretora,
+                Lado = lado,
+                Quantidade = quantidade,
+                CallbackInfo = callbackInfo,
+                ExchangeTime = exchangeTime,
+                Nivel = 0
+            }))
+            {
+                Interlocked.Increment(ref _eventosDescartados_FilaCheia);
+                if (_eventosDescartados_FilaCheia <= 5 || (_eventosDescartados_FilaCheia % 500) == 0)
+                    PvvDebugFileLog.Write($"[ENGINE-IN] TryWrite falhou (fila cheia?) total={_eventosDescartados_FilaCheia}");
+            }
         }
 
         /// <summary>
-        /// PROCESSA UMA ORDEM NO BOOK (ordem passiva colocada).
-        ///
-        /// Parâmetros:
-        /// - nomeCorretora: nome da corretora
-        /// - lado: "compra" (ordem de compra no bid) ou "venda" (ordem de venda no ask)
-        /// - nivel: 1 = boca (L1), 2 a 5 = níveis mais afastados
-        /// - quantidade: contratos ofertados
+        /// PROCESSA UMA ORDEM NO BOOK (ordem passiva). Apenas enfileira.
         /// </summary>
-        public void ProcessarBook(string nomeCorretora, string lado, int nivel, int quantidade, string? callbackInfo = null)
+        public void ProcessarBook(string nomeCorretora, string lado, int nivel, int quantidade, string? callbackInfo = null, DateTime? exchangeTime = null)
         {
             if (_pausado || string.IsNullOrEmpty(nomeCorretora)) return;
 
+            if (!_filaInterna.Writer.TryWrite(new EventoInterno
+            {
+                Tipo = TipoEventoInterno.Book,
+                NomeCorretora = nomeCorretora,
+                Lado = lado,
+                Quantidade = quantidade,
+                CallbackInfo = callbackInfo,
+                ExchangeTime = exchangeTime,
+                Nivel = nivel
+            }))
+            {
+                Interlocked.Increment(ref _eventosDescartados_FilaCheia);
+            }
+        }
+
+        public void ProcessarTrade(string nomeCorretora, string lado, int quantidade)
+        {
+            ProcessarAgressao(nomeCorretora, lado, quantidade);
+        }
+
+        // ============ WORKER ============
+
+        private async Task WorkerLoop(CancellationToken ct)
+        {
+            PvvDebugFileLog.Write("[ENGINE-WORKER] WorkerLoop INICIADO");
+
+            // Loop externo — NUNCA sai enquanto o motor estiver ativo.
+            // Única saída legítima: OperationCanceledException (motor sendo parado).
+            while (!ct.IsCancellationRequested)
+            {
+                try
+                {
+                    // Loop interno — drena o channel até completar ou cancelar.
+                    await foreach (var e in _filaInterna.Reader.ReadAllAsync(ct))
+                    {
+                        try
+                        {
+                            if (_pausado) continue;
+
+                            // Modo prioritário: descarta eventos normais enquanto
+                            // NarrarEventoComPrioridade está sendo enfileirado no áudio.
+                            if (_descartarFilaAtePrioritariaTerminar)
+                            {
+                                PvvDebugFileLog.Write("[ENGINE-WORKER] descartando evento (modo prioritário ativo)");
+                                continue;
+                            }
+
+                            if (e.Tipo == TipoEventoInterno.Agressao)
+                                ProcessarAgressaoInterno(e);
+                            else
+                                ProcessarBookInterno(e);
+                        }
+                        catch (Exception exEvento)
+                        {
+                            PvvDebugFileLog.Write($"[ENGINE-WORKER] EXCEÇÃO no evento: {exEvento.GetType().Name}: {exEvento.Message}");
+                            Console.WriteLine($"[PregaoVivaVozEngine] Worker erro no evento: {exEvento.Message}");
+                        }
+                    }
+
+                    // Se chegou aqui o channel foi completado — NÃO deveria acontecer
+                    // durante uso normal (Parar() cancela o CTS ANTES de completar o channel).
+                    // Recria o channel e retoma o loop externo.
+                    PvvDebugFileLog.Write("[ENGINE-WORKER] ALERTA: channel completou inesperadamente — recriando");
+
+                    _filaInterna = Channel.CreateBounded<EventoInterno>(
+                        new BoundedChannelOptions(FilaInternaCapacidade)
+                        {
+                            FullMode = BoundedChannelFullMode.DropOldest,
+                            SingleReader = true,
+                            SingleWriter = false,
+                            AllowSynchronousContinuations = false
+                        });
+                }
+                catch (OperationCanceledException)
+                {
+                    // Cancelamento normal (Parar() chamou _cts.Cancel()) — sair do loop.
+                    PvvDebugFileLog.Write("[ENGINE-WORKER] WorkerLoop cancelado (Parar)");
+                    break;
+                }
+                catch (Exception exLoop)
+                {
+                    PvvDebugFileLog.Write($"[ENGINE-WORKER] erro no loop: {exLoop.GetType().Name}: {exLoop.Message} — reiniciando em 100ms");
+                    Console.WriteLine($"[PregaoVivaVozEngine] Worker erro crítico: {exLoop.Message}");
+                    await Task.Delay(100, ct).ConfigureAwait(false);
+                }
+            }
+
+            PvvDebugFileLog.Write("[ENGINE-WORKER] WorkerLoop encerrado (cancelamento solicitado)");
+        }
+
+        private void ProcessarAgressaoInterno(EventoInterno e)
+        {
+            // TTL — descartar agressões com mais de 15s de atraso.
+            // Só se aplica quando a DLL forneceu timestamp de bolsa (ExchangeTime não-null).
+            // ExchangeTime=null → processar normalmente (fallback seguro).
+            if (e.ExchangeTime.HasValue)
+            {
+                var idade = DateTime.UtcNow - e.ExchangeTime.Value;
+                if (idade > TtlMaximo)
+                {
+                    PvvDebugFileLog.Write(
+                        $"[ENGINE-WORKER] TTL expirado — descartando agressão de {idade.TotalSeconds:F1}s atrás " +
+                        $"(nome={e.NomeCorretora} lado={e.Lado} qtd={e.Quantidade})");
+                    return;
+                }
+            }
+
             _eventosProcessados++;
 
-            var player = IdentificarPlayer(nomeCorretora);
-            if (player == null || !player.AtivoHoje) return;
+            long procN = Interlocked.Increment(ref _diagEngineProcessados);
+            bool procLog = procN <= 20 || (procN % 500) == 0;
 
+            var player = IdentificarPlayer(e.NomeCorretora!);
+            if (player == null)
+            {
+                if (procLog)
+                    PvvDebugFileLog.Write($"[ENGINE-WORKER] #{procN} SEM PLAYER match para nome='{e.NomeCorretora}' (evento descartado)");
+                return;
+            }
+            if (!player.AtivoHoje)
+            {
+                if (procLog)
+                    PvvDebugFileLog.Write($"[ENGINE-WORKER] #{procN} player='{player.Chave}' está DESATIVADO (ativoHoje=false) — não narrar");
+                return;
+            }
+            if (!player.Agressao.Ativo)
+            {
+                if (procLog)
+                    PvvDebugFileLog.Write($"[ENGINE-WORKER] #{procN} player='{player.Chave}' agressão desabilitada — não narrar");
+                return;
+            }
+
+            if (procLog)
+                PvvDebugFileLog.Write($"[ENGINE-WORKER] #{procN} player='{player.Chave}' OK → agregando (lado={e.Lado} qtd={e.Quantidade})");
+
+            AlimentarAgregador(player, e.Lado!, e.Quantidade, e.ExchangeTime);
+        }
+
+        private void ProcessarBookInterno(EventoInterno e)
+        {
+            // TTL — descartar eventos de book com mais de 15s de atraso.
+            // Na implementação atual os eventos de book chegam sempre com
+            // ExchangeTime=null (definido em ProcessarBook), portanto esta
+            // verificação é no-op — garante proteção caso timestamps de book
+            // sejam adicionados no futuro, e preserva narração prioritária
+            // (que também é book, também com ExchangeTime=null → nunca descartada).
+            if (e.ExchangeTime.HasValue)
+            {
+                var idade = DateTime.UtcNow - e.ExchangeTime.Value;
+                if (idade > TtlMaximo)
+                {
+                    PvvDebugFileLog.Write(
+                        $"[ENGINE-WORKER] TTL expirado — descartando book de {idade.TotalSeconds:F1}s atrás " +
+                        $"(nome={e.NomeCorretora} lado={e.Lado} qtd={e.Quantidade} nivel={e.Nivel})");
+                    return;
+                }
+            }
+
+            _eventosProcessados++;
+
+            var player = IdentificarPlayer(e.NomeCorretora!);
+            if (player == null || !player.AtivoHoje) return;
             if (!player.Book.Ativo) return;
 
-            int limiteMinimo = lado == "compra"
+            var tipo = e.Lado == "compra" ? TipoEvento.BookCompra : TipoEvento.BookVenda;
+
+            // ── VERIFICAÇÃO DE PRIORIDADE (independente dos filtros CompraMinima/VendaMinima) ──
+            // Só aciona quando PrioridadeMinima está definido (não null), a quantidade
+            // atinge esse limiar E o nível é 1..4 (frases gravadas só cobrem esses).
+            // Prioritária → interrompe áudio corrente + descarta fila + narra imediato.
+            // Se acionar, retorna: a normal NÃO deve narrar em cima.
+            int? limitePrio = player.Book.PrioridadeMinima;
+            if (limitePrio.HasValue
+                && e.Quantidade >= limitePrio.Value
+                && e.Nivel >= 1 && e.Nivel <= 4)
+            {
+                var eventoPrio = new EventoOrderFlow
+                {
+                    Timestamp = DateTime.Now,
+                    PlayerChave = player.Chave,
+                    PlayerNome = player.Nome,
+                    Tipo = tipo,
+                    Quantidade = e.Quantidade,
+                    Nivel = Math.Clamp(e.Nivel, 1, 4)
+                };
+                NarrarEventoComPrioridade(eventoPrio, e.CallbackInfo);
+                return;
+            }
+
+            // ── Fluxo normal (comportamento anterior, inalterado) ──
+            int limiteMinimo = e.Lado == "compra"
                 ? player.Book.CompraMinima
                 : player.Book.VendaMinima;
 
-            if (quantidade < limiteMinimo) return;
+            if (e.Quantidade < limiteMinimo) return;
 
-            var tipo = lado == "compra" ? TipoEvento.BookCompra : TipoEvento.BookVenda;
             var evento = new EventoOrderFlow
             {
                 Timestamp = DateTime.Now,
                 PlayerChave = player.Chave,
                 PlayerNome = player.Nome,
                 Tipo = tipo,
-                Quantidade = quantidade,
-                Nivel = Math.Clamp(nivel, 1, 4)
+                Quantidade = e.Quantidade,
+                Nivel = Math.Clamp(e.Nivel, 1, 4)
             };
 
-            NarrarEvento(evento, callbackInfo);
+            NarrarEvento(evento, e.CallbackInfo);
         }
 
-        /// <summary>
-        /// PROCESSA UM TRADE EXECUTADO (versão simplificada de agressão).
-        /// Use se você só tem info de que houve trade, sem saber se foi agressão ou passivo.
-        /// </summary>
-        public void ProcessarTrade(string nomeCorretora, string lado, int quantidade)
-        {
-            // Por padrão, trata como agressão
-            ProcessarAgressao(nomeCorretora, lado, quantidade);
-        }
-
-        // ============ AGREGADOR DE BLOCOS (CASO 1 APENAS) ============
+        // ============ AGREGADOR DE BLOCOS (CASO 1) ============
 
         /// <summary>
         /// Alimenta o estado de agregação com um novo callback.
         ///
-        /// Regra: compara o milissegundo exato (truncado) do timestamp atual
-        /// com o milissegundo do bloco aberto.
-        /// - MESMO milissegundo → acumula volume no bloco.
+        /// Regra: compara o milissegundo do TIMESTAMP DE BOLSA (exchangeTime).
+        /// - MESMO ms → acumula volume no bloco.
         /// - DIFERENTE → fecha bloco anterior (narra + alimenta detector), abre novo.
         ///
-        /// Nenhuma janela fixa de tempo — apenas igualdade de milissegundo.
+        /// Fallback (exchangeTime == null): usa DateTime.UtcNow — degradação
+        /// segura quando a DLL não enviou bHasDate.
         /// </summary>
-        private void AlimentarAgregador(PlayerConfig player, string lado, int quantidade)
+        private void AlimentarAgregador(PlayerConfig player, string lado, int quantidade, DateTime? exchangeTime)
         {
             var chaveEstado = string.Concat(player.Chave, "|", lado);
-            long agoraMs = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+
+            long tsMs = exchangeTime.HasValue
+                ? exchangeTime.Value.Ticks / TimeSpan.TicksPerMillisecond
+                : DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
 
             var estado = _estadosAgressao.GetOrAdd(chaveEstado, _ => new EstadoAgressao
             {
@@ -309,16 +547,22 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                 Lado = lado
             });
 
+            long nowTicks = DateTime.UtcNow.Ticks;
+
             lock (estado)
             {
-                estado.PlayerNome = player.Nome; // refresh caso tenha mudado
+                estado.PlayerNome = player.Nome;
 
                 if (estado.BlocoAberto)
                 {
-                    if (agoraMs == estado.MsBloco)
+                    if (tsMs == estado.MsBloco)
                     {
-                        // Mesmo milissegundo exato → agregar no bloco atual
+                        // Mesmo milissegundo exato de bolsa → agregar no bloco atual
                         estado.VolumeBloco += quantidade;
+                        // Renova a janela de silêncio: bloco só fecha após N ms
+                        // sem novo callback (evita fechar entre late arrivals do
+                        // mesmo ms de bolsa).
+                        estado.UltimoCallbackTicks = nowTicks;
                         return;
                     }
 
@@ -326,21 +570,23 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                     FecharBloco(estado, player);
                 }
 
-                // Iniciar novo bloco
                 estado.VolumeBloco = quantidade;
-                estado.MsBloco = agoraMs;
+                estado.MsBloco = tsMs;
                 estado.BlocoAberto = true;
+                estado.UltimoCallbackTicks = nowTicks;
             }
         }
 
         /// <summary>
         /// Fecha bloco aberto e processa volume agregado.
         ///
-        /// 1. Aplica filtro por player (TomouMinimo/BateuMinimo) sobre o total do bloco.
-        ///    Se passa → narra "bateu/tomou [total]" via FraseBuilderService
-        ///    (que já cuida do arredondamento e escolha do arquivo WAV correto).
+        /// 1. Aplica filtro por player (TomouMinimo/BateuMinimo) sobre o total
+        ///    do bloco. Se passa → narra "bateu/tomou [total]" via FraseBuilderService
+        ///    (que cuida do arredondamento e da escolha do WAV correto entre as
+        ///    45 gravações de números existentes).
         /// 2. Para players com Rajada.Participa=true: alimenta o DetectorRajadaService
-        ///    com o volume do bloco (independente do filtro de narração).
+        ///    com o volume do bloco + VolumeMinimo do próprio player (Objetivo 3),
+        ///    independente do filtro de narração acima.
         ///
         /// DEVE ser chamado dentro de lock(estado).
         /// </summary>
@@ -363,6 +609,10 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                     ? TipoEvento.AgressaoCompra
                     : TipoEvento.AgressaoVenda;
 
+                // Reconstrói o horário de bolsa a partir do MsBloco (UTC ms desde DateTime.MinValue).
+                var bolsaUtc = new DateTime(estado.MsBloco * TimeSpan.TicksPerMillisecond, DateTimeKind.Utc);
+                string bolsaStr = bolsaUtc.ToLocalTime().ToString("HH:mm:ss.fff");
+
                 NarrarEvento(new EventoOrderFlow
                 {
                     Timestamp = DateTime.Now,
@@ -370,34 +620,41 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                     PlayerNome = player.Nome,
                     Tipo = tipo,
                     Quantidade = volumeBloco
-                }, $"BLOCO_AGREGADO (vol={volumeBloco})");
+                }, $"BLOCO_AGREGADO bolsa={bolsaStr} agent={player.Nome} lado={estado.Lado} vol={volumeBloco}");
             }
 
-            // ── Alimentar DetectorRajadaService para players de rajada ──
-            // Independente do filtro de narração: blocos pequenos contribuem
-            // para a detecção de rajada mesmo que não sejam narrados individualmente.
+            // ── Alimentar DetectorRajadaService com o VolumeMinimo do player (Objetivo 3) ──
             if (player.Rajada.Participa)
             {
                 _detectorRajada.RegistrarAgressao(
                     player.Chave,
                     player.Nome,
                     estado.Lado,
-                    volumeBloco);
+                    volumeBloco,
+                    player.Rajada.VolumeMinimo);
             }
         }
 
         /// <summary>
-        /// Timer callback (20ms). Percorre todos os estados para fechar blocos
-        /// cujo milissegundo já ficou no passado (ms atual > ms do bloco).
-        ///
-        /// NÃO faz detecção de rajada nem silêncio — isso é responsabilidade
-        /// exclusiva do DetectorRajadaService.
+        /// Janela de silêncio (Ticks) antes de fechar um bloco aberto no PollAgregador.
+        /// Se nenhum novo callback chegar por este intervalo desde o último agregado,
+        /// o bloco é fechado. 50 ms cobre folgadamente o pior caso de latência
+        /// (~15-25 ms) entre callbacks do mesmo ms de bolsa que atravessam
+        /// Provider → Bridge worker → Engine worker sequencialmente.
+        /// </summary>
+        private const long CarenciaFechamentoTicks = 50L * TimeSpan.TicksPerMillisecond;
+
+        /// <summary>
+        /// Timer callback (20ms). Fecha blocos que ficaram <c>CarenciaFechamentoTicks</c>
+        /// (50 ms) sem receber novo callback — não usa mais o timestamp da bolsa como
+        /// referência (esse é sempre passado no instante em que chega no engine).
+        /// NÃO faz detecção de rajada nem silêncio — DetectorRajadaService cuida disso.
         /// </summary>
         private void PollAgregador(object? state)
         {
             if (_pausado) return;
 
-            long agoraMs = DateTime.UtcNow.Ticks / TimeSpan.TicksPerMillisecond;
+            long agoraTicks = DateTime.UtcNow.Ticks;
 
             foreach (var kvp in _estadosAgressao)
             {
@@ -405,7 +662,11 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
 
                 lock (estado)
                 {
-                    if (estado.BlocoAberto && agoraMs > estado.MsBloco)
+                    // Só fecha depois de N ms de silêncio desde o último callback
+                    // agregado — dá chance para late arrivals do mesmo ms de bolsa
+                    // chegarem via Bridge worker → Engine worker (que serializa).
+                    if (estado.BlocoAberto &&
+                        (agoraTicks - estado.UltimoCallbackTicks) >= CarenciaFechamentoTicks)
                     {
                         if (_playersConfig.TryGetValue(estado.PlayerChave, out var player))
                         {
@@ -413,7 +674,6 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                         }
                         else
                         {
-                            // Player removido — limpar bloco sem narrar
                             estado.BlocoAberto = false;
                             estado.VolumeBloco = 0;
                         }
@@ -424,13 +684,6 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
 
         // ============ INTERNAL - NARRAÇÃO ============
 
-        /// <summary>
-        /// Envia um evento pro FraseBuilder e enfileira no AudioPlayback.
-        /// O FraseBuilderService cuida do arredondamento (ArredondarQuantidade) e
-        /// da escolha do arquivo WAV correto para o número narrado.
-        /// <paramref name="callbackInfo"/> é a string original do callback da DLL — viaja
-        /// junto do evento até o log de narração pra manter correlação perfeita.
-        /// </summary>
         private void NarrarEvento(EventoOrderFlow evento, string? callbackInfo = null)
         {
             var arquivos = _fraseBuilder.MontarFrase(evento);
@@ -444,34 +697,57 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
             Console.WriteLine($"[NARRAR] {textoTextual}");
         }
 
-        // ============ HANDLERS DE RAJADA (PRIMÁRIOS) ============
-        // Eventos disparados pelo DetectorRajadaService.
-        // O detector recebe totais de bloco via RegistrarAgressao e cuida
-        // de TODA a lógica de início e fim de rajada internamente.
-        // O Engine apenas narra os eventos aqui.
-
         /// <summary>
-        /// Handler chamado quando o DetectorRajadaService detecta INÍCIO de rajada.
-        /// Narra "tomando" ou "batendo" para o player.
+        /// Narração PRIORITÁRIA: usa o mesmo FraseBuilderService (mesmas gravações,
+        /// mesmo arredondamento de quantidade), mas entrega ao AudioPlayback via
+        /// <see cref="AudioPlaybackService.NarrarComPrioridade"/> — o que INTERROMPE
+        /// o áudio corrente, descarta toda a fila normal e reproduz imediatamente.
         /// </summary>
+        private void NarrarEventoComPrioridade(EventoOrderFlow evento, string? callbackInfo = null)
+        {
+            var arquivos = _fraseBuilder.MontarFrase(evento);
+            var textoTextual = _fraseBuilder.MontarFraseTextual(evento);
+
+            if (arquivos.Count == 0) return;
+
+            // Ativa flag: o WorkerLoop descarta eventos normais pendentes na
+            // _filaInterna enquanto o clip prioritário é enfileirado no áudio.
+            _descartarFilaAtePrioritariaTerminar = true;
+            PvvDebugFileLog.Write($"[ENGINE-WORKER] modo prioritário ativado — descartando fila");
+            try
+            {
+                // NarrarComPrioridade: drena fila de áudio normal + cancela áudio
+                // corrente + enfileira na fila prioritária do AudioPlaybackService.
+                _audioPlayback.NarrarComPrioridade(arquivos, textoTextual, callbackInfo);
+                _eventosNarrados++;
+                Console.WriteLine($"[NARRAR-PRIO] {textoTextual}");
+            }
+            finally
+            {
+                _descartarFilaAtePrioritariaTerminar = false;
+                PvvDebugFileLog.Write($"[ENGINE-WORKER] narração prioritária concluída — retomando normal");
+            }
+        }
+
+        // ============ HANDLERS DE RAJADA (PRIMÁRIOS) ============
+
         private void OnRajadaIniciada(object? sender, EventoOrderFlow evento)
         {
             Interlocked.Increment(ref _rajadasDetectadas);
 
-            // Enriquece o nome do player (detector pode não ter o nome completo)
             if (_playersConfig.TryGetValue(evento.PlayerChave, out var player))
             {
                 evento.PlayerNome = player.Nome;
             }
 
-            NarrarEvento(evento, "RAJADA_INICIO (detectada pelo DetectorRajadaService)");
+            // ExchangeTime não disponível no DetectorRajadaService — usa evento.Timestamp
+            // (DateTime.Now local do momento da detecção) como fallback, conforme spec.
+            string bolsaStr = evento.Timestamp.ToString("HH:mm:ss.fff");
+            string ladoStr = evento.Tipo == TipoEvento.RajadaInicioCompra ? "compra" : "venda";
+
+            NarrarEvento(evento, $"RAJADA_INICIO bolsa={bolsaStr} agent={evento.PlayerNome} lado={ladoStr}");
         }
 
-        /// <summary>
-        /// Handler chamado quando o DetectorRajadaService detecta FIM de rajada
-        /// (silêncio > SilencioParouMilissegundos).
-        /// Narra "parou de tomar" ou "parou de bater" para o player.
-        /// </summary>
         private void OnRajadaParou(object? sender, EventoOrderFlow evento)
         {
             if (_playersConfig.TryGetValue(evento.PlayerChave, out var player))
@@ -479,26 +755,24 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                 evento.PlayerNome = player.Nome;
             }
 
-            NarrarEvento(evento, "RAJADA_PAROU (timeout de silencio)");
+            // Mesmo fallback: usa evento.Timestamp (DateTime.Now do MonitorSilencioLoop).
+            string bolsaStr = evento.Timestamp.ToString("HH:mm:ss.fff");
+            string ladoStr = evento.Tipo == TipoEvento.RajadaPararCompra ? "compra" : "venda";
+
+            NarrarEvento(evento, $"RAJADA_PAROU bolsa={bolsaStr} agent={evento.PlayerNome} lado={ladoStr}");
         }
 
         // ============ HELPERS ============
 
-        /// <summary>
-        /// Identifica o player a partir do nome que vem do ProfitDLL.
-        /// Faz match tanto pelo nome completo quanto por variações.
-        /// </summary>
         private PlayerConfig? IdentificarPlayer(string nomeCorretora)
         {
             if (string.IsNullOrEmpty(nomeCorretora)) return null;
 
             var nomeNorm = nomeCorretora.Trim().ToLower();
 
-            // Match direto por chave
             if (_playersConfig.TryGetValue(nomeNorm, out var player))
                 return player;
 
-            // Match por nome exato
             foreach (var p in _playersConfig.Values)
             {
                 if (p.Nome.Equals(nomeCorretora, StringComparison.OrdinalIgnoreCase))
@@ -508,7 +782,6 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                     return p;
             }
 
-            // Match parcial (contém)
             foreach (var p in _playersConfig.Values)
             {
                 if (nomeNorm.Contains(p.Chave.ToLower()) ||
@@ -522,8 +795,32 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         public void Dispose()
         {
             _agregadorTimer?.Dispose();
+            try
+            {
+                // Mesma ordem de Parar(): CTS primeiro para saída limpa, TryComplete depois.
+                _cts.Cancel();
+                _filaInterna.Writer.TryComplete();
+                _workerTask?.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch { /* best effort */ }
+            _cts.Dispose();
             _audioPlayback?.Dispose();
             _detectorRajada?.Dispose();
+        }
+
+        // ============ TIPOS INTERNOS ============
+
+        private enum TipoEventoInterno { Agressao, Book }
+
+        private class EventoInterno
+        {
+            public TipoEventoInterno Tipo;
+            public string? NomeCorretora;
+            public string? Lado;
+            public int Quantidade;
+            public int Nivel;
+            public string? CallbackInfo;
+            public DateTime? ExchangeTime;
         }
     }
 }

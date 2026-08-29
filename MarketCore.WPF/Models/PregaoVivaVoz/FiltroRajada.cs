@@ -2,7 +2,8 @@ namespace MarketCore.WPF.Models.PregaoVivaVoz
 {
     /// <summary>
     /// Configuração de participação do player no detector de rajada.
-    /// Parâmetros globais da rajada estão em ConfigRajadaGlobal.
+    /// Parâmetros globais da rajada (janela, sequência, silêncio) estão em ConfigRajadaGlobal.
+    /// O volume mínimo, no entanto, agora é POR PLAYER (não mais global).
     /// </summary>
     public class FiltroRajada
     {
@@ -10,11 +11,22 @@ namespace MarketCore.WPF.Models.PregaoVivaVoz
         /// Se este player participa da detecção de rajadas.
         /// </summary>
         public bool Participa { get; set; } = false;
+
+        /// <summary>
+        /// Volume mínimo acumulado (soma das agressões dentro da janela) para
+        /// disparar a rajada deste player específico. Substitui o antigo campo
+        /// global ConfigRajadaGlobal.VolumeMinimo.
+        /// Default: 100 contratos (mesmo valor do antigo default global).
+        /// </summary>
+        public int VolumeMinimo { get; set; } = 100;
     }
-    
+
     /// <summary>
     /// Parâmetros globais do detector de rajada.
     /// Aplicam-se a TODOS os players que participam.
+    /// OBSERVAÇÃO: o campo VolumeMinimo aqui é MANTIDO por compatibilidade
+    /// com o JSON antigo, mas NÃO é mais usado — cada player tem o seu
+    /// (ver FiltroRajada.VolumeMinimo).
     /// </summary>
     public class ConfigRajadaGlobal
     {
@@ -23,19 +35,20 @@ namespace MarketCore.WPF.Models.PregaoVivaVoz
         /// Padrão: 3 agressões.
         /// </summary>
         public int SequenciaMinima { get; set; } = 3;
-        
+
         /// <summary>
         /// Janela de tempo em MILISSEGUNDOS para as agressões ocorrerem.
         /// Padrão: 2000ms (2 segundos) - captura rajadas rápidas do WIN.
         /// </summary>
         public int JanelaMilissegundos { get; set; } = 2000;
-        
+
         /// <summary>
-        /// Volume mínimo acumulado (soma das agressões) para disparar alerta.
-        /// Padrão: 200 contratos.
+        /// [OBSOLETO] Volume mínimo acumulado global. Mantido apenas para
+        /// compatibilidade com o JSON antigo — agora cada player carrega seu
+        /// próprio VolumeMinimo em <see cref="FiltroRajada.VolumeMinimo"/>.
         /// </summary>
-        public int VolumeMinimo { get; set; } = 200;
-        
+        public int VolumeMinimo { get; set; } = 100;
+
         /// <summary>
         /// Tempo em MILISSEGUNDOS sem nova agressão para considerar que PAROU.
         /// Padrão: 3000ms (3 segundos).

@@ -295,7 +295,7 @@ public sealed class MarketEngine : IDisposable
                     : "--:--:--.---";
                 string callbackInfo =
                     $"BOOK  bolsa={bolsa} ticker={level.Ticker} agent={level.Broker} lado={lado} nivel={nivelPvv} qtd={volumeAgregadoBroker}";
-                pvvBookHook(level.Ticker, level.Broker, lado, nivelPvv, volumeAgregadoBroker, callbackInfo);
+                pvvBookHook(level.Ticker, level.Broker, lado, nivelPvv, volumeAgregadoBroker, callbackInfo, level.ExchangeTime);
             }
 
             // Detectores: inclui deletes da DLL quando relevante para microestrutura.

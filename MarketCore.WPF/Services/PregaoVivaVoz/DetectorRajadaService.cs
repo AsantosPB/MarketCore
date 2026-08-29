@@ -59,14 +59,21 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
         /// <summary>
         /// Registra uma nova agressão no detector.
         /// Chamado pelo motor a cada agressão detectada.
+        ///
+        /// <paramref name="volumeMinimoPlayer"/> é o limiar de volume acumulado
+        /// deste player específico (vem de FiltroRajada.VolumeMinimo). Substitui
+        /// o antigo _config.VolumeMinimo global — agora cada player carrega o
+        /// próprio limiar. Se <= 0, cai no default de 100.
         /// </summary>
-        public void RegistrarAgressao(string playerChave, string playerNome, string lado, int quantidade)
+        public void RegistrarAgressao(string playerChave, string playerNome, string lado, int quantidade, int volumeMinimoPlayer)
         {
             if (string.IsNullOrEmpty(playerChave)) return;
-            
+
+            int limiteVolume = volumeMinimoPlayer > 0 ? volumeMinimoPlayer : 100;
+
             var buffer = _buffers.GetOrAdd(playerChave, key => new BufferRajada { PlayerChave = key });
             var timestamp = DateTime.Now;
-            
+
             lock (buffer)
             {
                 // Se mudou de lado, reseta
@@ -74,18 +81,18 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                 {
                     buffer.Reset();
                 }
-                
+
                 buffer.LadoAtivo = lado;
                 buffer.AdicionarAgressao(quantidade, lado, timestamp);
                 buffer.LimparAntigas(_config.JanelaMilissegundos);
-                
+
                 // Verifica se atingiu limiar de rajada
                 int contagem = buffer.ContarAgressoes(lado);
                 int volumeTotal = buffer.VolumeTotal(lado);
-                
+
                 if (!buffer.RajadaEmAndamento &&
                     contagem >= _config.SequenciaMinima &&
-                    volumeTotal >= _config.VolumeMinimo)
+                    volumeTotal >= limiteVolume)
                 {
                     // RAJADA DETECTADA!
                     buffer.RajadaEmAndamento = true;
@@ -152,9 +159,11 @@ namespace MarketCore.WPF.Services.PregaoVivaVoz
                                 
                                 Console.WriteLine($"⏹️ [RAJADA PAROU] {buffer.PlayerChave} {buffer.LadoAtivo} · vol total {buffer.VolumeAcumulado}");
                                 RajadaParou?.Invoke(this, evento);
-                                
-                                // Reset após alertar
-                                buffer.Reset();
+
+                                // Remove o entry — ConcurrentDictionary suporta remoção
+                                // durante iteração foreach (sem exceção, documentado no .NET).
+                                // Se o mesmo player voltar a operar, GetOrAdd criará novo buffer.
+                                _buffers.TryRemove(kvp.Key, out _);
                             }
                         }
                     }

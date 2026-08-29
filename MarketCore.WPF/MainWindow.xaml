@@ -202,6 +202,72 @@
                     </Button>
                 </StackPanel>
 
+                <!-- ══ HEALTH MONITOR (4 indicadores da DLL) ══
+                     Vive na área vazia entre os botões da esquerda e os indicadores
+                     E:/Δ/CONECTADO. Bolinha colorida + texto compacto por card.
+                     Clique em qualquer card abre o popup de detalhes (PopupHealthDetails). -->
+                <StackPanel Grid.Column="3" x:Name="HealthMonitorPanel"
+                            Orientation="Horizontal" VerticalAlignment="Center"
+                            HorizontalAlignment="Center" Margin="16,0"
+                            Background="Transparent" Cursor="Hand"
+                            ToolTip="Monitor de saúde da DLL — clique para detalhes"
+                            MouseLeftButtonUp="HealthMonitorPanel_Click">
+                    <!-- 1) Threads DLL -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <Ellipse x:Name="HmDotThreads" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="HmTxtThreads" Text="THR --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    </StackPanel>
+                    <!-- 2) Feed de Market Data -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <Ellipse x:Name="HmDotFeed" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="HmTxtFeed" Text="FEED --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    </StackPanel>
+                    <!-- 3) Latência DLL+Motor -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                        <Ellipse x:Name="HmDotLatency" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="HmTxtLatency" Text="DLL --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    </StackPanel>
+                    <!-- 4) Status de Atualização -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse x:Name="HmDotUpdate" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="HmTxtUpdate" Text="Sem dados" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Popup de detalhes: abre ao clicar em qualquer indicador do Health Monitor -->
+                <Popup x:Name="PopupHealthDetails" PlacementTarget="{Binding ElementName=HealthMonitorPanel}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="#141414" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="4" Padding="14,12" Margin="0,4,0,0">
+                        <StackPanel MinWidth="320">
+                            <TextBlock Text="MONITOR DE SAÚDE DA DLL" FontSize="10" Foreground="#888888" Margin="0,0,0,8" FontFamily="Consolas"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Threads DLL: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailThreads" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Feed Market Data: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailFeed" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Latência DLL+Motor: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailLatency" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Pico de latência: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailLatencyPeak" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock Text="Último trade: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailLastTrade" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Uptime sessão: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
+                                <TextBlock x:Name="HmDetailUptime" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+
                 <!-- Indicadores (só Exaustão + Delta) -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
                     <Border Background="#1A2A1A" BorderBrush="#2A4A2A" BorderThickness="1" CornerRadius="3" Padding="6,2">

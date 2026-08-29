@@ -20,6 +20,9 @@ namespace MarketCore.WPF.ViewModels.PregaoVivaVoz
         private readonly ConfigPersistenceService _persistence;
         private PregaoVivaVozEngine? _engine;
         private EventoSimulador? _simulador;
+
+        // [PVV-DIAG] Timer 1s que atualiza os contadores no card mesmo sem narração.
+        private System.Windows.Threading.DispatcherTimer? _statsTimer;
         
         // ============ COLEÇÕES PRA BINDING ============
         
@@ -282,8 +285,37 @@ namespace MarketCore.WPF.ViewModels.PregaoVivaVoz
                 PregaoVivaVozHook.OnTradeReceived = bridge.OnTradeReceived;
                 PregaoVivaVozHook.OnBookUpdate    = bridge.OnBookUpdate;
 
+                // [PVV-DIAG] Confirma no arquivo que os hooks foram wirados de fato.
+                MarketCore.Providers.Nelogica.PvvDebugFileLog.Write(
+                    $"[VIEWMODEL] Hooks wirados: OnTradeReceived={PregaoVivaVozHook.OnTradeReceived != null} " +
+                    $"OnBookUpdate={PregaoVivaVozHook.OnBookUpdate != null} " +
+                    $"bridgeInstance={bridge != null}");
+
+                // [PVV-DIAG] Timer de UI: atualiza os contadores EventosProcessados/Narrados/Rajadas
+                // no card do PVV mesmo quando nenhuma narração acontece. Antes, o refresh só
+                // rodava em OnEventoNarrado — se nada narrava, o UI ficava eternamente em 0
+                // mesmo com o engine processando internamente.
+                if (_statsTimer == null)
+                {
+                    _statsTimer = new System.Windows.Threading.DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromMilliseconds(1000)
+                    };
+                    _statsTimer.Tick += (s, ev) =>
+                    {
+                        if (_engine != null)
+                        {
+                            EventosProcessados = _engine.EventosProcessados;
+                            EventosNarrados = _engine.EventosNarrados;
+                            RajadasDetectadas = _engine.RajadasDetectadas;
+                        }
+                    };
+                }
+                _statsTimer.Start();
+
                 MotorRodando = true;
                 AdicionarLog("🟢 Motor iniciado · aguardando eventos");
+                AdicionarLog($"📄 Diagnóstico em: {MarketCore.Providers.Nelogica.PvvDebugFileLog.FilePath}");
                 MensagemLog?.Invoke(this, "Motor Pregão Viva Voz iniciado");
             }
             catch (Exception ex)
@@ -307,11 +339,15 @@ namespace MarketCore.WPF.ViewModels.PregaoVivaVoz
                 // Desconecta hooks ANTES de dispor o motor — evita callback race com _engine null.
                 PregaoVivaVozHook.OnTradeReceived = null;
                 PregaoVivaVozHook.OnBookUpdate    = null;
+                var bridgeAtual = App.PregaoVivaVozBridge;
                 App.PregaoVivaVozBridge = null;
+                bridgeAtual?.Dispose();
 
                 _engine?.Parar();
                 _engine?.Dispose();
                 _engine = null;
+
+                _statsTimer?.Stop();
 
                 MotorRodando = false;
                 AdicionarLog("⚫ Motor parado");
