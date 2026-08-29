@@ -7,6 +7,7 @@ using MarketCore.Contracts;
 using MarketCore.Engine.Detectors;
 using MarketCore.Engine.Recording;
 using MarketCore.Engine.Storage;
+using MarketCore.Engine.Calendar;
 using MarketCore.Models;
 
 namespace MarketCore.Engine;
@@ -75,6 +76,9 @@ public sealed class MarketEngine : IDisposable
     private IMarketRecorder? _recorder;
     private StorageManager?  _storageManager;  // [FASE 3]
     private string?          _dbPath;           // [FASE 3] base path para data/db
+    private CalendarLoader?  _calendarLoader;  // [FASE 4]
+    private CalendarTimer?   _calendarTimer;   // [FASE 4]
+    private CalendarDay?     _calendarioHoje;  // [FASE 4] snapshot do dia atual
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -83,6 +87,22 @@ public sealed class MarketEngine : IDisposable
 
     public string ProviderName => _provider.ProviderName;
     public ConnectionStatus Status => _provider.Status;
+
+    // ── Calendário econômico ──────────────────────────────────────────────
+    /// <summary>Indica se o engine está em bloqueio por evento econômico no momento.</summary>
+    public bool BloqueadoPorEventoEconomico
+        => _calendarLoader?.EstaBloqueado(DateTime.Now) ?? false;
+
+    /// <summary>Calendário do dia atual (null se ainda não carregado).</summary>
+    public CalendarDay? CalendarioHoje => _calendarioHoje;
+
+    /// <summary>Próximo evento econômico a partir de agora (null se não houver).</summary>
+    public EconomicEvent? ProximoEvento
+        => _calendarLoader?.ProximoEvento(DateTime.Now);
+
+    /// <summary>Minutos até o início do próximo bloqueio (int.MaxValue se não houver).</summary>
+    public int MinutosAteProximoBloqueio
+        => _calendarLoader?.MinutosAteProximoBloqueio(DateTime.Now) ?? int.MaxValue;
 
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
@@ -128,6 +148,9 @@ public sealed class MarketEngine : IDisposable
         _recordingEnabled = false;
         _recorder?.Dispose();
         _storageManager?.Dispose(); // [FASE 3]
+        _calendarTimer?.Dispose();  // [FASE 4]
+        _calendarLoader = null;
+        _calendarTimer  = null;
         _recorder = null;
         Console.WriteLine("[RECORDER] Gravação desabilitada");
     }
@@ -154,6 +177,20 @@ public sealed class MarketEngine : IDisposable
             var hoje = DateOnly.FromDateTime(DateTime.Now);
             _storageManager = new StorageManager(); // [FASE 3]
             await _storageManager.InicializarAsync(_dbPath ?? System.IO.Path.Combine("data", "db"));
+
+            _calendarLoader = new CalendarLoader(_storageManager); // [FASE 4]
+            _calendarLoader.OnCalendarLoaded   += dia  => _calendarioHoje = dia;
+            _calendarLoader.OnBlockApproaching += (ev, min) =>
+                Console.WriteLine($"[CALENDAR] ⚠ {ev.Name} em {min} min — bloqueio iminente");
+            _calendarLoader.OnBlockStart += ev =>
+                Console.WriteLine($"[CALENDAR] 🔴 BLOQUEIO iniciado — {ev.Name} ({ev.Country}, {ev.Impact})");
+            _calendarLoader.OnBlockEnd += ev =>
+                Console.WriteLine($"[CALENDAR] 🟢 BLOQUEIO encerrado — {ev.Name}");
+
+            _calendarTimer = new CalendarTimer(_calendarLoader); // [FASE 4]
+            _calendarTimer.Iniciar();
+            _ = _calendarLoader.CarregarAsync(DateTime.Today); // carga inicial sem bloquear ConnectAsync
+
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
@@ -167,6 +204,11 @@ public sealed class MarketEngine : IDisposable
 
     public async Task DisconnectAsync()
     {
+        _calendarTimer?.Parar();        // [FASE 4] para timers antes de fechar
+        _calendarTimer?.Dispose();
+        _calendarLoader = null;
+        _calendarTimer  = null;
+
         if (_recordingEnabled && _recorder != null)
         {
             var status = _recorder.Status;
@@ -597,6 +639,7 @@ public sealed class MarketEngine : IDisposable
         _cts.Dispose();
         _recorder?.Dispose();
         _storageManager?.Dispose(); // [FASE 3]
+        _calendarTimer?.Dispose();  // [FASE 4]
     }
 }
 

@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using DuckDB.NET.Data;
 using Microsoft.Data.Sqlite;
+using MarketCore.Engine.Calendar;
 
 namespace MarketCore.Engine.Storage;
 
@@ -290,6 +291,24 @@ VALUES ('strategy_version', 'FLOWSENSE_V2', $ts);";
         cmd.Parameters.Clear();
         cmd.Parameters.AddWithValue("$ts", DateTime.UtcNow.Ticks);
         await cmd.ExecuteNonQueryAsync();
+
+        // [FASE 4] Calendário econômico — eventos importados do Investing.com
+        cmd.CommandText = @"
+CREATE TABLE IF NOT EXISTS economic_events (
+    event_id             TEXT    NOT NULL,
+    event_date           TEXT    NOT NULL,
+    time_brasilia        INTEGER NOT NULL,
+    name                 TEXT,
+    country              TEXT,
+    impact               INTEGER,
+    forecast             REAL,
+    previous             REAL,
+    block_minutes_before INTEGER,
+    wait_seconds_after   INTEGER,
+    is_active            INTEGER,
+    PRIMARY KEY (event_id, event_date)
+);";
+        await cmd.ExecuteNonQueryAsync();
     }
 
     /// <summary>Grava uma decisão do Decision Core no SQLite.</summary>
@@ -381,6 +400,96 @@ VALUES
         }
 
         return result;
+    }
+
+    // ── Calendário econômico ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Persiste todos os eventos de um CalendarDay no SQLite.
+    /// Substitui eventos existentes para a mesma data (DELETE + INSERT).
+    /// </summary>
+    public async Task SalvarEventosAsync(CalendarDay day)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (day.Events.Count == 0) return;
+
+        var dateStr = day.Date.ToString("yyyy-MM-dd");
+
+        using var transaction = _sqlite!.BeginTransaction();
+        using var cmd = _sqlite.CreateCommand();
+        cmd.Transaction = transaction;
+
+        cmd.CommandText = "DELETE FROM economic_events WHERE event_date = $date";
+        cmd.Parameters.AddWithValue("$date", dateStr);
+        await cmd.ExecuteNonQueryAsync();
+
+        cmd.CommandText = @"
+INSERT INTO economic_events
+    (event_id, event_date, time_brasilia, name, country, impact,
+     forecast, previous, block_minutes_before, wait_seconds_after, is_active)
+VALUES
+    ($id, $date, $tb, $name, $country, $impact,
+     $forecast, $previous, $bmb, $wsa, $active)";
+
+        foreach (var ev in day.Events)
+        {
+            cmd.Parameters.Clear();
+            cmd.Parameters.AddWithValue("$id",       ev.EventId);
+            cmd.Parameters.AddWithValue("$date",     dateStr);
+            cmd.Parameters.AddWithValue("$tb",       ev.TimeBrasilia.Ticks);
+            cmd.Parameters.AddWithValue("$name",     ev.Name);
+            cmd.Parameters.AddWithValue("$country",  ev.Country);
+            cmd.Parameters.AddWithValue("$impact",   (int)ev.Impact);
+            cmd.Parameters.AddWithValue("$forecast", (object?)ev.Forecast ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$previous", (object?)ev.Previous ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$bmb",      ev.BlockMinutesBefore);
+            cmd.Parameters.AddWithValue("$wsa",      ev.WaitSecondsAfter);
+            cmd.Parameters.AddWithValue("$active",   ev.IsActive ? 1 : 0);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await transaction.CommitAsync();
+    }
+
+    /// <summary>
+    /// Carrega eventos econômicos salvos para uma data específica.
+    /// Retorna um CalendarDay vazio se não houver dados persistidos.
+    /// </summary>
+    public async Task<CalendarDay> CarregarEventosSalvosAsync(DateTime date)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var day     = new CalendarDay { Date = date.Date };
+        var dateStr = date.ToString("yyyy-MM-dd");
+
+        using var cmd = _sqlite!.CreateCommand();
+        cmd.CommandText = @"
+SELECT event_id, time_brasilia, name, country, impact,
+       forecast, previous, block_minutes_before, wait_seconds_after, is_active
+FROM   economic_events
+WHERE  event_date = $date
+ORDER  BY time_brasilia";
+        cmd.Parameters.AddWithValue("$date", dateStr);
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            day.Events.Add(new EconomicEvent
+            {
+                EventId            = reader.GetString(0),
+                TimeBrasilia       = new DateTime(reader.GetInt64(1), DateTimeKind.Local),
+                Name               = reader.GetString(2),
+                Country            = reader.GetString(3),
+                Impact             = (ImpactLevel)reader.GetInt32(4),
+                Forecast           = reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                Previous           = reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                BlockMinutesBefore = reader.GetInt32(7),
+                WaitSecondsAfter   = reader.GetInt32(8),
+                IsActive           = reader.GetInt32(9) != 0,
+            });
+        }
+
+        return day;
     }
 
     // ── Dispose ───────────────────────────────────────────────────────────

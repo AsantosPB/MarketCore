@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 3)
-- Fase atual: Fase 3 concluída — iniciando Fase 4 (Calendar Loader)
+- Última atualização: 29/08/2026 (Fase 4)
+- Fase atual: Fase 4 concluída — iniciando Fase 5 (Feature Engine)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -77,7 +77,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 1 — Corrigir BookProcessingLoop + formato fixo _book.bin
 - [x] Fase 2 — SequenceNumber + Channel<T> nos workers
 - [x] Fase 3 — DuckDB + SQLite (novas camadas, sem tocar no binário)
-- [ ] Fase 4 — Calendar Loader (agenda econômica automática)
+- [x] Fase 4 — Calendar Loader (agenda econômica automática)
 - [ ] Fase 5 — Feature Engine
 - [ ] Fase 6 — Event Detector + Regime Detector
 - [ ] Fase 7 — Dataset automático (features + labels no DuckDB)
@@ -203,3 +203,15 @@ git push origin main --tags
   - PROJETO.md — fase 3 marcada concluída
 - Pastas criadas: data/db/, data/raw/, data/features/, data/labels/, data/patterns/
 - Commit: fase-3 — tag: v0.3.0
+
+### 29/08/2026 — Fase 4
+- Arquivos criados:
+  - Engine/Calendar/CalendarModels.cs — ImpactLevel enum (Low/Medium/High/Critical), EconomicEvent (EventId, TimeBrasilia, Impact, BlockMinutesBefore, WaitSecondsAfter, BloqueioInicio/Fim), CalendarDay
+  - Engine/Calendar/CalendarLoader.cs — download Investing.com via HtmlAgilityPack; detecção DST USA (2º dom. março → 1º dom. novembro); conversão NY→Brasília (+1h/+2h); classificação de impacto por país+keywords; persistência SQLite; EstaBloqueado, ProximoEvento, MinutosAteProximoBloqueio, VerificarBloqueios
+  - Engine/Calendar/CalendarTimer.cs — Timer carga às 08:30 + loop monitoramento 30s
+- Arquivos modificados:
+  - Engine/Storage/StorageManager.cs — tabela economic_events no SQLite; SalvarEventosAsync(CalendarDay); CarregarEventosSalvosAsync(DateTime)
+  - Engine/MarketEngine.cs — campos _calendarLoader/_calendarTimer/_calendarioHoje; propriedades públicas BloqueadoPorEventoEconomico, CalendarioHoje, ProximoEvento, MinutosAteProximoBloqueio; init em ConnectAsync; handlers OnCalendarLoaded/OnBlockApproaching/OnBlockStart/OnBlockEnd; Parar/Dispose em DisconnectAsync e Dispose()
+  - MarketCore.csproj — PackageReference HtmlAgilityPack 1.11.67
+  - PROJETO.md — fase 4 marcada concluída
+- Commit: fase-4 — tag: v0.4.0
