@@ -6,6 +6,7 @@ using DuckDB.NET.Data;
 using Microsoft.Data.Sqlite;
 using MarketCore.Engine.Calendar;
 using MarketCore.Engine.Dataset;
+using MarketCore.Engine.Paper;
 using MarketCore.Engine.Patterns;
 using System.Text.Json;
 
@@ -326,6 +327,25 @@ CREATE TABLE IF NOT EXISTS economic_events (
     wait_seconds_after   INTEGER,
     is_active            INTEGER,
     PRIMARY KEY (event_id, event_date)
+);
+CREATE TABLE IF NOT EXISTS paper_sessions (
+    session_id      TEXT PRIMARY KEY,
+    date            TEXT NOT NULL,
+    start_time      TEXT,
+    end_time        TEXT,
+    total_trades    INTEGER,
+    win_trades      INTEGER,
+    loss_trades     INTEGER,
+    win_rate        REAL,
+    gross_pnl       REAL,
+    total_slippage  REAL,
+    net_pnl         REAL,
+    max_drawdown    REAL,
+    expectancy      REAL,
+    profit_factor   REAL,
+    avg_latency_ms  REAL,
+    avg_slippage    REAL,
+    notes           TEXT
 );";
         await cmd.ExecuteNonQueryAsync();
     }
@@ -807,7 +827,83 @@ VALUES
 
     public void Dispose()
     {
-        if (_disposed) return;
+    /// <summary>Persiste uma sessão de paper trading no SQLite.</summary>
+    public async Task SalvarPaperSessionAsync(PaperTradingSession session)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        using var cmd = _sqlite!.CreateCommand();
+        cmd.CommandText = @"
+INSERT OR REPLACE INTO paper_sessions
+    (session_id, date, start_time, end_time,
+     total_trades, win_trades, loss_trades, win_rate,
+     gross_pnl, total_slippage, net_pnl, max_drawdown,
+     expectancy, profit_factor, avg_latency_ms, avg_slippage, notes)
+VALUES
+    ($sid, $dt, $st, $et,
+     $tt, $wt, $lt, $wr,
+     $gp, $ts, $np, $md,
+     $exp, $pf, $alms, $aslip, $notes)";
+        cmd.Parameters.AddWithValue("$sid",   session.SessionId.ToString());
+        cmd.Parameters.AddWithValue("$dt",    session.Date.ToString("yyyy-MM-dd"));
+        cmd.Parameters.AddWithValue("$st",    session.StartTime.ToString("o"));
+        cmd.Parameters.AddWithValue("$et",    session.EndTime?.ToString("o") ?? string.Empty);
+        cmd.Parameters.AddWithValue("$tt",    session.TotalTrades);
+        cmd.Parameters.AddWithValue("$wt",    session.WinTrades);
+        cmd.Parameters.AddWithValue("$lt",    session.LossTrades);
+        cmd.Parameters.AddWithValue("$wr",    session.WinRate);
+        cmd.Parameters.AddWithValue("$gp",    session.GrossPnL);
+        cmd.Parameters.AddWithValue("$ts",    session.TotalSlippage);
+        cmd.Parameters.AddWithValue("$np",    session.NetPnL);
+        cmd.Parameters.AddWithValue("$md",    session.MaxDrawdown);
+        cmd.Parameters.AddWithValue("$exp",   session.Expectancy);
+        cmd.Parameters.AddWithValue("$pf",    session.ProfitFactor);
+        cmd.Parameters.AddWithValue("$alms",  session.AvgLatencyMs);
+        cmd.Parameters.AddWithValue("$aslip", session.AvgSlippage);
+        cmd.Parameters.AddWithValue("$notes", session.Notes);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>Carrega sessões de paper trading dos últimos N dias.</summary>
+    public async Task<List<PaperTradingSession>> CarregarPaperSessionsAsync(int ultimosDias = 30)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var resultado = new List<PaperTradingSession>();
+        var desde     = DateTime.Today.AddDays(-ultimosDias).ToString("yyyy-MM-dd");
+
+        using var cmd = _sqlite!.CreateCommand();
+        cmd.CommandText = "SELECT * FROM paper_sessions WHERE date >= $desde ORDER BY date DESC";
+        cmd.Parameters.AddWithValue("$desde", desde);
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            resultado.Add(new PaperTradingSession
+            {
+                SessionId     = Guid.Parse(reader.GetString(0)),
+                Date          = DateTime.Parse(reader.GetString(1)),
+                StartTime     = DateTime.Parse(reader.GetString(2)),
+                EndTime       = reader.IsDBNull(3) ? null : DateTime.Parse(reader.GetString(3)),
+                TotalTrades   = reader.GetInt32(4),
+                WinTrades     = reader.GetInt32(5),
+                LossTrades    = reader.GetInt32(6),
+                WinRate       = reader.GetDouble(7),
+                GrossPnL      = reader.GetDouble(8),
+                TotalSlippage = reader.GetDouble(9),
+                NetPnL        = reader.GetDouble(10),
+                MaxDrawdown   = reader.GetDouble(11),
+                Expectancy    = reader.GetDouble(12),
+                ProfitFactor  = reader.GetDouble(13),
+                AvgLatencyMs  = reader.GetDouble(14),
+                AvgSlippage   = reader.GetDouble(15),
+                Notes         = reader.IsDBNull(16) ? string.Empty : reader.GetString(16)
+            });
+        }
+        return resultado;
+    }
+
+    if (_disposed) return;
         _disposed = true;
         _duckDb?.Close();
         _duckDb?.Dispose();

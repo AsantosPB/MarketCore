@@ -15,6 +15,7 @@ using MarketCore.Engine.Backtest;   // [FASE 10]
 using MarketCore.Engine.Agents;     // [FASE 11]
 using MarketCore.Engine.Decision;   // [FASE 12]
 using MarketCore.Engine.Risk;        // [FASE 13]
+using MarketCore.Engine.Paper;       // [FASE 14]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -105,6 +106,8 @@ public sealed class MarketEngine : IDisposable
     private bool              _temPosicaoAberta;
     private int               _tradesDoDia;
     private double            _latenciaMs;
+    private PaperTradingEngine? _paperEngine;      // [FASE 14]
+    private bool               _paperModeAtivo;   // [FASE 14]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -195,6 +198,37 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Desativa o Kill Switch — exige ação manual deliberada.</summary>
     public void DesativarKillSwitch()  // [FASE 13]
         => _riskManager?.DesativarKillSwitch();
+
+    // ── Paper Trading — Fase 14 ────────────────────────────────────────────────
+
+    /// <summary>Indica se o modo paper trading está ativo.</summary>
+    public bool PaperModeAtivo => _paperModeAtivo;  // [FASE 14]
+
+    /// <summary>Sessão de paper trading em andamento.</summary>
+    public PaperTradingSession? SessaoPaperAtual  // [FASE 14]
+        => _paperEngine?.SessaoAtual;
+
+    /// <summary>Ativa o modo de paper trading com dados reais e execução simulada.</summary>
+    public void AtivarPaperTrading()  // [FASE 14]
+    {
+        if (_paperModeAtivo) return;
+        _paperEngine = new PaperTradingEngine(_storageManager, _riskManager!);
+        _paperEngine.OnTrade      += OnPaperTrade;
+        _paperEngine.OnPnLUpdate  += OnPaperPnLUpdate;
+        _paperEngine.OnSessionEnd += OnPaperSessionEnd;
+        _paperEngine.IniciarSessao();
+        _paperModeAtivo = true;
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [PAPER] Modo paper trading ativado");
+    }
+
+    /// <summary>Encerra a sessão de paper trading e persiste resultados.</summary>
+    public async Task DesativarPaperTradingAsync()  // [FASE 14]
+    {
+        if (!_paperModeAtivo || _paperEngine == null) return;
+        await _paperEngine.EncerrarSessaoAsync();
+        _paperModeAtivo = false;
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [PAPER] Modo paper trading desativado");
+    }
 
     // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
 
@@ -406,10 +440,14 @@ public sealed class MarketEngine : IDisposable
                         _ultimaAtualizacaoBook);
 
                     if (risco.Result == RiskCheckResult.Approved)
-                        Console.WriteLine(
-                            $"[RISK] APROVADO — {estado} | "
-                          + $"score={_decisionCore.UltimoEstado} | "
-                          + $"regime={regime.Regime}");
+                    {
+                        if (_paperModeAtivo && _paperEngine != null)
+                            await _paperEngine.ProcessarDecisaoAsync(estado, snap);
+                        else
+                            Console.WriteLine(
+                                $"[RISK] APROVADO — {estado} | "
+                              + $"regime={regime.Regime}");
+                    }
                 }
             };
             _patternDiscovery = new PatternDiscovery();
@@ -555,6 +593,28 @@ public sealed class MarketEngine : IDisposable
         Console.WriteLine(
             $"[{DateTime.Now:HH:mm:ss}] [DECISION] Estado: {estado} | "
           + $"Regime: {_featureEngine?.RegimeAtual.Regime}");
+    }
+
+    // ── Handlers de Paper Trading — Fase 14 ────────────────────────────────
+
+    private void OnPaperTrade(TradeRecord trade)  // [FASE 14]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [PAPER] Trade: {trade.Side} "
+          + $"entry={trade.EntryPrice:F3} exit={trade.ExitPrice:F3} "
+          + $"pnl=R${trade.NetPnl:F2} reason={trade.ExitReason}");
+    }
+
+    private void OnPaperPnLUpdate(double pnl)  // [FASE 14]
+    {
+        // Atualizar UI — Fase 16
+    }
+
+    private void OnPaperSessionEnd(PaperTradingSession session)  // [FASE 14]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [PAPER] Sessão finalizada: "
+          + $"{session.TotalTrades} trades | NetPnL: R${session.NetPnL:F2}");
     }
 
     // ── Handlers de Risk Manager — Fase 13 ─────────────────────────────────
@@ -962,6 +1022,8 @@ public sealed class MarketEngine : IDisposable
         _datasetTimer?.Dispose();   // [FASE 7]
         _replayEngine?.Dispose();   // [FASE 9]
         _riskManager?.AtivarKillSwitch("Sistema encerrando");  // [FASE 13]
+        if (_paperModeAtivo) _ = DesativarPaperTradingAsync();  // [FASE 14]
+        _paperEngine?.Dispose();
     }
 }
 

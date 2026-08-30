@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 13 concluída — iniciando Fase 14
+- Fase atual: Fase 14 concluída — iniciando Fase 15
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -87,7 +87,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 11 — Agent Engine (6 agentes)
 - [x] Fase 12 — Decision Core
 - [x] Fase 13 — Risk Manager + Kill Switch
-- [ ] Fase 14 — Paper Trading (2 semanas mínimo)
+- [x] Fase 14 — Paper Trading (2 semanas mínimo)
 - [ ] Fase 15 — Live Execution
 - [ ] Fase 16 — Janela MCIE Principal (WPF)
 - [ ] Fase 17 — Janela Preço Justo (WPF)
@@ -146,6 +146,19 @@ Identificado na auditoria de 29/08/2026:
 ```
 ---
 ## Histórico de mudanças
+### 30/08/2026 — Fase 14
+- Arquivos criados:
+  - Engine/Paper/PaperTradingSession.cs — POCO de sessão com estatísticas completas
+  - Engine/Paper/PaperPosition.cs — posição com MFE/MAE, gera TradeRecord ao fechar
+  - Engine/Paper/PaperExecutionProvider.cs — IExecutionProvider simulado, latência 80-300ms, slippage 0.5
+  - Engine/Paper/PaperTradingEngine.cs — motor completo, stop -340pts/target +500pts, OnOrderFilled capture
+- Arquivos modificados:
+  - Engine/Storage/StorageManager.cs — tabela paper_sessions, SalvarPaperSessionAsync, CarregarPaperSessionsAsync
+  - Engine/MarketEngine.cs — using FASE 14, campos _paperEngine/_paperModeAtivo, propriedades PaperModeAtivo/SessaoPaperAtual, AtivarPaperTrading/DesativarPaperTradingAsync, pipeline RiskManager→PaperTradingEngine, handlers OnPaperTrade/OnPaperPnLUpdate/OnPaperSessionEnd, Dispose
+  - PROJETO.md — Fase 14 marcada concluída
+- Pipeline: FeatureEngine → AgentEngine → DecisionCore → RiskManager → PaperTradingEngine
+- Commit: fase-14 — tag: v0.14.0
+
 ### 30/08/2026 — Fase 13
 - Arquivos criados:
   - Engine/Risk/RiskModels.cs — RiskCheckResult, BlockReason, RiskDecision, RiskConfig, RiskState
