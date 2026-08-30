@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 14 concluída — iniciando Fase 15
+- Fase atual: Fase 15 concluída — iniciando Fase 16
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -88,7 +88,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 12 — Decision Core
 - [x] Fase 13 — Risk Manager + Kill Switch
 - [x] Fase 14 — Paper Trading (2 semanas mínimo)
-- [ ] Fase 15 — Live Execution
+- [x] Fase 15 — Live Execution
 - [ ] Fase 16 — Janela MCIE Principal (WPF)
 - [ ] Fase 17 — Janela Preço Justo (WPF)
 ---
@@ -158,6 +158,16 @@ Identificado na auditoria de 29/08/2026:
   - PROJETO.md — Fase 14 marcada concluída
 - Pipeline: FeatureEngine → AgentEngine → DecisionCore → RiskManager → PaperTradingEngine
 - Commit: fase-14 — tag: v0.14.0
+
+### 30/08/2026 — Fase 15
+- Arquivos criados:
+  - Engine/Live/LiveExecutionProvider.cs — implementação live de IExecutionProvider (IsLive=true); stub documentado para integração futura com ProfitDLL (ordem real ainda não mapeada em ProfitDLL.cs); market orders disparam fill imediato, limit orders via VerificarOrdensPendentes(); CancelarTodasAsync() para Kill Switch
+  - Engine/Live/LiveTradingEngine.cs — motor live espelhando PaperTradingEngine; reutiliza PaperPosition e PaperTradingSession; ProcessarDecisaoAsync(DecisionState, FeatureSnapshot); stop -340 pts / target +500 pts; PararAsync() para cancelar ordens; CalcularEstatisticas(); persiste via StorageManager
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 15, campos _liveEngine/_liveModeAtivo, propriedades ModoAtual/SessaoLiveAtual, AtivarLiveTrading/DesativarLiveTradingAsync, pipeline live>paper>log, handlers OnLiveTrade/OnLivePnLUpdate/OnLiveError, Kill Switch aciona PararAsync(), Dispose
+  - PROJETO.md — Fase 15 marcada concluída
+- Nota técnica: ProfitDLLProvider implementa IMarketDataProvider apenas (sem métodos de roteamento de ordens). LiveExecutionProvider contém TODO documentado para integração futura quando ProfitDLL.cs mapear SendBuyOrder/SendSellOrder/CancelOrder.
+- Commit: fase-15 — tag: v0.15.0
 
 ### 30/08/2026 — Fase 13
 - Arquivos criados:

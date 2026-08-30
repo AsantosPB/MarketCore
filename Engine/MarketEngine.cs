@@ -16,6 +16,7 @@ using MarketCore.Engine.Agents;     // [FASE 11]
 using MarketCore.Engine.Decision;   // [FASE 12]
 using MarketCore.Engine.Risk;        // [FASE 13]
 using MarketCore.Engine.Paper;       // [FASE 14]
+using MarketCore.Engine.Live;        // [FASE 15]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -108,6 +109,8 @@ public sealed class MarketEngine : IDisposable
     private double            _latenciaMs;
     private PaperTradingEngine? _paperEngine;      // [FASE 14]
     private bool               _paperModeAtivo;   // [FASE 14]
+    private LiveTradingEngine?  _liveEngine;       // [FASE 15]
+    private bool               _liveModeAtivo;    // [FASE 15]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -228,6 +231,48 @@ public sealed class MarketEngine : IDisposable
         await _paperEngine.EncerrarSessaoAsync();
         _paperModeAtivo = false;
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [PAPER] Modo paper trading desativado");
+    }
+
+    // ── Live Trading — Fase 15 ───────────────────────────────────────────────
+
+    /// <summary>Modo atual de operação: OBSERVAR, PAPER ou LIVE.</summary>
+    public string ModoAtual =>  // [FASE 15]
+        _liveModeAtivo  ? "LIVE"     :
+        _paperModeAtivo ? "PAPER"    : "OBSERVAR";
+
+    /// <summary>Sessão de live trading em andamento (null se não iniciada).</summary>
+    public PaperTradingSession? SessaoLiveAtual  // [FASE 15]
+        => _liveEngine?.SessaoAtual;
+
+    /// <summary>
+    /// Ativa o modo de live trading com execução real via broker.
+    /// Se o paper mode estiver ativo, desativa-o antes de ativar o live mode.
+    /// </summary>
+    public void AtivarLiveTrading()  // [FASE 15]
+    {
+        if (_liveModeAtivo) return;
+        if (_paperModeAtivo)
+        {
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [LIVE] Desativando paper mode antes de ativar live mode");
+            _ = DesativarPaperTradingAsync();
+            _paperModeAtivo = false;
+        }
+        _liveEngine = new LiveTradingEngine(_storageManager, _riskManager!);
+        _liveEngine.OnTrade      += OnLiveTrade;
+        _liveEngine.OnPnLUpdate  += OnLivePnLUpdate;
+        _liveEngine.OnError      += OnLiveError;
+        _liveEngine.IniciarSessao();
+        _liveModeAtivo = true;
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [LIVE] Modo live trading ativado");
+    }
+
+    /// <summary>Encerra a sessão de live trading e persiste resultados.</summary>
+    public async Task DesativarLiveTradingAsync()  // [FASE 15]
+    {
+        if (!_liveModeAtivo || _liveEngine == null) return;
+        await _liveEngine.EncerrarSessaoAsync();
+        _liveModeAtivo = false;
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [LIVE] Modo live trading desativado");
     }
 
     // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
@@ -441,7 +486,9 @@ public sealed class MarketEngine : IDisposable
 
                     if (risco.Result == RiskCheckResult.Approved)
                     {
-                        if (_paperModeAtivo && _paperEngine != null)
+                        if (_liveModeAtivo && _liveEngine != null)
+                            await _liveEngine.ProcessarDecisaoAsync(estado, snap);    // [FASE 15]
+                        else if (_paperModeAtivo && _paperEngine != null)
                             await _paperEngine.ProcessarDecisaoAsync(estado, snap);
                         else
                             Console.WriteLine(
@@ -617,13 +664,35 @@ public sealed class MarketEngine : IDisposable
           + $"{session.TotalTrades} trades | NetPnL: R${session.NetPnL:F2}");
     }
 
+    // ── Handlers de Live Trading — Fase 15 ───────────────────────────────────
+
+    private void OnLiveTrade(TradeRecord trade)  // [FASE 15]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [LIVE] Trade: {trade.Side} "
+          + $"entry={trade.EntryPrice:F3} exit={trade.ExitPrice:F3} "
+          + $"pnl=R${trade.NetPnl:F2} reason={trade.ExitReason}");
+    }
+
+    private void OnLivePnLUpdate(double pnl)  // [FASE 15]
+    {
+        // Atualizar UI — Fase 16
+    }
+
+    private void OnLiveError(string erro)  // [FASE 15]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [LIVE] ERRO: {erro}");
+    }
+
     // ── Handlers de Risk Manager — Fase 13 ─────────────────────────────────
 
     private void OnKillSwitchAtivado(string motivo)  // [FASE 13]
     {
         Console.WriteLine(
             $"[{DateTime.Now:HH:mm:ss}] [KILL SWITCH] ATIVADO: {motivo}");
-        // Fase 15: cancelar ordens abertas e fechar posição
+        if (_liveModeAtivo && _liveEngine != null)
+            _ = _liveEngine.PararAsync();  // [FASE 15] cancelar ordens abertas
     }
 
     private void OnOrdemBloqueada(RiskDecision d)  // [FASE 13]
@@ -1024,6 +1093,8 @@ public sealed class MarketEngine : IDisposable
         _riskManager?.AtivarKillSwitch("Sistema encerrando");  // [FASE 13]
         if (_paperModeAtivo) _ = DesativarPaperTradingAsync();  // [FASE 14]
         _paperEngine?.Dispose();
+        if (_liveModeAtivo) _ = DesativarLiveTradingAsync();   // [FASE 15]
+        _liveEngine?.Dispose();
     }
 }
 
