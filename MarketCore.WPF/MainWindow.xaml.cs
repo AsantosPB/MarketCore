@@ -234,6 +234,13 @@ namespace MarketCore.WPF
         private DetectorAggregator _detectorAggregator = null!;
         private FlowScoreEngine _flowScoreEngine = null!;
         private DispatcherTimer _flowScoreTimer = null!;
+        // ── MCIE ──────────────────────────────────────────────────────────────
+        private DispatcherTimer? _mcieTimer;
+        private bool _eventLogPaused;
+        private string _activeModoAtual = "OBSERVAR";
+        public ObservableCollection<EventLogViewModel>        McieEventLog    { get; } = new();
+        public ObservableCollection<AgentViewModel>           McieAgentes     { get; } = new();
+        public ObservableCollection<CalendarioEventViewModel> McieCalendario  { get; } = new();
 
         // ── Agent Panel ───────────────────────────────────────────────────────
         // ── Leitura de Fluxo (substitui o antigo Agent Panel) ──────────────────
@@ -305,6 +312,8 @@ namespace MarketCore.WPF
 
             _clockTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _clockTimer.Tick += ClockTimer_Tick;
+            _mcieTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _mcieTimer.Tick += McieTimer_Tick;
 
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
@@ -585,6 +594,28 @@ namespace MarketCore.WPF
             _uiTimer.Start();
             _uiPulseTimer.Start();
             _clockTimer.Start();
+            // ── MCIE: timer + botões de modo + event log + stop/target ──────────
+            IcEventLog.ItemsSource   = McieEventLog;
+            IcAgentes.ItemsSource    = McieAgentes;
+            IcCalendario.ItemsSource = McieCalendario;
+
+            BtnModoObservar.Click += BtnModoObservar_Click;
+            BtnModoPaper.Click    += BtnModoPaper_Click;
+            BtnModoLive.Click     += BtnModoLive_Click;
+
+            BtnEventLogPausa.Click += BtnEventLogPausa_Click;
+
+            BtnTf1s.Click  += (_, _) => BtnTf_Click("1S");
+            BtnTf5s.Click  += (_, _) => BtnTf_Click("5S");
+            BtnTf15s.Click += (_, _) => BtnTf_Click("15S");
+            BtnTf1m.Click  += (_, _) => BtnTf_Click("1M");
+            BtnTf5m.Click  += (_, _) => BtnTf_Click("5M");
+
+            TxStop.TextChanged   += TxStop_TextChanged;
+            TxTarget.TextChanged += TxTarget_TextChanged;
+
+            UpdateModeButtonStyles("OBSERVAR");
+            _mcieTimer!.Start();
 
             if (_isRealMarket && FlowsenseUiSettings.Load().ShowHistoryDownloadOnStartup)
                 _openHistoryDownloadAfterConnect = true;
@@ -2633,6 +2664,369 @@ namespace MarketCore.WPF
         }
         */
 
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Timer principal (100 ms)
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void McieTimer_Tick(object? sender, EventArgs e)
+        {
+            try
+            {
+                var modo = _engine?.ModoAtual ?? "OBSERVAR";
+
+                // Chip de modo no toolbar
+                if (modo != _activeModoAtual)
+                {
+                    _activeModoAtual = modo;
+                    UpdateModeButtonStyles(modo);
+                }
+
+                TbModoAtualChip.Text   = modo;
+                TbMcieStatusModo.Text  = modo;
+
+                // ── Posição / P&L (Paper ou Live) ─────────────────────────────
+                var sessaoLive  = _engine?.SessaoLiveAtual;
+                // sessaoLive pode ser PaperTradingSession ou LiveTradingSession
+                // Por hora lemos propriedades comuns via duck-typing
+                if (sessaoLive != null)
+                {
+                    UpdatePosicaoPanel(sessaoLive);
+                    UpdatePerformancePanel(sessaoLive);
+                }
+                else
+                {
+                    TbPosicaoEstado.Text = "FLAT";
+                    TbPnlAberto.Text     = "R$ 0,00";
+                    TbEstadoAtual.Text   = "SEM POSIÇÃO";
+                }
+            }
+            catch (Exception ex)
+            {
+                App.AppendCrashLog("McieTimer_Tick", ex);
+            }
+        }
+
+        private void UpdatePosicaoPanel(dynamic sessao)
+        {
+            try
+            {
+                var pnl = (decimal)sessao.PnLAberto;
+                TbPnlAberto.Text      = FormatPnl(pnl);
+                TbPnlAberto.Foreground = pnl >= 0
+                    ? new SolidColorBrush(Color.FromRgb(0, 212, 170))   // #00D4AA
+                    : new SolidColorBrush(Color.FromRgb(255, 68, 102));  // #FF4466
+
+                // Estado (Flat / Long / Short)
+                var estado = sessao.Estado?.ToString() ?? "FLAT";
+                TbPosicaoEstado.Text = estado;
+                TbEstadoAtual.Text   = estado;
+
+                // Preço / Stop / Target de entrada
+                TbPrecoPosicao.Text  = FormatPrice((decimal)sessao.PrecoEntrada);
+                TbStopPosicao.Text   = FormatPrice((decimal)sessao.StopAtual);
+                TbTargetPosicao.Text = FormatPrice((decimal)sessao.TargetAtual);
+
+                // Resultado do dia
+                TbResultadoDia.Text  = FormatPnl((decimal)sessao.ResultadoDia);
+            }
+            catch { /* propriedade ausente — ignora */ }
+        }
+
+        private void UpdatePerformancePanel(dynamic sessao)
+        {
+            try
+            {
+                TbPerfPL.Text    = FormatPnl((decimal)sessao.ResultadoDia);
+                TbPerfTrades.Text = sessao.TotalTrades?.ToString() ?? "0";
+                TbPerfWin.Text   = FormatPct((double)(sessao.WinRate ?? 0.0));
+                TbPerfDD.Text    = FormatPnl((decimal)(sessao.MaxDrawdown ?? 0m));
+            }
+            catch { /* ignora propriedade ausente */ }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Botões de modo
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void UpdateModeButtonStyles(string modo)
+        {
+            // Reset all
+            var btnObservar = BtnModoObservar;
+            var btnPaper    = BtnModoPaper;
+            var btnLive     = BtnModoLive;
+
+            // OBSERVAR
+            btnObservar.Background = modo == "OBSERVAR"
+                ? new SolidColorBrush(Color.FromRgb(26, 32, 48))   // #1A2030
+                : new SolidColorBrush(Color.FromRgb(30, 34, 40));   // #1E2228
+            btnObservar.Foreground = modo == "OBSERVAR"
+                ? new SolidColorBrush(Color.FromRgb(74, 158, 255))  // #4A9EFF
+                : new SolidColorBrush(Color.FromRgb(160, 168, 184));
+
+            // PAPER
+            btnPaper.Background = modo == "PAPER"
+                ? new SolidColorBrush(Color.FromRgb(26, 42, 26))    // #1A2A1A
+                : new SolidColorBrush(Color.FromRgb(30, 34, 40));
+            btnPaper.Foreground = modo == "PAPER"
+                ? new SolidColorBrush(Color.FromRgb(0, 212, 170))   // #00D4AA
+                : new SolidColorBrush(Color.FromRgb(160, 168, 184));
+
+            // LIVE
+            btnLive.Background = modo == "LIVE"
+                ? new SolidColorBrush(Color.FromRgb(42, 26, 26))    // #2A1A1A
+                : new SolidColorBrush(Color.FromRgb(30, 34, 40));
+            btnLive.Foreground = modo == "LIVE"
+                ? new SolidColorBrush(Color.FromRgb(255, 68, 102))  // #FF4466
+                : new SolidColorBrush(Color.FromRgb(160, 168, 184));
+        }
+
+        private void BtnModoObservar_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var modo = _engine?.ModoAtual ?? "OBSERVAR";
+                if (modo == "PAPER")
+                    _ = _engine.DesativarPaperTradingAsync();
+                else if (modo == "LIVE")
+                    _ = _engine.DesativarLiveTradingAsync();
+
+                UpdateModeButtonStyles("OBSERVAR");
+                AppendEventLog("MODO", "Modo OBSERVAR ativado", "#4A9EFF");
+            }
+            catch (Exception ex) { App.AppendCrashLog("BtnModoObservar_Click", ex); }
+        }
+
+        private void BtnModoPaper_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var modo = _engine?.ModoAtual ?? "OBSERVAR";
+                if (modo == "LIVE")
+                    _ = _engine.DesativarLiveTradingAsync();
+
+                _engine.AtivarPaperTrading();
+                UpdateModeButtonStyles("PAPER");
+                AppendEventLog("MODO", "Paper Trading ativado", "#00D4AA");
+            }
+            catch (Exception ex) { App.AppendCrashLog("BtnModoPaper_Click", ex); }
+        }
+
+        private void BtnModoLive_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!ConfirmarLiveModal()) return;
+
+                var modo = _engine?.ModoAtual ?? "OBSERVAR";
+                if (modo == "PAPER")
+                    _ = _engine.DesativarPaperTradingAsync();
+
+                _engine.AtivarLiveTrading();
+                UpdateModeButtonStyles("LIVE");
+                AppendEventLog("MODO", "⚠ LIVE Trading ativado!", "#FF4466");
+            }
+            catch (Exception ex) { App.AppendCrashLog("BtnModoLive_Click", ex); }
+        }
+
+        /// <summary>Modal de confirmação para modo LIVE. Retorna true se confirmado.</summary>
+        private bool ConfirmarLiveModal()
+        {
+            var modal = new Window
+            {
+                Title           = "Confirmar modo LIVE",
+                Width           = 380,
+                Height          = 200,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner           = this,
+                ResizeMode      = ResizeMode.NoResize,
+                Background      = new SolidColorBrush(Color.FromRgb(17, 19, 24)),  // #111318
+                WindowStyle     = WindowStyle.None,
+                BorderBrush     = new SolidColorBrush(Color.FromRgb(255, 68, 102)),
+                BorderThickness = new Thickness(1),
+            };
+
+            bool confirmed = false;
+
+            var root = new Border
+            {
+                BorderBrush     = new SolidColorBrush(Color.FromRgb(255, 68, 102)),
+                BorderThickness = new Thickness(2),
+                Padding         = new Thickness(20),
+            };
+
+            var panel = new StackPanel { Spacing = 12 };
+
+            panel.Children.Add(new TextBlock
+            {
+                Text       = "⚠ Ativar modo LIVE?",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize   = 16,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(255, 68, 102)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text       = "Operações serão executadas com dinheiro real.
+Confirme apenas se estiver pronto para operar.",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize   = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(160, 168, 184)),
+                TextWrapping = TextWrapping.Wrap,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextAlignment = TextAlignment.Center,
+            });
+
+            var btnPanel = new StackPanel
+            {
+                Orientation         = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 8, 0, 0),
+            };
+
+            var btnCancelar = new Button
+            {
+                Content    = "Cancelar",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize   = 12,
+                Width      = 110, Height = 32,
+                Margin     = new Thickness(0, 0, 12, 0),
+                Background = new SolidColorBrush(Color.FromRgb(30, 34, 40)),
+                Foreground = new SolidColorBrush(Color.FromRgb(160, 168, 184)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(50, 58, 72)),
+            };
+            btnCancelar.Click += (_, _) => modal.Close();
+
+            var btnConfirmar = new Button
+            {
+                Content    = "Confirmar LIVE",
+                FontFamily = new FontFamily("Consolas"),
+                FontSize   = 12,
+                Width      = 130, Height = 32,
+                Background = new SolidColorBrush(Color.FromRgb(255, 68, 102)),
+                Foreground = new SolidColorBrush(Color.FromRgb(232, 232, 232)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(255, 68, 102)),
+                FontWeight = FontWeights.Bold,
+            };
+            btnConfirmar.Click += (_, _) => { confirmed = true; modal.Close(); };
+
+            btnPanel.Children.Add(btnCancelar);
+            btnPanel.Children.Add(btnConfirmar);
+            panel.Children.Add(btnPanel);
+            root.Child = panel;
+            modal.Content = root;
+
+            modal.ShowDialog();
+            return confirmed;
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Stop / Target em tempo real
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void TxStop_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!decimal.TryParse(TxStop.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal v))
+                return;
+            try
+            {
+                _engine?.SessaoLiveAtual?.AtualizarStop((double)v);
+            }
+            catch { /* ignora se sessão inativa */ }
+        }
+
+        private void TxTarget_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (!decimal.TryParse(TxTarget.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal v))
+                return;
+            try
+            {
+                _engine?.SessaoLiveAtual?.AtualizarTarget((double)v);
+            }
+            catch { /* ignora se sessão inativa */ }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Event Log
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void BtnEventLogPausa_Click(object sender, RoutedEventArgs e)
+        {
+            _eventLogPaused = !_eventLogPaused;
+            BtnEventLogPausa.Content   = _eventLogPaused ? "▶ Continuar" : "⏸ Pausar";
+            BtnEventLogPausa.Foreground = _eventLogPaused
+                ? new SolidColorBrush(Color.FromRgb(245, 197, 24))   // #F5C518
+                : new SolidColorBrush(Color.FromRgb(160, 168, 184));
+        }
+
+        private const int EventLogMaxItems = 80;
+
+        public void AppendEventLog(string tipo, string detalhe, string cor = "#A0A8B8")
+        {
+            if (_eventLogPaused) return;
+            Dispatcher.InvokeAsync(() =>
+            {
+                McieEventLog.Insert(0, new EventLogViewModel
+                {
+                    Hora    = DateTime.Now.ToString("HH:mm:ss"),
+                    Tipo    = tipo,
+                    Detalhe = detalhe,
+                    Cor     = cor,
+                });
+                while (McieEventLog.Count > EventLogMaxItems)
+                    McieEventLog.RemoveAt(McieEventLog.Count - 1);
+            });
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Time frame selector
+        // ══════════════════════════════════════════════════════════════════════
+
+        private void BtnTf_Click(string tf)
+        {
+            try
+            {
+                // Reborda todos como inativos, destaca o selecionado
+                foreach (var btn in new[] { BtnTf1s, BtnTf5s, BtnTf15s, BtnTf1m, BtnTf5m })
+                {
+                    btn.Foreground  = new SolidColorBrush(Color.FromRgb(160, 168, 184));
+                    btn.BorderBrush = new SolidColorBrush(Color.FromRgb(50, 58, 72));
+                }
+                var active = tf switch
+                {
+                    "1S"  => BtnTf1s,
+                    "5S"  => BtnTf5s,
+                    "15S" => BtnTf15s,
+                    "1M"  => BtnTf1m,
+                    _     => BtnTf5m,
+                };
+                active.Foreground  = new SolidColorBrush(Color.FromRgb(74, 158, 255));   // #4A9EFF
+                active.BorderBrush = new SolidColorBrush(Color.FromRgb(74, 158, 255));
+
+                // Repassa ao FlowCandleChart se ele suportar mudança de TF
+                // flowCandleChart.SetTimeframe(tf);  // reservado para fase futura
+                AppendEventLog("TF", $"Timeframe → {tf}", "#4A9EFF");
+            }
+            catch (Exception ex) { App.AppendCrashLog("BtnTf_Click", ex); }
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  MCIE — Helpers de formatação
+        // ══════════════════════════════════════════════════════════════════════
+
+        private static string FormatPnl(decimal v)
+            => v >= 0
+                ? $"+ R$ {v:N2}"
+                : $"- R$ {Math.Abs(v):N2}";
+
+        private static string FormatPrice(decimal v)
+            => v == 0 ? "--" : v.ToString("N2", CultureInfo.InvariantCulture);
+
+        private static string FormatPct(double v)
+            => $"{v * 100:F1}%";
+
         protected override void OnClosed(EventArgs e)
         {
             App.AppendLifecycle("MainWindow.OnClosed");
@@ -2785,4 +3179,42 @@ namespace MarketCore.WPF
         public int    VolMax      { get; set; }
         public string DisplayText { get; set; } = "";
     }
+    // ══════════════════════════════════════════════════════════════════════════
+    //  MCIE VIEW MODELS
+    // ══════════════════════════════════════════════════════════════════════════
+
+    public class AgentViewModel : INotifyPropertyChanged
+    {
+        private string _nome = "";
+        private string _sinal = "--";
+        private string _conf = "--";
+        private string _cor = "#A0A8B8";
+
+        public string Nome  { get => _nome;  set { _nome  = value; OnPropChanged(); } }
+        public string Sinal { get => _sinal; set { _sinal = value; OnPropChanged(); } }
+        public string Conf  { get => _conf;  set { _conf  = value; OnPropChanged(); } }
+        public string Cor   { get => _cor;   set { _cor   = value; OnPropChanged(); } }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropChanged([CallerMemberName] string? n = null)
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+    }
+
+    public class EventLogViewModel
+    {
+        public string Hora    { get; set; } = "";
+        public string Tipo    { get; set; } = "";
+        public string Detalhe { get; set; } = "";
+        public string Cor     { get; set; } = "#A0A8B8";
+    }
+
+    public class CalendarioEventViewModel
+    {
+        public string Hora      { get; set; } = "";
+        public string Titulo    { get; set; } = "";
+        public string Impacto   { get; set; } = "MÉDIO";       // CRÍTICO / ALTO / MÉDIO
+        public string ImpactoCor { get; set; } = "#F5C518";
+    }
+
+
 }

@@ -9,14 +9,25 @@
         Title="MarketCore FlowSense"
         Height="900" Width="1500"
         MinHeight="700" MinWidth="900"
-        Background="#0D0D0D"
+        Background="#0D0F11"
         FontFamily="Consolas">
     <Window.Resources>
-        <SolidColorBrush x:Key="BgPrimary" Color="#0D0D0D"/>
-        <SolidColorBrush x:Key="BgSecondary" Color="#141414"/>
-        <SolidColorBrush x:Key="BgTertiary" Color="#1A1A1A"/>
-        <SolidColorBrush x:Key="AccentGreen" Color="#00C853"/>
-        <SolidColorBrush x:Key="AccentRed" Color="#FF1744"/>
+        <!-- Cores MCIE -->
+        <SolidColorBrush x:Key="BgPrimary"    Color="#0D0F11"/>
+        <SolidColorBrush x:Key="BgPanel"      Color="#111318"/>
+        <SolidColorBrush x:Key="BgSecondary"  Color="#141414"/>
+        <SolidColorBrush x:Key="BgTertiary"   Color="#1A1A1A"/>
+        <SolidColorBrush x:Key="BorderColor"  Color="#1E2228"/>
+        <SolidColorBrush x:Key="TextPrimary"  Color="#E8E8E8"/>
+        <SolidColorBrush x:Key="TextLabel"    Color="#A0A8B8"/>
+        <SolidColorBrush x:Key="TextMuted"    Color="#6A7488"/>
+        <SolidColorBrush x:Key="AccentGreen"  Color="#00D4AA"/>
+        <SolidColorBrush x:Key="AccentRed"    Color="#FF4466"/>
+        <SolidColorBrush x:Key="AccentBlue"   Color="#4A9EFF"/>
+        <SolidColorBrush x:Key="AccentYellow" Color="#F5C518"/>
+        <!-- Legacy compat -->
+        <SolidColorBrush x:Key="BgPrimaryOld" Color="#0D0D0D"/>
+        <!-- Estilos base -->
         <Style x:Key="MonoText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="11"/>
@@ -25,77 +36,60 @@
         </Style>
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="Foreground" Value="#6A7488"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
-        <Style x:Key="DarkCombo" TargetType="ComboBox">
-            <Setter Property="Background" Value="#1A1A1A"/>
-            <Setter Property="Foreground" Value="#E8E8E8"/>
-            <Setter Property="BorderBrush" Value="#2A2A2A"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Foreground" Value="#A0A8B8"/>
         </Style>
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="Background" Value="#F0F0F0"/>
-            <Setter Property="Foreground" Value="#111111"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Padding" Value="6,3"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#00C853"/>
-                    <Setter Property="Foreground" Value="#000000"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#00C853"/>
-                    <Setter Property="Foreground" Value="#000000"/>
-                </Trigger>
-            </Style.Triggers>
+        <Style x:Key="ValueText" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
         <Style x:Key="DarkInput" TargetType="TextBox">
-            <Setter Property="Background" Value="#1A1A1A"/>
+            <Setter Property="Background" Value="#1A1D24"/>
             <Setter Property="Foreground" Value="#E8E8E8"/>
-            <Setter Property="BorderBrush" Value="#2A2A2A"/>
+            <Setter Property="BorderBrush" Value="#1E2228"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="4,2"/>
             <Setter Property="CaretBrush" Value="#E8E8E8"/>
         </Style>
-        <!-- Ticker principal: editável; Enter ou perda de foco aplica subscrição -->
         <Style x:Key="HeaderTickerInput" TargetType="TextBox" BasedOn="{StaticResource DarkInput}">
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Height" Value="26"/>
-            <Setter Property="MinWidth" Value="72"/>
-            <Setter Property="MaxWidth" Value="160"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinWidth" Value="66"/>
+            <Setter Property="MaxWidth" Value="120"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
+        </Style>
+        <Style x:Key="NumericInput" TargetType="TextBox" BasedOn="{StaticResource DarkInput}">
+            <Setter Property="Width" Value="54"/>
+            <Setter Property="TextAlignment" Value="Right"/>
         </Style>
         <Style x:Key="DarkButton" TargetType="Button">
-            <Setter Property="Background" Value="#1E2A1E"/>
-            <Setter Property="Foreground" Value="#00C853"/>
-            <Setter Property="BorderBrush" Value="#00C853"/>
+            <Setter Property="Background" Value="#1A2030"/>
+            <Setter Property="Foreground" Value="#4A9EFF"/>
+            <Setter Property="BorderBrush" Value="#1E2228"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Padding" Value="8,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#00C853"/>
-                    <Setter Property="Foreground" Value="#0D0D0D"/>
+                    <Setter Property="Background" Value="#253050"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="DangerButton" TargetType="Button">
-            <Setter Property="Background" Value="#2A1010"/>
-            <Setter Property="Foreground" Value="#FF4444"/>
-            <Setter Property="BorderBrush" Value="#FF4444"/>
+            <Setter Property="Background" Value="#2A1A1A"/>
+            <Setter Property="Foreground" Value="#FF4466"/>
+            <Setter Property="BorderBrush" Value="#FF4466"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontFamily" Value="Consolas"/>
             <Setter Property="FontSize" Value="10"/>
@@ -103,241 +97,936 @@
             <Setter Property="Width" Value="20"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <!-- Botão modo: base inativo -->
+        <Style x:Key="ModoBtnBase" TargetType="Button">
+            <Setter Property="Background" Value="#14161A"/>
+            <Setter Property="Foreground" Value="#6A7488"/>
+            <Setter Property="BorderBrush" Value="#1E2228"/>
+            <Setter Property="BorderThickness" Value="0,0,0,0"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
         <Style x:Key="HSep" TargetType="Separator">
-            <Setter Property="Background" Value="#2A2A2A"/>
+            <Setter Property="Background" Value="#1E2228"/>
             <Setter Property="Height" Value="1"/>
-            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Margin" Value="0,2"/>
         </Style>
         <Style x:Key="HiddenScroll" TargetType="ScrollViewer">
             <Setter Property="VerticalScrollBarVisibility" Value="Hidden"/>
             <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
+        <Style x:Key="DarkCombo" TargetType="ComboBox">
+            <Setter Property="Background" Value="#1A1D24"/>
+            <Setter Property="Foreground" Value="#E8E8E8"/>
+            <Setter Property="BorderBrush" Value="#1E2228"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Height" Value="22"/>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="#111318"/>
+            <Setter Property="Foreground" Value="#E8E8E8"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
     </Window.Resources>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         OUTER GRID: Toolbar | Content | StatusBar
+    ═══════════════════════════════════════════════════════════════ -->
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="38"/>
+            <RowDefinition Height="36"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="28"/>
         </Grid.RowDefinitions>
 
-        <!-- ══ HEADER ══ -->
-        <Border Grid.Row="0" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,0,0,1">
-            <Grid Margin="12,0">
+        <!-- ══ TOOLBAR ══ -->
+        <Border Grid.Row="0" Background="#0A0C0F" BorderBrush="#1E2228" BorderThickness="0,0,0,1">
+            <Grid Margin="8,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/><!-- Logo -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/><!-- Sep -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/><!-- Ticker+Preço -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/><!-- Clock -->
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/><!-- Latência -->
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/><!-- Eventos -->
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/><!-- Sep -->
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/><!-- Conexão -->
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/><!-- Sep -->
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="Auto"/><!-- Seletor modo -->
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="Auto"/><!-- Chip modo -->
+                    <ColumnDefinition Width="*"/><!-- Spacer -->
+                    <ColumnDefinition Width="Auto"/><!-- Health -->
+                    <ColumnDefinition Width="4"/>
+                    <ColumnDefinition Width="Auto"/><!-- Botões ícone -->
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" x:Name="TxPrimaryTicker" Style="{StaticResource HeaderTickerInput}"
-                         Text="WINQ26"
-                         ToolTip="Código do ativo (ex.: WINFUT, WINQ26, PETR4). Enter ou clique fora para monitorizar em todo o FlowSense."/>
-                <TextBlock Grid.Column="1" x:Name="TbLastPrice" Text="128.440" FontSize="14" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center" Margin="0,0,16,0"/>
 
-                <!-- Botões de ação -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                    <Button x:Name="BtnAgentPanel" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Abrir Leitura de Fluxo" Margin="0,0,4,0">
-                        <Viewbox Width="15" Height="15">
-                            <Canvas Width="24" Height="24">
-                                <Line X1="12" Y1="2" X2="12" Y2="5" Stroke="#00FF88" StrokeThickness="1.5"/>
-                                <Ellipse Canvas.Left="10.5" Canvas.Top="1" Width="3" Height="3" Fill="#00FF88"/>
-                                <Rectangle Canvas.Left="4" Canvas.Top="5" Width="16" Height="11" RadiusX="3" RadiusY="3" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.5"/>
-                                <Ellipse Canvas.Left="7" Canvas.Top="8" Width="3" Height="3" Fill="#00FF88"/>
-                                <Ellipse Canvas.Left="14" Canvas.Top="8" Width="3" Height="3" Fill="#00FF88"/>
-                                <Rectangle Canvas.Left="8" Canvas.Top="13" Width="8" Height="1.5" RadiusX="1" RadiusY="1" Fill="#00FF88"/>
-                                <Rectangle Canvas.Left="6" Canvas.Top="16" Width="12" Height="6" RadiusX="2" RadiusY="2" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.5"/>
-                                <Rectangle Canvas.Left="2" Canvas.Top="17" Width="4" Height="3" RadiusX="1" RadiusY="1" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.2"/>
-                                <Rectangle Canvas.Left="18" Canvas.Top="17" Width="4" Height="3" RadiusX="1" RadiusY="1" Fill="#1E2A1E" Stroke="#00FF88" StrokeThickness="1.2"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="BtnHistory" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Baixar histórico WIN (CSV por contrato)" Visibility="Collapsed" Margin="0,0,4,0">
-                        <Viewbox Width="14" Height="14">
-                            <Canvas Width="24" Height="24">
-                                <Path Stroke="#00BCD4" StrokeThickness="1.6" StrokeLineJoin="Round" Data="M6,4 L6,20 M4,7 L8,7 M4,12 L8,12 M4,17 L8,12"/>
-                                <Path Stroke="#00BCD4" StrokeThickness="1.6" Data="M12,6 L14,4 L20,4 L20,20 L12,20 Z M12,10 L18,10 M12,14 L18,14 M12,18 L16,18"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="BtnRecordingConfig" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Configurar caminho de gravação" Margin="0,0,4,0">
-                        <Viewbox Width="14" Height="14">
-                            <Canvas Width="24" Height="24">
-                                <Path Fill="#4488FF" Data="M2,6 L8,6 L10,4 L22,4 L22,18 L2,18 Z"/>
-                                <Path Fill="#2266CC" Data="M2,8 L22,8 L22,18 L2,18 Z"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="BtnAnaliseQuant" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Análise Quantitativa" Margin="0,0,4,0">
-                        <Viewbox Width="15" Height="15">
-                            <Canvas Width="24" Height="24">
-                                <Rectangle Canvas.Left="2" Canvas.Top="14" Width="4" Height="8" Fill="#00BCD4"/>
-                                <Rectangle Canvas.Left="8" Canvas.Top="9"  Width="4" Height="13" Fill="#00BCD4"/>
-                                <Rectangle Canvas.Left="14" Canvas.Top="5" Width="4" Height="17" Fill="#00BCD4"/>
-                                <Rectangle Canvas.Left="20" Canvas.Top="2" Width="4" Height="20" Fill="#00C853"/>
-                                <Polyline Points="4,13 10,8 16,4 22,1" Stroke="#FFD600" StrokeThickness="1.5" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="BtnPregaoVivaVoz" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Pregão Viva Voz" Margin="0,0,4,0">
-                        <Viewbox Width="15" Height="15">
-                            <Canvas Width="24" Height="24">
-                                <Rectangle Canvas.Left="9" Canvas.Top="2" Width="6" Height="10" RadiusX="3" RadiusY="3" Fill="#FF8C00"/>
-                                <Path Stroke="#FF8C00" StrokeThickness="1.5" Fill="Transparent" Data="M6,12 A6,6 0 0 0 18,12"/>
-                                <Line X1="12" Y1="18" X2="12" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                                <Line X1="8" Y1="21" X2="16" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="BtnPower" Width="22" Height="22" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Encerrar MarketCore">
-                        <Viewbox Width="16" Height="16">
-                            <Canvas Width="24" Height="24">
-                                <Path Stroke="#CC3333" StrokeThickness="2.2" Fill="Transparent" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Data="M 7,5 A 8.5,8.5 0 1 0 17,5"/>
-                                <Line X1="12" Y1="1.5" X2="12" Y2="10" Stroke="#CC3333" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            </Canvas>
-                        </Viewbox>
-                    </Button>
+                <!-- Logo -->
+                <TextBlock Grid.Column="0" Text="MC" FontSize="13" FontWeight="Bold"
+                           Foreground="#4A9EFF" VerticalAlignment="Center"/>
+
+                <!-- Separador 1 -->
+                <Rectangle Grid.Column="2" Width="1" Height="18" Fill="#1E2228" VerticalAlignment="Center"/>
+
+                <!-- Ticker + Preço -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBox x:Name="TxPrimaryTicker" Style="{StaticResource HeaderTickerInput}"
+                             Text="WINQ26" Margin="0,0,6,0"
+                             ToolTip="Código do ativo. Enter ou clique fora para aplicar."/>
+                    <TextBlock x:Name="TbLastPrice" Text="--" FontSize="13" FontWeight="Bold"
+                               Foreground="#00D4AA" VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <!-- ══ HEALTH MONITOR (4 indicadores da DLL) ══
-                     Vive na área vazia entre os botões da esquerda e os indicadores
-                     E:/Δ/CONECTADO. Bolinha colorida + texto compacto por card.
-                     Clique em qualquer card abre o popup de detalhes (PopupHealthDetails). -->
-                <StackPanel Grid.Column="3" x:Name="HealthMonitorPanel"
+                <!-- Relógio -->
+                <TextBlock Grid.Column="6" x:Name="TbClock" Text="--:--:--"
+                           FontSize="11" Foreground="#E8E8E8" VerticalAlignment="Center"/>
+
+                <!-- Latência -->
+                <TextBlock Grid.Column="8" x:Name="TbDataLatency" Text="--" FontSize="11"
+                           Foreground="#A0A8B8" VerticalAlignment="Center"
+                           ToolTip="DLL→motor→HUD latência"
+                           TextTrimming="CharacterEllipsis" MaxWidth="90"/>
+
+                <!-- Eventos E: -->
+                <StackPanel Grid.Column="10" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="E:" FontSize="11" Foreground="#6A7488" Margin="0,0,2,0"/>
+                    <TextBlock x:Name="TbExhaustionCount" Text="0" FontSize="11" Foreground="#F5C518"/>
+                    <TextBlock Text=" Δ" FontSize="11" Foreground="#6A7488" Margin="4,0,2,0"/>
+                    <TextBlock x:Name="TbDelta" Text="+0" FontSize="11" FontWeight="Bold" Foreground="#00D4AA"/>
+                </StackPanel>
+
+                <!-- Separador 2 -->
+                <Rectangle Grid.Column="12" Width="1" Height="18" Fill="#1E2228" VerticalAlignment="Center"/>
+
+                <!-- Conexão -->
+                <StackPanel Grid.Column="14" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="EllipseConnection" Width="7" Height="7" Fill="#FF4466" Margin="0,0,4,0"/>
+                    <TextBlock x:Name="TbConnectionStatus" Text="DESCONECTADO"
+                               FontSize="10" Foreground="#A0A8B8" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Separador 3 -->
+                <Rectangle Grid.Column="16" Width="1" Height="18" Fill="#1E2228" VerticalAlignment="Center"/>
+
+                <!-- Seletor de Modo -->
+                <StackPanel Grid.Column="18" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnModoObservar" Style="{StaticResource ModoBtnBase}"
+                            Content="OBSERVAR" ToolTip="Modo observação — sem execução"
+                            Click="BtnModoObservar_Click"/>
+                    <Button x:Name="BtnModoPaper" Style="{StaticResource ModoBtnBase}"
+                            Content="PAPER" ToolTip="Paper trading simulado"
+                            Margin="2,0,0,0" Click="BtnModoPaper_Click"/>
+                    <Button x:Name="BtnModoLive" Style="{StaticResource ModoBtnBase}"
+                            Content="LIVE" ToolTip="Live trading — ordens reais"
+                            Margin="2,0,0,0" Click="BtnModoLive_Click"/>
+                </StackPanel>
+
+                <!-- Chip modo atual -->
+                <Border Grid.Column="20" Background="#1A2030" BorderBrush="#1E2228" BorderThickness="1"
+                        CornerRadius="3" Padding="6,1" VerticalAlignment="Center" Margin="0,0,0,0">
+                    <TextBlock x:Name="TbModoAtualChip" Text="OBSERVAR"
+                               FontSize="10" FontWeight="Bold" Foreground="#4A9EFF"/>
+                </Border>
+
+                <!-- ── Health Monitor ── -->
+                <StackPanel Grid.Column="22" x:Name="HealthMonitorPanel"
                             Orientation="Horizontal" VerticalAlignment="Center"
-                            HorizontalAlignment="Center" Margin="16,0"
                             Background="Transparent" Cursor="Hand"
                             ToolTip="Monitor de saúde da DLL — clique para detalhes"
                             MouseLeftButtonUp="HealthMonitorPanel_Click">
-                    <!-- 1) Threads DLL -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                        <Ellipse x:Name="HmDotThreads" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="HmTxtThreads" Text="THR --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Ellipse x:Name="HmDotThreads" Width="7" Height="7" Fill="#666666" Margin="0,0,3,0"/>
+                        <TextBlock x:Name="HmTxtThreads" Text="THR --" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <!-- 2) Feed de Market Data -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                        <Ellipse x:Name="HmDotFeed" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="HmTxtFeed" Text="FEED --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Ellipse x:Name="HmDotFeed" Width="7" Height="7" Fill="#666666" Margin="0,0,3,0"/>
+                        <TextBlock x:Name="HmTxtFeed" Text="FEED --" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <!-- 3) Latência DLL+Motor -->
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                        <Ellipse x:Name="HmDotLatency" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="HmTxtLatency" Text="DLL --" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+                        <Ellipse x:Name="HmDotLatency" Width="7" Height="7" Fill="#666666" Margin="0,0,3,0"/>
+                        <TextBlock x:Name="HmTxtLatency" Text="DLL --" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <!-- 4) Status de Atualização -->
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse x:Name="HmDotUpdate" Width="9" Height="9" Fill="#666666" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="HmTxtUpdate" Text="Sem dados" FontSize="11" Foreground="#DDDDDD" VerticalAlignment="Center" FontFamily="Consolas"/>
+                        <Ellipse x:Name="HmDotUpdate" Width="7" Height="7" Fill="#666666" Margin="0,0,3,0"/>
+                        <TextBlock x:Name="HmTxtUpdate" Text="Sem dados" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                     </StackPanel>
                 </StackPanel>
 
-                <!-- Popup de detalhes: abre ao clicar em qualquer indicador do Health Monitor -->
+                <!-- Popup de saúde -->
                 <Popup x:Name="PopupHealthDetails" PlacementTarget="{Binding ElementName=HealthMonitorPanel}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Background="#141414" BorderBrush="#2A2A2A" BorderThickness="1" CornerRadius="4" Padding="14,12" Margin="0,4,0,0">
-                        <StackPanel MinWidth="320">
-                            <TextBlock Text="MONITOR DE SAÚDE DA DLL" FontSize="10" Foreground="#888888" Margin="0,0,0,8" FontFamily="Consolas"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock Text="Threads DLL: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailThreads" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                    <Border Background="#111318" BorderBrush="#1E2228" BorderThickness="1" CornerRadius="4" Padding="14,10" Margin="0,4,0,0">
+                        <StackPanel MinWidth="300">
+                            <TextBlock Text="MONITOR DE SAÚDE DA DLL" FontSize="10" Foreground="#6A7488" Margin="0,0,0,8"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Threads DLL: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailThreads" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock Text="Feed Market Data: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailFeed" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Feed Market Data: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailFeed" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock Text="Latência DLL+Motor: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailLatency" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Latência DLL+Motor: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailLatency" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock Text="Pico de latência: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailLatencyPeak" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Pico latência: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailLatencyPeak" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock Text="Último trade: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailLastTrade" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                <TextBlock Text="Último trade: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailLastTrade" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Uptime sessão: " FontSize="11" Foreground="#AAAAAA" FontFamily="Consolas" Width="140"/>
-                                <TextBlock x:Name="HmDetailUptime" Text="--" FontSize="11" Foreground="#EEEEEE" FontFamily="Consolas"/>
+                                <TextBlock Text="Uptime sessão: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
+                                <TextBlock x:Name="HmDetailUptime" Text="--" FontSize="11" Foreground="#E8E8E8"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
                 </Popup>
 
-                <!-- Indicadores (só Exaustão + Delta) -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
-                    <Border Background="#1A2A1A" BorderBrush="#2A4A2A" BorderThickness="1" CornerRadius="3" Padding="6,2">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="E:" FontSize="11" FontWeight="Bold" Foreground="#AAAAAA"/>
-                            <TextBlock x:Name="TbExhaustionCount" Text="0" FontSize="12" FontWeight="Bold" Foreground="#FFD600"/>
-                        </StackPanel>
-                    </Border>
+                <!-- Botões ícone -->
+                <StackPanel Grid.Column="24" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnAgentPanel" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Leitura de Fluxo" Margin="0,0,3,0">
+                        <Viewbox Width="13" Height="13">
+                            <Canvas Width="24" Height="24">
+                                <Line X1="12" Y1="2" X2="12" Y2="5" Stroke="#00D4AA" StrokeThickness="1.5"/>
+                                <Ellipse Canvas.Left="10.5" Canvas.Top="1" Width="3" Height="3" Fill="#00D4AA"/>
+                                <Rectangle Canvas.Left="4" Canvas.Top="5" Width="16" Height="11" RadiusX="3" RadiusY="3" Fill="#1A2A20" Stroke="#00D4AA" StrokeThickness="1.5"/>
+                                <Ellipse Canvas.Left="7" Canvas.Top="8" Width="3" Height="3" Fill="#00D4AA"/>
+                                <Ellipse Canvas.Left="14" Canvas.Top="8" Width="3" Height="3" Fill="#00D4AA"/>
+                                <Rectangle Canvas.Left="8" Canvas.Top="13" Width="8" Height="1.5" RadiusX="1" RadiusY="1" Fill="#00D4AA"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="BtnHistory" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Histórico WIN" Visibility="Collapsed" Margin="0,0,3,0">
+                        <Viewbox Width="12" Height="12">
+                            <Canvas Width="24" Height="24">
+                                <Path Stroke="#4A9EFF" StrokeThickness="1.6" Data="M6,4 L6,20 M4,7 L8,7 M4,12 L8,12"/>
+                                <Path Stroke="#4A9EFF" StrokeThickness="1.6" Data="M12,6 L14,4 L20,4 L20,20 L12,20 Z M12,10 L18,10 M12,14 L18,14"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="BtnRecordingConfig" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Config gravação" Margin="0,0,3,0">
+                        <Viewbox Width="13" Height="13">
+                            <Canvas Width="24" Height="24">
+                                <Path Fill="#4A9EFF" Data="M12,8 A4,4 0 1 0 12,16 A4,4 0 1 0 12,8 Z"/>
+                                <Path Stroke="#4A9EFF" StrokeThickness="2" Fill="Transparent"
+                                      Data="M12,2 L13.5,5.5 L17,4 L15.5,7.5 L19,9 L15.5,10.5 L17,14 L13.5,12.5 L12,16 L10.5,12.5 L7,14 L8.5,10.5 L5,9 L8.5,7.5 L7,4 L10.5,5.5 Z"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="BtnAnaliseQuant" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Análise Quantitativa" Margin="0,0,3,0">
+                        <Viewbox Width="13" Height="13">
+                            <Canvas Width="24" Height="24">
+                                <Rectangle Canvas.Left="2"  Canvas.Top="14" Width="4" Height="8" Fill="#4A9EFF"/>
+                                <Rectangle Canvas.Left="8"  Canvas.Top="9"  Width="4" Height="13" Fill="#4A9EFF"/>
+                                <Rectangle Canvas.Left="14" Canvas.Top="5"  Width="4" Height="17" Fill="#4A9EFF"/>
+                                <Rectangle Canvas.Left="20" Canvas.Top="2"  Width="4" Height="20" Fill="#00D4AA"/>
+                                <Polyline Points="4,13 10,8 16,4 22,1" Stroke="#F5C518" StrokeThickness="1.5"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="BtnPregaoVivaVoz" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Pregão Viva Voz" Margin="0,0,3,0">
+                        <Viewbox Width="13" Height="13">
+                            <Canvas Width="24" Height="24">
+                                <Rectangle Canvas.Left="9" Canvas.Top="2" Width="6" Height="10" RadiusX="3" RadiusY="3" Fill="#FF8C00"/>
+                                <Path Stroke="#FF8C00" StrokeThickness="1.5" Fill="Transparent" Data="M6,12 A6,6 0 0 0 18,12"/>
+                                <Line X1="12" Y1="18" X2="12" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5"/>
+                                <Line X1="8"  Y1="21" X2="16" Y2="21" Stroke="#FF8C00" StrokeThickness="1.5"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="BtnPower" Width="20" Height="20" Background="Transparent" BorderThickness="0"
+                            Cursor="Hand" ToolTip="Encerrar MarketCore">
+                        <Viewbox Width="14" Height="14">
+                            <Canvas Width="24" Height="24">
+                                <Path Stroke="#FF4466" StrokeThickness="2.2" Fill="Transparent"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M7,5 A8.5,8.5 0 1 0 17,5"/>
+                                <Line X1="12" Y1="1.5" X2="12" Y2="10" Stroke="#FF4466" StrokeThickness="2.2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            </Canvas>
+                        </Viewbox>
+                    </Button>
                 </StackPanel>
-                <Border Grid.Column="5" Background="#0A1A0A" BorderBrush="#1A3A1A" BorderThickness="1" CornerRadius="3" Padding="8,3" Margin="0,0,8,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Δ " FontSize="11" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TbDelta" Text="+0" FontSize="13" FontWeight="Bold" Foreground="#00C853" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-                <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                    <Ellipse x:Name="EllipseConnection" Width="8" Height="8" Fill="#FF1744" Margin="0,0,5,0"/>
-                    <TextBlock x:Name="TbConnectionStatus" Text="DESCONECTADO" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                </StackPanel>
-                <TextBlock Grid.Column="7" x:Name="TbClock" Text="--:--:--" FontSize="11" Foreground="#CCCCCC" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
-        <!-- ══ ÁREA PRINCIPAL — só Chart + FlowScore (book/tape/alertas removidos) ══ -->
+        <!-- ══ CONTEÚDO — 3 colunas ══ -->
         <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="500"/>
-            </Grid.RowDefinitions>
-            <local:FlowCandleChart x:Name="flowCandleChart" Grid.Row="0"/>
-            <Border Grid.Row="1" Background="#0A0A0A" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0" x:Name="PainelInferiorGrafico">
-                <fs:FlowScorePanel x:Name="FlowScorePanelControl"/>
-            </Border>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="195"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ════════════════════════════════
+                 COLUNA A — Pressão + Agressão + Calendário
+            ════════════════════════════════ -->
+            <Grid Grid.Column="0" Background="#111318">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><!-- Pressão -->
+                    <RowDefinition Height="Auto"/><!-- Agressão -->
+                    <RowDefinition Height="*"/><!-- Calendário -->
+                </Grid.RowDefinitions>
+
+                <!-- ── PAINEL PRESSÃO ── -->
+                <Border Grid.Row="0" BorderBrush="#1E2228" BorderThickness="0,0,1,1" Padding="8,6">
+                    <StackPanel>
+                        <TextBlock Text="PRESSÃO DO BOOK" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+
+                        <!-- Barra de pressão -->
+                        <Grid Height="14" Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="ColVenda" Width="50*"/>
+                                <ColumnDefinition x:Name="ColCompra" Width="50*"/>
+                            </Grid.ColumnDefinitions>
+                            <Rectangle Grid.Column="0" x:Name="RectVendaBar" Fill="#FF4466" RadiusX="2" RadiusY="2"/>
+                            <Rectangle Grid.Column="1" x:Name="RectCompraBar" Fill="#00D4AA" RadiusX="2" RadiusY="2"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock x:Name="TbPressaoVendaPct" Text="50%" FontSize="11"
+                                       Foreground="#FF4466" HorizontalAlignment="Left"/>
+                            <TextBlock x:Name="TbPressaoCompraPct" Text="50%" FontSize="11"
+                                       Foreground="#00D4AA" HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Score grande -->
+                        <TextBlock x:Name="TbPressaoScore" Text="+0.00" FontSize="16" FontWeight="Bold"
+                                   Foreground="#00D4AA" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                        <TextBlock x:Name="TbPressaoDesc" Text="Pressão equilibrada" FontSize="11"
+                                   Foreground="#6A7488" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+
+                        <!-- OFI grid 2×2 -->
+                        <TextBlock Text="OFI" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,4">
+                                <TextBlock Text="100ms" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbOfi100ms" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="500ms" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbOfi500ms" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
+                                <TextBlock Text="1s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbOfi1s" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock Text="5s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbOfi5s" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── PAINEL AGRESSÃO ── -->
+                <Border Grid.Row="1" BorderBrush="#1E2228" BorderThickness="0,0,1,1" Padding="8,6">
+                    <StackPanel>
+                        <TextBlock Text="AGRESSÃO" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+
+                        <!-- Barra COMPRA -->
+                        <Grid Margin="0,0,0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="46"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="40"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="COMPRA" FontSize="10" Foreground="#00D4AA" VerticalAlignment="Center"/>
+                            <ProgressBar Grid.Column="1" x:Name="PbCompra" Height="8" Minimum="0" Maximum="100" Value="50"
+                                         Foreground="#00D4AA" Background="#1E2228" Margin="4,0"/>
+                            <TextBlock Grid.Column="2" x:Name="TbAgCompraVal" Text="--" FontSize="11"
+                                       Foreground="#00D4AA" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Barra VENDA -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="46"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="40"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="VENDA" FontSize="10" Foreground="#FF4466" VerticalAlignment="Center"/>
+                            <ProgressBar Grid.Column="1" x:Name="PbVenda" Height="8" Minimum="0" Maximum="100" Value="50"
+                                         Foreground="#FF4466" Background="#1E2228" Margin="4,0"/>
+                            <TextBlock Grid.Column="2" x:Name="TbAgVendaVal" Text="--" FontSize="11"
+                                       Foreground="#FF4466" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Delta acumulado grande -->
+                        <TextBlock x:Name="TbDeltaGrande" Text="+0" FontSize="16" FontWeight="Bold"
+                                   Foreground="#00D4AA" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                        <TextBlock Text="compra/venda líquida na sessão" FontSize="10"
+                                   Foreground="#6A7488" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+
+                        <!-- Delta grid 2×2 -->
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,3">
+                                <TextBlock Text="1s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbDelta1s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,3">
+                                <TextBlock Text="5s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbDelta5s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
+                                <TextBlock Text="30s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbDelta30s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock Text="5min" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbDelta5min" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Mini gráfico delta -->
+                        <Canvas x:Name="CanvasDeltaMini" Height="32" Background="#0D0F11"
+                                ClipToBounds="True" Margin="0,0,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── PAINEL CALENDÁRIO ── -->
+                <Border Grid.Row="2" BorderBrush="#1E2228" BorderThickness="0,0,1,0" Padding="8,6">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="CALENDÁRIO" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="IcCalendario">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Margin="0,0,0,3" Padding="4,3" CornerRadius="2"
+                                                Background="{Binding BgColor}" BorderBrush="{Binding BgColor}" BorderThickness="0">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Hora}" FontSize="10" Foreground="#6A7488" Width="38"/>
+                                                    <TextBlock Text="{Binding Impacto}" FontSize="10" FontWeight="Bold"
+                                                               Foreground="{Binding ImpactoColor}" Margin="0,0,4,0"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Nome}" FontSize="11"
+                                                           Foreground="{Binding TextColor}" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ════════════════════════════════
+                 COLUNA B — Gráfico + Agentes + EventLog
+            ════════════════════════════════ -->
+            <Grid Grid.Column="1" Background="#0D0F11">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="220"/><!-- Gráfico -->
+                    <RowDefinition Height="Auto"/><!-- Score final FlowSense (oculto) -->
+                    <RowDefinition Height="150"/><!-- Agentes -->
+                    <RowDefinition Height="*"/><!-- Event Log -->
+                </Grid.RowDefinitions>
+
+                <!-- ── GRÁFICO ── -->
+                <Border Grid.Row="0" BorderBrush="#1E2228" BorderThickness="0,0,0,1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="26"/><!-- Header -->
+                            <RowDefinition Height="*"/><!-- Chart -->
+                            <RowDefinition Height="20"/><!-- Footer -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Header gráfico -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#0A0C0F"
+                                    VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock Text="Gráfico " FontSize="11" Foreground="#6A7488" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TbGraficoTicker" Text="WINFUT" FontSize="11" FontWeight="Bold"
+                                       Foreground="#A0A8B8" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Button x:Name="BtnTf1s"  Content="1S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
+                            <Button x:Name="BtnTf5s"  Content="5S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
+                            <Button x:Name="BtnTf15s" Content="15S" Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
+                            <Button x:Name="BtnTf1m"  Content="1M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
+                            <Button x:Name="BtnTf5m"  Content="5M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Click="BtnTf_Click"/>
+                        </StackPanel>
+
+                        <!-- FlowCandleChart existente (já implementado, recebe trades) -->
+                        <local:FlowCandleChart x:Name="flowCandleChart" Grid.Row="1"/>
+
+                        <!-- Footer gráfico -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Background="#0A0C0F"
+                                    VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock Text="Mín: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock x:Name="TbGraficoMin" Text="--" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
+                            <TextBlock Text="Máx: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock x:Name="TbGraficoMax" Text="--" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
+                            <TextBlock Text="Rate: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock x:Name="TbGraficoRate" Text="-- tr/s" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
+                            <TextBlock Text="Vol: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock x:Name="TbGraficoVol" Text="--" FontSize="10" Foreground="#A0A8B8"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- FlowScorePanelControl oculto: inicializado pelo código, não visível no MCIE -->
+                <Border Grid.Row="1" Height="0" Visibility="Collapsed">
+                    <fs:FlowScorePanel x:Name="FlowScorePanelControl"/>
+                </Border>
+
+                <!-- ── AGENTES ── -->
+                <Border Grid.Row="2" BorderBrush="#1E2228" BorderThickness="0,0,0,1" Padding="8,6">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><!-- Header colunas -->
+                            <RowDefinition Height="*"/><!-- Linhas agentes -->
+                            <RowDefinition Height="Auto"/><!-- Score final -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Header colunas -->
+                        <Grid Grid.Row="0" Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="36"/>
+                                <ColumnDefinition Width="36"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Agente" FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock Grid.Column="1" Text="Score" FontSize="10" Foreground="#6A7488" Margin="4,0,0,0"/>
+                            <TextBlock Grid.Column="2" Text="Pts" FontSize="10" Foreground="#6A7488" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="Conf" FontSize="10" Foreground="#6A7488" HorizontalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Linhas de agentes -->
+                        <ItemsControl Grid.Row="1" x:Name="IcAgentes">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="36"/>
+                                            <ColumnDefinition Width="36"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Nome}" FontSize="12"
+                                                   Foreground="#A0A8B8" VerticalAlignment="Center"/>
+                                        <ProgressBar Grid.Column="1" Height="6" Minimum="0" Maximum="100"
+                                                     Value="{Binding ScorePct}" Foreground="{Binding CorBrush}"
+                                                     Background="#1E2228" Margin="4,0"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding ScoreStr}" FontSize="13"
+                                                   FontWeight="Bold" Foreground="{Binding Cor}"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Conf}" FontSize="10"
+                                                   Foreground="#6A7488" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Score final FlowSense -->
+                        <Border Grid.Row="2" Background="#0D0F11" BorderBrush="#1E2228" BorderThickness="1"
+                                CornerRadius="3" Padding="8,4" Margin="0,6,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TbFlowScoreFinal" Text="0.00" FontSize="16" FontWeight="Bold"
+                                           Foreground="#E8E8E8" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TbFlowDirecao" Text="NEUTRO" FontSize="11" FontWeight="Bold"
+                                           Foreground="#6A7488" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <TextBlock Text="Confiança:" FontSize="10" Foreground="#6A7488" VerticalAlignment="Center" Margin="0,0,2,0"/>
+                                <TextBlock x:Name="TbFlowConf" Text="--%" FontSize="11"
+                                           Foreground="#A0A8B8" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- ── EVENT LOG ── -->
+                <Border Grid.Row="3" Padding="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="26"/><!-- Header -->
+                            <RowDefinition Height="*"/><!-- Lista -->
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#0A0C0F"
+                                    VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock Text="EVENT LOG" FontSize="10" FontWeight="Bold"
+                                       Foreground="#6A7488" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Button x:Name="BtnEventLogPausa" Content="⏸" FontSize="10"
+                                    Width="22" Height="18" Background="Transparent" BorderThickness="0"
+                                    Foreground="#6A7488" Cursor="Hand"
+                                    Click="BtnEventLogPausa_Click" ToolTip="Pausar/retomar auto-scroll"/>
+                        </StackPanel>
+
+                        <ScrollViewer Grid.Row="1" x:Name="SvEventLog"
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl x:Name="IcEventLog">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="4,1">
+                                            <TextBlock Text="{Binding Hora}" FontSize="10" Foreground="#6A7488" Width="50"/>
+                                            <TextBlock Text="{Binding Tipo}" FontSize="11" FontWeight="Bold"
+                                                       Foreground="{Binding CorTipo}" Width="80"/>
+                                            <TextBlock Text="{Binding Detalhe}" FontSize="11"
+                                                       Foreground="#A0A8B8" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ════════════════════════════════
+                 COLUNA C — Decisão + Posição + Performance
+            ════════════════════════════════ -->
+            <Grid Grid.Column="2" Background="#111318">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/><!-- Decisão -->
+                    <RowDefinition Height="Auto"/><!-- Posição -->
+                    <RowDefinition Height="*"/><!-- Performance -->
+                </Grid.RowDefinitions>
+
+                <!-- ── PAINEL DECISÃO ── -->
+                <Border Grid.Row="0" BorderBrush="#1E2228" BorderThickness="1,0,0,1" Padding="8,6">
+                    <StackPanel>
+                        <TextBlock Text="DECISÃO" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+
+                        <!-- Estado atual -->
+                        <Border Background="#0D1A14" BorderBrush="#00D4AA" BorderThickness="0,0,0,1"
+                                Padding="6,4" Margin="0,0,0,4">
+                            <StackPanel>
+                                <TextBlock Text="ESTADO ATUAL" FontSize="8" Foreground="#6A7488" Margin="0,0,0,2"/>
+                                <TextBlock x:Name="TbEstadoAtual" Text="NEUTRO" FontSize="16" FontWeight="Bold"
+                                           Foreground="#E8E8E8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Ação sugerida -->
+                        <Border Background="#0D0F11" BorderBrush="#1E2228" BorderThickness="1"
+                                Padding="6,4" Margin="0,0,0,6" CornerRadius="3">
+                            <StackPanel>
+                                <TextBlock Text="AÇÃO SUGERIDA" FontSize="8" Foreground="#6A7488" Margin="0,0,0,2"/>
+                                <TextBlock x:Name="TbAcaoSugerida" Text="AGUARDAR" FontSize="22" FontWeight="Bold"
+                                           Foreground="#6A7488"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Info linhas -->
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Regime" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TbDecisaoRegime" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Janela" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TbDecisaoJanela" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Confirm." Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TbDecisaoConf" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Padrão" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TbDecisaoPadrao" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Expira em" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TbDecisaoExpira" Text="--" FontSize="11" Foreground="#F5C518"/>
+                        </Grid>
+
+                        <!-- Stop / Target configuráveis -->
+                        <Border Background="#0D0F11" BorderBrush="#1E2228" BorderThickness="1"
+                                CornerRadius="3" Padding="6,5" Margin="0,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Stop e target (pts)" FontSize="10"
+                                           Foreground="#6A7488" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="42"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="22"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Stop" FontSize="11"
+                                               Foreground="#FF4466" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" x:Name="TxStop" Style="{StaticResource NumericInput}"
+                                             Text="340" TextChanged="TxStop_TextChanged"/>
+                                    <TextBlock Grid.Column="2" Text="pts" FontSize="10"
+                                               Foreground="#6A7488" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="42"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="22"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Target" FontSize="11"
+                                               Foreground="#00D4AA" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" x:Name="TxTarget" Style="{StaticResource NumericInput}"
+                                             Text="500" TextChanged="TxTarget_TextChanged"/>
+                                    <TextBlock Grid.Column="2" Text="pts" FontSize="10"
+                                               Foreground="#6A7488" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── PAINEL POSIÇÃO ── -->
+                <Border Grid.Row="1" BorderBrush="#1E2228" BorderThickness="1,0,0,1" Padding="8,6">
+                    <StackPanel>
+                        <TextBlock Text="POSIÇÃO" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+
+                        <TextBlock x:Name="TbPosicaoEstado" Text="FLAT" FontSize="14" FontWeight="Bold"
+                                   Foreground="#6A7488" Margin="0,0,0,6"/>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,4">
+                                <TextBlock Text="Preço médio" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPrecoPosicao" Text="--" FontSize="13" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
+                                <TextBlock Text="Stop" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbStopPosicao" Text="--" FontSize="13" FontWeight="Bold" Foreground="#FF4466"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
+                                <TextBlock Text="Target" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbTargetPosicao" Text="--" FontSize="13" FontWeight="Bold" Foreground="#00D4AA"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1">
+                                <TextBlock Text="Contratos" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbContratoPosicao" Text="0" FontSize="13" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock x:Name="TbPnlAberto" Text="R$ 0,00" FontSize="18" FontWeight="Bold"
+                                   Foreground="#6A7488" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="P/L aberto" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TbPLAbertoPosicao" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Result. dia" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TbResultadoDia" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Limite" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TbLimitePosicao" Text="--" FontSize="11" Foreground="#E8E8E8"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Drawdown" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TbDrawdownPosicao" Text="--" FontSize="11" Foreground="#FF4466"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── PAINEL PERFORMANCE ── -->
+                <Border Grid.Row="2" BorderBrush="#1E2228" BorderThickness="1,0,0,0" Padding="8,6">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/><!-- Label -->
+                            <RowDefinition Height="Auto"/><!-- Métricas 3×2 -->
+                            <RowDefinition Height="Auto"/><!-- Equity canvas -->
+                            <RowDefinition Height="*"/><!-- Saúde -->
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="PERFORMANCE" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
+
+                        <!-- Métricas 3×2 -->
+                        <Grid Grid.Row="1" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,2,4">
+                                <TextBlock Text="P/L" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfPL" Text="R$0" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,2,4">
+                                <TextBlock Text="Trades" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfTrades" Text="0" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,4">
+                                <TextBlock Text="Win rate" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfWin" Text="-- %" FontSize="11" FontWeight="Bold" Foreground="#00D4AA"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,2,0">
+                                <TextBlock Text="Expect." FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfExp" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,2,0">
+                                <TextBlock Text="Drawdown" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfDD" Text="--" FontSize="11" FontWeight="Bold" Foreground="#FF4466"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,0">
+                                <TextBlock Text="ProfFact" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock x:Name="TbPerfPF" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Mini gráfico equity -->
+                        <Border Grid.Row="2" Background="#0D0F11" BorderBrush="#1E2228" BorderThickness="1"
+                                Margin="0,0,0,6" Height="40">
+                            <Canvas x:Name="CanvasEquity" ClipToBounds="True"/>
+                        </Border>
+
+                        <!-- Saúde do sistema -->
+                        <StackPanel Grid.Row="3">
+                            <TextBlock Text="SAÚDE DO SISTEMA" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="55"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                    <RowDefinition/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="ProfitDLL" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TbSaudeDLL" Text="--" FontSize="11" Foreground="#6A7488"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Feed" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TbSaudeFeed" Text="--" FontSize="11" Foreground="#6A7488"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Gravação" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TbSaudeGrav" Text="--" FontSize="11" Foreground="#6A7488"/>
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="Latência" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TbSaudeLatencia" Text="--" FontSize="11" Foreground="#6A7488"/>
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="Risk" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TbSaudeRisk" Text="--" FontSize="11" Foreground="#6A7488"/>
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="Kill Sw." Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TbSaudeKill" Text="PRONTO" FontSize="11" Foreground="#00D4AA"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- ══ STATUS BAR ══ -->
-        <Border Grid.Row="2" Background="#080808" BorderBrush="#2A2A2A" BorderThickness="0,1,0,0">
-            <Grid Margin="12,0">
+        <Border Grid.Row="2" Background="#080A0C" BorderBrush="#1E2228" BorderThickness="0,1,0,0">
+            <Grid Margin="10,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="12"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+
+                <!-- Ao vivo / Trades -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock Text="Trades:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TbTradeCount" Foreground="#EEEEEE" FontSize="10" Text="0" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                    <Ellipse x:Name="EllipseConnection2" Width="6" Height="6" Fill="#FF4466"
+                             Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Trades:" FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbTradeCount" Text="0" FontSize="10" Foreground="#E8E8E8"
+                               Margin="3,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
+
+                <!-- Gravação -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <TextBlock Text="Gravando:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                    <Ellipse x:Name="EllipseRecording" Width="7" Height="7" Fill="#333333" Margin="4,0,0,0" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TbRecordingStatus" Foreground="#EEEEEE" FontSize="10" Text="OFF" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                    <TextBlock Text="Gravando:" FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
+                    <Ellipse x:Name="EllipseRecording" Width="6" Height="6" Fill="#333333"
+                             Margin="4,0,0,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbRecordingStatus" Text="OFF" FontSize="10" Foreground="#E8E8E8"
+                               Margin="3,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
+
+                <!-- Replay -->
                 <StackPanel Grid.Column="4" Orientation="Horizontal">
-                    <TextBlock Text="Replay:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="TbReplayStatus" Foreground="#EEEEEE" FontSize="10" Text="--" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                    <TextBlock Text="Replay:" FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbReplayStatus" Text="--" FontSize="10" Foreground="#E8E8E8"
+                               Margin="3,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
+
+                <!-- Latência / DiskAlert -->
                 <StackPanel Grid.Column="6" Orientation="Horizontal">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
-                        <TextBlock Text="Relógio:" FontSize="10" Foreground="#AAAAAA" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TbDataLatency" FontSize="10" Foreground="#EEEEEE" VerticalAlignment="Center" Margin="6,0,0,0" FontFamily="Consolas" Text="--" ToolTip="Negócio = hora vinda da DLL (quando há data). DLL→motor = fila/processador Profit. motor→HUD = até este frame da UI (~33 ms). PC = relógio local agora." TextTrimming="CharacterEllipsis"/>
-                    </StackPanel>
-                    <TextBlock x:Name="TbDiskAlert" Text="" FontSize="9" Foreground="#FF1744" VerticalAlignment="Center" Visibility="Collapsed"/>
+                    <TextBlock Text="Latência:" FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbDataLatencyStatus" Text="--" FontSize="10" Foreground="#E8E8E8"
+                               Margin="3,0,10,0" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbDiskAlert" Text="" FontSize="9" Foreground="#FF4466"
+                               VerticalAlignment="Center" Visibility="Collapsed"/>
                 </StackPanel>
-                <TextBlock Grid.Column="8" Text="MarketCore FlowSense v4.0 • Modo Análise pt-BR" FontSize="10" Foreground="#888888" VerticalAlignment="Center"/>
+
+                <!-- Modo atual (central spacer + modo) -->
+                <StackPanel Grid.Column="8" Orientation="Horizontal">
+                    <TextBlock Text="Modo: " FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TbMcieStatusModo" Text="OBSERVAR" FontSize="10" FontWeight="Bold"
+                               Foreground="#4A9EFF" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Versão -->
+                <TextBlock Grid.Column="10" Text="MCIE v1.0 · Build: 16 fases"
+                           FontSize="10" Foreground="#6A7488" VerticalAlignment="Center"/>
             </Grid>
         </Border>
     </Grid>

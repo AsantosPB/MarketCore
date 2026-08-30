@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 15 concluída — iniciando Fase 16
+- Fase atual: Fase 16 concluída — iniciando Fase 17
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -89,7 +89,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 13 — Risk Manager + Kill Switch
 - [x] Fase 14 — Paper Trading (2 semanas mínimo)
 - [x] Fase 15 — Live Execution
-- [ ] Fase 16 — Janela MCIE Principal (WPF)
+- [x] Fase 16 — Janela MCIE Principal (WPF)
 - [ ] Fase 17 — Janela Preço Justo (WPF)
 ---
 ## Horários e contexto de mercado
@@ -158,6 +158,12 @@ Identificado na auditoria de 29/08/2026:
   - PROJETO.md — Fase 14 marcada concluída
 - Pipeline: FeatureEngine → AgentEngine → DecisionCore → RiskManager → PaperTradingEngine
 - Commit: fase-14 — tag: v0.14.0
+
+### 30/08/2026 — Fase 16
+- Arquivos alterados:
+  - MarketCore.WPF/MainWindow.xaml — substituído por dashboard MCIE completo (3 colunas, toolbar MCIE, seletor de modo OBSERVAR/PAPER/LIVE)
+  - MarketCore.WPF/MainWindow.xaml.cs — adições MCIE: _mcieTimer 100ms, McieTimer_Tick, BtnModoObservar/Paper/Live_Click, ConfirmarLiveModal, TxStop/TxTarget_TextChanged, AppendEventLog, BtnTf_Click, UpdateModeButtonStyles, ViewModels AgentViewModel/EventLogViewModel/CalendarioEventViewModel
+- Commit: fase-16 — tag: v0.16.0
 
 ### 30/08/2026 — Fase 15
 - Arquivos criados:
