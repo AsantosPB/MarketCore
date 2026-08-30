@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 7 concluída — iniciando Fase 8
+- Fase atual: Fase 8 concluída — iniciando Fase 9
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -81,7 +81,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 5 — Feature Engine
 - [x] Fase 6 — Event Detector + Regime Detector
 - [x] Fase 7 — Dataset automático (features + labels no DuckDB)
-- [ ] Fase 8 — Pattern Engine + Pattern Registry
+- [x] Fase 8 — Pattern Engine + Pattern Registry
 - [ ] Fase 9 — Replay determinístico
 - [ ] Fase 10 — Backtest com simulador de execução
 - [ ] Fase 11 — Agent Engine (6 agentes)
@@ -250,3 +250,15 @@ git push origin main --tags
   - PROJETO.md — fase 7 marcada concluída
 - REGRA ABSOLUTA LOOK-AHEAD BIAS: labels usam apenas index j > i (timestamp > T0). Comentado no código.
 - Commit: fase-7 — tag: v0.7.0
+
+### 29/08/2026 — Fase 8
+- Arquivos criados:
+  - Engine/Patterns/PatternModels.cs — PatternStatus (9 estados), PatternCondition, PatternStats (12 métricas + WinRateByRegime), DiscoveredPattern (InDecay = RecentWinRate < DiscoveryWinRate * 0.85)
+  - Engine/Patterns/PatternEvaluator.cs — Satisfaz() (all-conditions match), CalcularStats() (WinRate/LossRate/Expectancy/ProfitFactor/Sharpe/MFE/MAE/WinRateByRegime), AvaliarPadrao(); GetFeatureValue() via switch sobre 15 features
+  - Engine/Patterns/PatternDiscovery.cs — DescubrirAsync() com divisão 70/15/15; busca 2-3 condições; validação >= 70% performance em validação e out-of-sample; EliminarRedundantes() (correlação > 0.85); 13 features candidatas; critérios: MinSamples=200, MinExpectancy=2.0, MinProfitFactor=1.5, MinWinRate=0.55
+  - Engine/Patterns/PatternRegistry.cs — InicializarAsync, AdicionarAsync, AtualizarStatusAsync, PadroesAtivos, MonitorarDecayAsync (threshold InDecay: RecentWinRate < DiscoveryWinRate * 0.85)
+- Arquivos modificados:
+  - Engine/Storage/StorageManager.cs — SalvarPadraoAsync (SQLite, conditions em JSON), AtualizarStatusPadraoAsync, CarregarPadroesAsync, ConsultarDatasetComLabelsAsync (alias para ConsultarDatasetAsync)
+  - Engine/MarketEngine.cs — campos _patternRegistry/_patternDiscovery; init em ConnectAsync; wiring OnDatasetPronto (discovery + decay automáticos); handler OnPatternEmDecay; propriedades PatternRegistry e PadroesAtivos()
+  - PROJETO.md — fase 8 marcada concluída
+- Commit: fase-8 — tag: v0.8.0

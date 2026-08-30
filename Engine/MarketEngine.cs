@@ -9,6 +9,7 @@ using MarketCore.Engine.Recording;
 using MarketCore.Engine.Storage;
 using MarketCore.Engine.Calendar;
 using MarketCore.Engine.Dataset;
+using MarketCore.Engine.Patterns;  // [FASE 8]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -85,6 +86,8 @@ public sealed class MarketEngine : IDisposable
     private SnapshotTimer?   _snapshotTimer;   // [FASE 5]
     private DatasetBuilder?  _datasetBuilder;  // [FASE 7]
     private DatasetTimer?    _datasetTimer;    // [FASE 7]
+    private PatternRegistry?  _patternRegistry;  // [FASE 8]
+    private PatternDiscovery? _patternDiscovery; // [FASE 8]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -122,6 +125,13 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Constrói o dataset manualmente para a data informada.</summary>
     public async Task<DatasetStats?> ConstruirDatasetManualAsync(DateTime date)
         => _datasetBuilder != null ? await _datasetBuilder.BuildAsync(date) : null;  // [FASE 7]
+
+    /// <summary>Catálogo de padrões descobertos pelo Pattern Engine.</summary>
+    public PatternRegistry? PatternRegistry => _patternRegistry;  // [FASE 8]
+
+    /// <summary>Lista de padrões com status Approved ou Live.</summary>
+    public List<DiscoveredPattern> PadroesAtivos()  // [FASE 8]
+        => _patternRegistry?.PadroesAtivos() ?? new List<DiscoveredPattern>();
 
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
@@ -222,6 +232,25 @@ public sealed class MarketEngine : IDisposable
             _datasetTimer.OnDatasetPronto += OnDatasetPronto;
             _datasetTimer.Iniciar();
 
+            // [FASE 8] — Pattern Engine
+            _patternRegistry  = new PatternRegistry(_storageManager!);
+            await _patternRegistry.InicializarAsync();
+            _patternRegistry.OnPatternDecay += OnPatternEmDecay;
+            _patternDiscovery = new PatternDiscovery();
+            _patternDiscovery.OnPatternFound += async p =>
+                await _patternRegistry.AdicionarAsync(p);
+
+            // Após dataset pronto, rodar discovery e monitorar decay
+            _datasetTimer.OnDatasetPronto += async stats =>
+            {
+                var dataset = await _storageManager!.ConsultarDatasetComLabelsAsync(
+                    DateTime.Today, DateTime.Today);
+                if (_patternDiscovery != null)
+                    await _patternDiscovery.DescubrirAsync(dataset);
+                if (_patternRegistry != null)
+                    await _patternRegistry.MonitorarDecayAsync(dataset);
+            };
+
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
@@ -314,6 +343,16 @@ public sealed class MarketEngine : IDisposable
             $"[{DateTime.Now:HH:mm:ss}] Dataset pronto: {stats.LabeledSnapshots} snapshots rotulados. "
             + $"Up: {stats.UpMoves} Down: {stats.DownMoves} Neutral: {stats.Neutral} "
             + $"AvgReturn1s: {stats.AvgReturn1s:F2} pts");
+    }
+
+    // ── Handler de Pattern Engine — Fase 8 ─────────────────────────────
+
+    private void OnPatternEmDecay(DiscoveredPattern p)  // [FASE 8]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] ALERTA DECAY — Padrão #{p.PatternId} "
+            + $"discovery={p.DiscoveryWinRate:P1} recent={p.RecentWinRate:P1} "
+            + $"condições={p.Conditions.Count} regime={p.PrimaryRegime}");
     }
 
     // ── Handlers de Feature Engine — Fase 6 ──────────────────────────────

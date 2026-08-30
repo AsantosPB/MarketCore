@@ -6,6 +6,8 @@ using DuckDB.NET.Data;
 using Microsoft.Data.Sqlite;
 using MarketCore.Engine.Calendar;
 using MarketCore.Engine.Dataset;
+using MarketCore.Engine.Patterns;
+using System.Text.Json;
 
 namespace MarketCore.Engine.Storage;
 
@@ -678,6 +680,128 @@ INSERT INTO dataset_stats VALUES (
             return count is long l ? l > 0 : false;
         });
     }
+
+
+    // ── Pattern Engine (Fase 8) ──────────────────────────────────────────
+
+    /// <summary>Persiste um padrão descoberto na tabela patterns (SQLite).</summary>
+    public async Task SalvarPadraoAsync(DiscoveredPattern pattern)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        string condJson = JsonSerializer.Serialize(pattern.Conditions);
+
+        await Task.Run(() =>
+        {
+            using var cmd = _sqlite!.CreateCommand();
+            cmd.CommandText = @"
+INSERT OR REPLACE INTO patterns
+    (pattern_id, version, created_at, conditions,
+     sample_count, win_rate, expectancy, profit_factor,
+     mfe_avg, mae_avg, drawdown, regime,
+     training_period, validation_period, status)
+VALUES
+    (@pid, @ver, @cat, @cond,
+     @sc, @wr, @ex, @pf,
+     @mfe, @mae, @dd, @reg,
+     @tp, @vp, @st)";
+            cmd.Parameters.AddWithValue("@pid", pattern.PatternId);
+            cmd.Parameters.AddWithValue("@ver", pattern.Version);
+            cmd.Parameters.AddWithValue("@cat", pattern.CreatedAt.Ticks);
+            cmd.Parameters.AddWithValue("@cond", condJson);
+            cmd.Parameters.AddWithValue("@sc",  pattern.TrainingStats.SampleCount);
+            cmd.Parameters.AddWithValue("@wr",  pattern.TrainingStats.WinRate);
+            cmd.Parameters.AddWithValue("@ex",  pattern.TrainingStats.Expectancy);
+            cmd.Parameters.AddWithValue("@pf",  pattern.TrainingStats.ProfitFactor);
+            cmd.Parameters.AddWithValue("@mfe", pattern.TrainingStats.MfeAvg);
+            cmd.Parameters.AddWithValue("@mae", pattern.TrainingStats.MaeAvg);
+            cmd.Parameters.AddWithValue("@dd",  pattern.TrainingStats.MaxDrawdown);
+            cmd.Parameters.AddWithValue("@reg", pattern.PrimaryRegime);
+            cmd.Parameters.AddWithValue("@tp",  pattern.TrainingPeriod);
+            cmd.Parameters.AddWithValue("@vp",  pattern.ValidationPeriod);
+            cmd.Parameters.AddWithValue("@st",  pattern.Status.ToString());
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    /// <summary>Atualiza o status de um padrão existente no SQLite.</summary>
+    public async Task AtualizarStatusPadraoAsync(int patternId, PatternStatus status)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await Task.Run(() =>
+        {
+            using var cmd = _sqlite!.CreateCommand();
+            cmd.CommandText = "UPDATE patterns SET status = @st WHERE pattern_id = @pid";
+            cmd.Parameters.AddWithValue("@st",  status.ToString());
+            cmd.Parameters.AddWithValue("@pid", patternId);
+            cmd.ExecuteNonQuery();
+        });
+    }
+
+    /// <summary>Carrega padroes do SQLite. Filtra por status se fornecido.</summary>
+    public async Task<List<DiscoveredPattern>> CarregarPadroesAsync(PatternStatus? status = null)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var result = new List<DiscoveredPattern>();
+        await Task.Run(() =>
+        {
+            using var cmd = _sqlite!.CreateCommand();
+            cmd.CommandText = status.HasValue
+                ? "SELECT * FROM patterns WHERE status = @st ORDER BY pattern_id"
+                : "SELECT * FROM patterns ORDER BY pattern_id";
+            if (status.HasValue)
+                cmd.Parameters.AddWithValue("@st", status.Value.ToString());
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var condJson = reader.GetString(3);
+                var conditions = JsonSerializer.Deserialize<List<PatternCondition>>(condJson)
+                                 ?? new List<PatternCondition>();
+
+                var stats = new PatternStats
+                {
+                    SampleCount   = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                    WinRate       = reader.IsDBNull(5) ? 0 : reader.GetDouble(5),
+                    Expectancy    = reader.IsDBNull(6) ? 0 : reader.GetDouble(6),
+                    ProfitFactor  = reader.IsDBNull(7) ? 0 : reader.GetDouble(7),
+                    MfeAvg        = reader.IsDBNull(8) ? 0 : reader.GetDouble(8),
+                    MaeAvg        = reader.IsDBNull(9) ? 0 : reader.GetDouble(9),
+                    MaxDrawdown   = reader.IsDBNull(10) ? 0 : reader.GetDouble(10),
+                };
+
+                if (!Enum.TryParse<PatternStatus>(reader.GetString(14), out var st))
+                    st = PatternStatus.Discovered;
+
+                var pattern = new DiscoveredPattern
+                {
+                    PatternId        = reader.GetInt32(0),
+                    Version          = reader.GetInt32(1),
+                    CreatedAt        = new DateTime(reader.GetInt64(2)),
+                    Conditions       = conditions,
+                    TrainingStats    = stats,
+                    PrimaryRegime    = reader.IsDBNull(11) ? string.Empty : reader.GetString(11),
+                    TrainingPeriod   = reader.IsDBNull(12) ? string.Empty : reader.GetString(12),
+                    ValidationPeriod = reader.IsDBNull(13) ? string.Empty : reader.GetString(13),
+                    Status           = st,
+                    DiscoveryWinRate = stats.WinRate,
+                    RecentWinRate    = stats.WinRate
+                };
+                result.Add(pattern);
+            }
+        });
+        return result;
+    }
+
+    /// <summary>
+    /// Consulta o dataset completo (features + labels) para uso pelo Pattern Engine.
+    /// Equivalente a ConsultarDatasetAsync, exposto com nome mais descritivo.
+    /// </summary>
+    public Task<List<DatasetRecord>> ConsultarDatasetComLabelsAsync(
+        DateTime inicio, DateTime fim)
+        => ConsultarDatasetAsync(inicio, fim);
 
     // ── Dispose ───────────────────────────────────────────────────────────
 
