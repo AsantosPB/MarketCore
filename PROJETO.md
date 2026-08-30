@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 12 concluída — iniciando Fase 13
+- Fase atual: Fase 13 concluída — iniciando Fase 14
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -86,7 +86,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 10 — Backtest com simulador de execução
 - [x] Fase 11 — Agent Engine (6 agentes)
 - [x] Fase 12 — Decision Core
-- [ ] Fase 13 — Risk Manager + Kill Switch
+- [x] Fase 13 — Risk Manager + Kill Switch
 - [ ] Fase 14 — Paper Trading (2 semanas mínimo)
 - [ ] Fase 15 — Live Execution
 - [ ] Fase 16 — Janela MCIE Principal (WPF)
@@ -146,6 +146,16 @@ Identificado na auditoria de 29/08/2026:
 ```
 ---
 ## Histórico de mudanças
+### 30/08/2026 — Fase 13
+- Arquivos criados:
+  - Engine/Risk/RiskModels.cs — RiskCheckResult, BlockReason, RiskDecision, RiskConfig, RiskState
+  - Engine/Risk/RiskManager.cs — 11 verificações, Kill Switch automático (perda/feed/book), ResetDiario
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 13, campos _riskManager/_riskConfig/_pnlDiario etc, wiring em ConnectAsync, pipeline FeatureEngine→AgentEngine→DecisionCore→RiskManager, OnKillSwitchAtivado/OnOrdemBloqueada, propriedades RiskManager/EstadoRisco/AtivarKillSwitchManual/DesativarKillSwitch, ResetDiario em IniciarPregaoAsync, KillSwitch em Dispose
+  - PROJETO.md — Fase 13 marcada concluída
+- Kill Switch automático: (1) perda diária >= limite, (2) feed desconectado, (3) book stale >10s
+- Commit: fase-13 — tag: v0.13.0
+
 ### 30/08/2026 — Fase 12
 - Arquivos criados:
   - Engine/Decision/DecisionModels.cs — DecisionState, DecisionMode, WeightSet (pesos por regime)

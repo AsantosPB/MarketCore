@@ -14,6 +14,7 @@ using MarketCore.Engine.Replay;    // [FASE 9]
 using MarketCore.Engine.Backtest;   // [FASE 10]
 using MarketCore.Engine.Agents;     // [FASE 11]
 using MarketCore.Engine.Decision;   // [FASE 12]
+using MarketCore.Engine.Risk;        // [FASE 13]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -97,6 +98,13 @@ public sealed class MarketEngine : IDisposable
     private BacktestEngine?   _backtestEngine;   // [FASE 10]
     private AgentEngine?      _agentEngine;      // [FASE 11]
     private DecisionCore?     _decisionCore;     // [FASE 12]
+    private RiskManager?      _riskManager;      // [FASE 13]
+    private RiskConfig        _riskConfig = new();
+    private DateTime          _ultimaAtualizacaoBook;
+    private double            _pnlDiario;
+    private bool              _temPosicaoAberta;
+    private int               _tradesDoDia;
+    private double            _latenciaMs;
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -171,6 +179,22 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Último estado de decisão emitido pelo Decision Core.</summary>
     public DecisionState UltimaDecisao  // [FASE 12]
         => _decisionCore?.UltimoEstado ?? DecisionState.Wait;
+
+    // ── Risk Manager — Fase 13 ──────────────────────────────────────────────────
+
+    /// <summary>Gerenciador de risco — autoridade total sobre ordens.</summary>
+    public RiskManager? RiskManager  => _riskManager;  // [FASE 13]
+
+    /// <summary>Estado atual do Risk Manager (PnL diário, trades, Kill Switch).</summary>
+    public RiskState?   EstadoRisco  => _riskManager?.Estado;  // [FASE 13]
+
+    /// <summary>Ativa o Kill Switch manualmente (operação irreversível sem reset explícito).</summary>
+    public void AtivarKillSwitchManual(string motivo)  // [FASE 13]
+        => _riskManager?.AtivarKillSwitch(motivo);
+
+    /// <summary>Desativa o Kill Switch — exige ação manual deliberada.</summary>
+    public void DesativarKillSwitch()  // [FASE 13]
+        => _riskManager?.DesativarKillSwitch();
 
     // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
 
@@ -350,11 +374,43 @@ public sealed class MarketEngine : IDisposable
             // [FASE 12] — Decision Core
             _decisionCore = new DecisionCore(_storageManager);
             _decisionCore.OnDecision += OnDecisaoTomada;
+
+            // [FASE 13] — Risk Manager
+            _riskManager = new RiskManager(_riskConfig);
+            _riskManager.OnKillSwitch += OnKillSwitchAtivado;
+            _riskManager.OnBlocked    += OnOrdemBloqueada;
+
             _featureEngine.OnSnapshot += async snap =>
             {
+                _ultimaAtualizacaoBook = DateTime.UtcNow;
                 var regime  = _featureEngine.RegimeAtual;
                 var signals = _agentEngine.Avaliar(snap, regime);
                 await _decisionCore.AvaliarAsync(snap, regime, signals);
+                var estado  = _decisionCore.UltimoEstado;
+
+                // Só verificar risco se há sinal de entrada/saída
+                if (estado == DecisionState.Buy      ||
+                    estado == DecisionState.StrongBuy ||
+                    estado == DecisionState.Sell      ||
+                    estado == DecisionState.StrongSell ||
+                    estado == DecisionState.Exit)
+                {
+                    var risco = _riskManager.Verificar(
+                        estado,
+                        snap,
+                        _temPosicaoAberta,
+                        _pnlDiario,
+                        _tradesDoDia,
+                        feedConectado: true,
+                        _latenciaMs,
+                        _ultimaAtualizacaoBook);
+
+                    if (risco.Result == RiskCheckResult.Approved)
+                        Console.WriteLine(
+                            $"[RISK] APROVADO — {estado} | "
+                          + $"score={_decisionCore.UltimoEstado} | "
+                          + $"regime={regime.Regime}");
+                }
             };
             _patternDiscovery = new PatternDiscovery();
             _patternDiscovery.OnPatternFound += async p =>
@@ -377,6 +433,7 @@ public sealed class MarketEngine : IDisposable
                 Console.WriteLine("[RECORDER] Falha ao iniciar pregão - gravação desabilitada");
                 _recordingEnabled = false;
             }
+            _riskManager?.ResetDiario();  // [FASE 13] reset diário
         }
 
         await _provider.ConnectAsync(credentials);
@@ -498,6 +555,21 @@ public sealed class MarketEngine : IDisposable
         Console.WriteLine(
             $"[{DateTime.Now:HH:mm:ss}] [DECISION] Estado: {estado} | "
           + $"Regime: {_featureEngine?.RegimeAtual.Regime}");
+    }
+
+    // ── Handlers de Risk Manager — Fase 13 ─────────────────────────────────
+
+    private void OnKillSwitchAtivado(string motivo)  // [FASE 13]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [KILL SWITCH] ATIVADO: {motivo}");
+        // Fase 15: cancelar ordens abertas e fechar posição
+    }
+
+    private void OnOrdemBloqueada(RiskDecision d)  // [FASE 13]
+    {
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [RISK] BLOQUEADO: {d.Reason} — {d.Detail}");
     }
 
     // ── Handlers de Feature Engine — Fase 6 ──────────────────────────────
@@ -889,6 +961,7 @@ public sealed class MarketEngine : IDisposable
         _snapshotTimer?.Dispose();  // [FASE 5]
         _datasetTimer?.Dispose();   // [FASE 7]
         _replayEngine?.Dispose();   // [FASE 9]
+        _riskManager?.AtivarKillSwitch("Sistema encerrando");  // [FASE 13]
     }
 }
 
