@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 11 concluída — iniciando Fase 12
+- Fase atual: Fase 12 concluída — iniciando Fase 13
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -85,7 +85,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 9 — Replay determinístico
 - [x] Fase 10 — Backtest com simulador de execução
 - [x] Fase 11 — Agent Engine (6 agentes)
-- [ ] Fase 12 — Decision Core
+- [x] Fase 12 — Decision Core
 - [ ] Fase 13 — Risk Manager + Kill Switch
 - [ ] Fase 14 — Paper Trading (2 semanas mínimo)
 - [ ] Fase 15 — Live Execution
@@ -146,6 +146,15 @@ Identificado na auditoria de 29/08/2026:
 ```
 ---
 ## Histórico de mudanças
+### 30/08/2026 — Fase 12
+- Arquivos criados:
+  - Engine/Decision/DecisionModels.cs — DecisionState, DecisionMode, WeightSet (pesos por regime)
+  - Engine/Decision/DecisionCore.cs — scoring ponderado, AplicarConfirmacao 600ms, GravarDecisionAsync
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 12, campo _decisionCore, wiring em ConnectAsync (substituição do stub Fase 11), OnDecisaoTomada, DecisionCore/UltimaDecisao properties
+  - PROJETO.md — Fase 12 marcada concluída
+- Commit: fase-12 — tag: v0.12.0
+
 ### 30/08/2026 — Fase 11
 - Arquivos criados:
   - Engine/Agents/AgentModels.cs — Direction, AgentSignal, IAgent

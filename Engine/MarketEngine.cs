@@ -13,6 +13,7 @@ using MarketCore.Engine.Patterns;  // [FASE 8]
 using MarketCore.Engine.Replay;    // [FASE 9]
 using MarketCore.Engine.Backtest;   // [FASE 10]
 using MarketCore.Engine.Agents;     // [FASE 11]
+using MarketCore.Engine.Decision;   // [FASE 12]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -95,6 +96,7 @@ public sealed class MarketEngine : IDisposable
     private ReplayEngine?     _replayEngine;     // [FASE 9]
     private BacktestEngine?   _backtestEngine;   // [FASE 10]
     private AgentEngine?      _agentEngine;      // [FASE 11]
+    private DecisionCore?     _decisionCore;     // [FASE 12]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -160,6 +162,15 @@ public sealed class MarketEngine : IDisposable
                 : new List<AgentSignal>();
         }
     }
+
+    // ── Decision Core — Fase 12 ─────────────────────────────────────────────────
+
+    /// <summary>Motor de decisão: scoring ponderado por regime + confirmação 600ms.</summary>
+    public DecisionCore? DecisionCore => _decisionCore;  // [FASE 12]
+
+    /// <summary>Último estado de decisão emitido pelo Decision Core.</summary>
+    public DecisionState UltimaDecisao  // [FASE 12]
+        => _decisionCore?.UltimoEstado ?? DecisionState.Wait;
 
     // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
 
@@ -335,11 +346,15 @@ public sealed class MarketEngine : IDisposable
             // [FASE 11] — Agent Engine
             _agentEngine = new AgentEngine(_patternRegistry);
             _agentEngine.OnSignals += OnAgentSignals;
-            _featureEngine.OnSnapshot += snap =>
+
+            // [FASE 12] — Decision Core
+            _decisionCore = new DecisionCore(_storageManager);
+            _decisionCore.OnDecision += OnDecisaoTomada;
+            _featureEngine.OnSnapshot += async snap =>
             {
                 var regime  = _featureEngine.RegimeAtual;
                 var signals = _agentEngine.Avaliar(snap, regime);
-                // signals serão consumidos pelo Decision Core (Fase 12)
+                await _decisionCore.AvaliarAsync(snap, regime, signals);
             };
             _patternDiscovery = new PatternDiscovery();
             _patternDiscovery.OnPatternFound += async p =>
@@ -472,6 +487,17 @@ public sealed class MarketEngine : IDisposable
             $"[{DateTime.Now:HH:mm:ss}] ALERTA DECAY — Padrão #{p.PatternId} "
             + $"discovery={p.DiscoveryWinRate:P1} recent={p.RecentWinRate:P1} "
             + $"condições={p.Conditions.Count} regime={p.PrimaryRegime}");
+    }
+
+    // ── Handler de Decision Core — Fase 12 ──────────────────────────────────
+
+    private void OnDecisaoTomada(DecisionState estado)  // [FASE 12]
+    {
+        if (estado == DecisionState.Wait) return;
+
+        Console.WriteLine(
+            $"[{DateTime.Now:HH:mm:ss}] [DECISION] Estado: {estado} | "
+          + $"Regime: {_featureEngine?.RegimeAtual.Regime}");
     }
 
     // ── Handlers de Feature Engine — Fase 6 ──────────────────────────────
