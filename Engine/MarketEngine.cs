@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +10,8 @@ using MarketCore.Engine.Storage;
 using MarketCore.Engine.Calendar;
 using MarketCore.Engine.Dataset;
 using MarketCore.Engine.Patterns;  // [FASE 8]
+using MarketCore.Engine.Replay;    // [FASE 9]
+using MarketCore.Engine.Backtest;   // [FASE 10]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -88,6 +90,9 @@ public sealed class MarketEngine : IDisposable
     private DatasetTimer?    _datasetTimer;    // [FASE 7]
     private PatternRegistry?  _patternRegistry;  // [FASE 8]
     private PatternDiscovery? _patternDiscovery; // [FASE 8]
+    private string?           _diretorioBase;    // [FASE 9]
+    private ReplayEngine?     _replayEngine;     // [FASE 9]
+    private BacktestEngine?   _backtestEngine;   // [FASE 10]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -133,6 +138,72 @@ public sealed class MarketEngine : IDisposable
     public List<DiscoveredPattern> PadroesAtivos()  // [FASE 8]
         => _patternRegistry?.PadroesAtivos() ?? new List<DiscoveredPattern>();
 
+    // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
+
+    /// <summary>Sessão de replay em andamento (null se não iniciada).</summary>
+    public ReplaySession? ReplayAtual => _replayEngine?.Session; // [FASE 9]
+
+    /// <summary>Inicia replay de uma data a partir dos arquivos .bin gravados.</summary>
+    public async Task<ReplayResult> IniciarReplayAsync(                      // [FASE 9]
+        DateTime date, ReplaySpeed speed = ReplaySpeed.RealTime)
+    {
+        if (_featureEngine == null)
+            throw new InvalidOperationException("FeatureEngine não inicializado. Chame ConnectAsync primeiro.");
+        if (_diretorioBase == null)
+            throw new InvalidOperationException("Diretório base não configurado. Chame HabilitarGravacao primeiro.");
+
+        var rawPath = System.IO.Path.Combine(_diretorioBase, "..", "data", "raw");
+        _replayEngine = new ReplayEngine(_featureEngine, rawPath);
+        _replayEngine.OnProgress += s =>
+        {
+            if (s.ProgressPct % 10 < 0.1)
+                Console.WriteLine($"Replay {s.ProgressPct:F0}% — {s.ProcessedEvents:N0} eventos");
+        };
+        return await _replayEngine.IniciarAsync(date, speed);
+    }
+
+    /// <summary>Pausa o replay em andamento.</summary>
+    public void PausarReplay()  => _replayEngine?.Pausar();  // [FASE 9]
+
+    /// <summary>Retoma o replay pausado.</summary>
+    public void RetomarReplay() => _replayEngine?.Retomar(); // [FASE 9]
+
+    /// <summary>Cancela o replay em andamento.</summary>
+    public void PararReplay()   => _replayEngine?.Parar();   // [FASE 9]
+    // ── Backtest Engine — Fase 10 ────────────────────────────────────────────
+
+    /// <summary>Executa backtest de um pregão usando os arquivos .bin gravados.</summary>
+    public async Task<BacktestResult> ExecutarBacktestAsync(BacktestConfig config)  // [FASE 10]
+    {
+        if (_featureEngine == null)
+            throw new InvalidOperationException(
+                "FeatureEngine não inicializado. Chame ConnectAsync primeiro.");
+        if (_diretorioBase == null)
+            throw new InvalidOperationException(
+                "Diretório base não configurado. Chame HabilitarGravacao primeiro.");
+        if (_patternRegistry == null)
+            throw new InvalidOperationException(
+                "PatternRegistry não inicializado. Chame ConnectAsync primeiro.");
+
+        var rawPath = System.IO.Path.Combine(_diretorioBase, "data", "raw");
+
+        _backtestEngine = new BacktestEngine(
+            _featureEngine,
+            _patternRegistry,
+            rawPath);
+
+        _backtestEngine.OnLog += msg =>
+            Console.WriteLine($"[BACKTEST] {msg}");
+
+        var result = await _backtestEngine.ExecutarAsync(config);
+
+        Console.WriteLine(
+            $"[BACKTEST] Concluído: {result.TotalTrades} trades | " +
+            $"NetPnL: {result.NetPnL:F2} | WinRate: {result.WinRate:P1}");
+
+        return result;
+    }
+
     /// <summary>Registra sink da Análise Quantitativa (thread-safe; chamado da UI).</summary>
     public void SetAnaliseQuantSink(IAnaliseQuantDataSink? sink) => _analiseQuantSink = sink;
 
@@ -152,7 +223,8 @@ public sealed class MarketEngine : IDisposable
             diretorioBase = System.IO.Path.Combine(diretorioBase, "_SIM");
 
         _recorder = new MarketRecorder(diretorioBase);
-        _dbPath   = System.IO.Path.Combine(diretorioBase, "..", "data", "db"); // [FASE 3]
+        _dbPath        = System.IO.Path.Combine(diretorioBase, "..", "data", "db"); // [FASE 3]
+        _diretorioBase = diretorioBase; // [FASE 9]
 
         _recorder.ErroGravacao += (s, e) =>
         {
@@ -743,6 +815,7 @@ public sealed class MarketEngine : IDisposable
         _calendarTimer?.Dispose();  // [FASE 4]
         _snapshotTimer?.Dispose();  // [FASE 5]
         _datasetTimer?.Dispose();   // [FASE 7]
+        _replayEngine?.Dispose();   // [FASE 9]
     }
 }
 

@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 8 concluída — iniciando Fase 9
+- Fase atual: Fase 10 concluída — iniciando Fase 11
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -82,8 +82,8 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 6 — Event Detector + Regime Detector
 - [x] Fase 7 — Dataset automático (features + labels no DuckDB)
 - [x] Fase 8 — Pattern Engine + Pattern Registry
-- [ ] Fase 9 — Replay determinístico
-- [ ] Fase 10 — Backtest com simulador de execução
+- [x] Fase 9 — Replay determinístico
+- [x] Fase 10 — Backtest com simulador de execução
 - [ ] Fase 11 — Agent Engine (6 agentes)
 - [ ] Fase 12 — Decision Core
 - [ ] Fase 13 — Risk Manager + Kill Switch
@@ -146,6 +146,28 @@ Identificado na auditoria de 29/08/2026:
 ```
 ---
 ## Histórico de mudanças
+### 30/08/2026 — Fase 10
+- Arquivos criados:
+  - Engine/Backtest/ExecutionProvider.cs — interface IExecutionProvider, OrderType, OrderFill
+  - Engine/Backtest/BacktestExecutionProvider.cs — simulador de execução com latência e slippage assimétrico (Ask+slip / Bid-slip)
+  - Engine/Backtest/BacktestPosition.cs — gerenciamento de posição com MFE/MAE e criação de TradeRecord
+  - Engine/Backtest/BacktestModels.cs — BacktestResult (StrategyAlpha/ExecutionAlpha separados), BacktestConfig
+  - Engine/Backtest/BacktestEngine.cs — motor principal: replay + padrões + execução + stop/target + CalcularResultado
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 10, campo _backtestEngine, método ExecutarBacktestAsync
+  - PROJETO.md — Fase 10 marcada concluída
+- Commit: fase-10 — tag: v0.10.0
+
+### 30/08/2026 — Fase 9
+- Arquivos criados:
+  - Engine/Replay/ReplayModels.cs — ReplaySpeed, ReplayStatus, RawTradeEvent, RawBookEvent, ReplaySession, ReplayResult
+  - Engine/Replay/ReplayReader.cs — leitura de trades (var-length) e book (272 bytes), MergeSort cronológico, fallback de nome de arquivo
+  - Engine/Replay/ReplayEngine.cs — loop de replay com throttle, pause/resume, step-by-step, SHA256 checksum de determinismo
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 9, campos _diretorioBase/_replayEngine, IniciarReplayAsync, PausarReplay, RetomarReplay, PararReplay, ReplayAtual, Dispose
+  - PROJETO.md — Fase 9 marcada concluída
+- Commit: fase-9 — tag: v0.9.0
+
 ### 29/08/2026 — Fase 1
 - Arquivos modificados:
   - Providers/Nelogica/ProfitDLLProvider.cs — BookProcessingLoop reativada (StartProcessingThread); filtros rank/agente/PVV removidos do OnOfferBookCallbackCore; todos os 10 níveis enfileirados em _bookQueue
