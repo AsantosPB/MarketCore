@@ -2,7 +2,7 @@
 ## Estado atual
 - Versão: 1.0.0-alpha
 - Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 10 concluída — iniciando Fase 11
+- Fase atual: Fase 11 concluída — iniciando Fase 12
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
@@ -84,7 +84,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 8 — Pattern Engine + Pattern Registry
 - [x] Fase 9 — Replay determinístico
 - [x] Fase 10 — Backtest com simulador de execução
-- [ ] Fase 11 — Agent Engine (6 agentes)
+- [x] Fase 11 — Agent Engine (6 agentes)
 - [ ] Fase 12 — Decision Core
 - [ ] Fase 13 — Risk Manager + Kill Switch
 - [ ] Fase 14 — Paper Trading (2 semanas mínimo)
@@ -146,6 +146,21 @@ Identificado na auditoria de 29/08/2026:
 ```
 ---
 ## Histórico de mudanças
+### 30/08/2026 — Fase 11
+- Arquivos criados:
+  - Engine/Agents/AgentModels.cs — Direction, AgentSignal, IAgent
+  - Engine/Agents/FlowAgent.cs — delta 1s/5s + OFI + AggressionRatio
+  - Engine/Agents/BookAgent.cs — BookImbalance + DepthImbalance + Microprice + Stacking/Pulling
+  - Engine/Agents/AbsorptionAgent.cs — AbsorptionScore + amplificação por velocidade baixa
+  - Engine/Agents/OFIAgent.cs — OFI 100ms/500ms/1s + convergência de janelas
+  - Engine/Agents/PatternAgent.cs — padrões históricos aprovados, NeutralSignal se vazio
+  - Engine/Agents/RegimeAgent.cs — regime + janela temporal + bloqueio em leilão/evento
+  - Engine/Agents/AgentEngine.cs — orquestra 6 agentes, OnSignals
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — using FASE 11, campo _agentEngine, wiring em ConnectAsync, OnAgentSignals, AgentEngine/UltimosSignals properties
+  - PROJETO.md — Fase 11 marcada concluída
+- Commit: fase-11 — tag: v0.11.0
+
 ### 30/08/2026 — Fase 10
 - Arquivos criados:
   - Engine/Backtest/ExecutionProvider.cs — interface IExecutionProvider, OrderType, OrderFill

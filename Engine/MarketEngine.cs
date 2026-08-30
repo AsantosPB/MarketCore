@@ -12,6 +12,7 @@ using MarketCore.Engine.Dataset;
 using MarketCore.Engine.Patterns;  // [FASE 8]
 using MarketCore.Engine.Replay;    // [FASE 9]
 using MarketCore.Engine.Backtest;   // [FASE 10]
+using MarketCore.Engine.Agents;     // [FASE 11]
 using MarketCore.Engine.Features;
 using MarketCore.Models;
 
@@ -93,6 +94,7 @@ public sealed class MarketEngine : IDisposable
     private string?           _diretorioBase;    // [FASE 9]
     private ReplayEngine?     _replayEngine;     // [FASE 9]
     private BacktestEngine?   _backtestEngine;   // [FASE 10]
+    private AgentEngine?      _agentEngine;      // [FASE 11]
     private bool _recordingEnabled = false;
 
     private decimal _lastPrice = 0;
@@ -137,6 +139,27 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Lista de padrões com status Approved ou Live.</summary>
     public List<DiscoveredPattern> PadroesAtivos()  // [FASE 8]
         => _patternRegistry?.PadroesAtivos() ?? new List<DiscoveredPattern>();
+
+    // ── Agent Engine — Fase 11 ─────────────────────────────────────────────────
+
+    /// <summary>Motor de agentes especializados.</summary>
+    public AgentEngine? AgentEngine => _agentEngine;  // [FASE 11]
+
+    /// <summary>
+    /// Avalia todos os agentes com o snapshot mais recente.
+    /// Retorna lista vazia se o engine não estiver inicializado.
+    /// </summary>
+    public List<AgentSignal> UltimosSignals  // [FASE 11]
+    {
+        get
+        {
+            var snap   = UltimoSnapshot;
+            var regime = RegimeAtual;
+            return snap != null && _agentEngine != null
+                ? _agentEngine.Avaliar(snap, regime)
+                : new List<AgentSignal>();
+        }
+    }
 
     // ── Replay Engine — Fase 9 ──────────────────────────────────────────────
 
@@ -308,6 +331,16 @@ public sealed class MarketEngine : IDisposable
             _patternRegistry  = new PatternRegistry(_storageManager!);
             await _patternRegistry.InicializarAsync();
             _patternRegistry.OnPatternDecay += OnPatternEmDecay;
+
+            // [FASE 11] — Agent Engine
+            _agentEngine = new AgentEngine(_patternRegistry);
+            _agentEngine.OnSignals += OnAgentSignals;
+            _featureEngine.OnSnapshot += snap =>
+            {
+                var regime  = _featureEngine.RegimeAtual;
+                var signals = _agentEngine.Avaliar(snap, regime);
+                // signals serão consumidos pelo Decision Core (Fase 12)
+            };
             _patternDiscovery = new PatternDiscovery();
             _patternDiscovery.OnPatternFound += async p =>
                 await _patternRegistry.AdicionarAsync(p);
@@ -418,6 +451,20 @@ public sealed class MarketEngine : IDisposable
     }
 
     // ── Handler de Pattern Engine — Fase 8 ─────────────────────────────
+
+    // ── Handler de Agent Engine — Fase 11 ──────────────────────────────────
+
+    private void OnAgentSignals(List<AgentSignal> signals)  // [FASE 11]
+    {
+        var avgScore = signals.Count > 0
+            ? signals.Average(s => s.Score)
+            : 0;
+
+        if (Math.Abs(avgScore) > 50)
+            Console.WriteLine(
+                $"[{DateTime.Now:HH:mm:ss}] [AGENTS] Score médio: {avgScore:F0} | "
+                + string.Join(", ", signals.Select(s => $"{s.AgentId}:{s.Score}")));
+    }
 
     private void OnPatternEmDecay(DiscoveredPattern p)  // [FASE 8]
     {
