@@ -585,11 +585,11 @@
                             <TextBlock Text="Gráfico " FontSize="11" Foreground="#6A7488" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TbGraficoTicker" Text="WINFUT" FontSize="11" FontWeight="Bold"
                                        Foreground="#A0A8B8" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <Button x:Name="BtnTf1s"  Content="1S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
-                            <Button x:Name="BtnTf5s"  Content="5S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
-                            <Button x:Name="BtnTf15s" Content="15S" Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
-                            <Button x:Name="BtnTf1m"  Content="1M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0" Click="BtnTf_Click"/>
-                            <Button x:Name="BtnTf5m"  Content="5M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Click="BtnTf_Click"/>
+                            <Button x:Name="BtnTf1s"  Content="1S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0"/>
+                            <Button x:Name="BtnTf5s"  Content="5S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0"/>
+                            <Button x:Name="BtnTf15s" Content="15S" Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0"/>
+                            <Button x:Name="BtnTf1m"  Content="1M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0"/>
+                            <Button x:Name="BtnTf5m"  Content="5M"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0"/>
                         </StackPanel>
 
                         <!-- FlowCandleChart existente (já implementado, recebe trades) -->

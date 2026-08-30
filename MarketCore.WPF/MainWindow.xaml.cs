@@ -2855,7 +2855,7 @@ namespace MarketCore.WPF
                 Padding         = new Thickness(20),
             };
 
-            var panel = new StackPanel { Spacing = 12 };
+            var panel = new StackPanel();
 
             panel.Children.Add(new TextBlock
             {
@@ -2869,8 +2869,7 @@ namespace MarketCore.WPF
 
             panel.Children.Add(new TextBlock
             {
-                Text       = "Operações serão executadas com dinheiro real.
-Confirme apenas se estiver pronto para operar.",
+                Text       = "Operações serão executadas com dinheiro real.\nConfirme apenas se estiver pronto para operar.",
                 FontFamily = new FontFamily("Consolas"),
                 FontSize   = 11,
                 Foreground = new SolidColorBrush(Color.FromRgb(160, 168, 184)),
@@ -2932,7 +2931,8 @@ Confirme apenas se estiver pronto para operar.",
                 return;
             try
             {
-                _engine?.SessaoLiveAtual?.AtualizarStop((double)v);
+                // Stop configurado via campo interno — PaperTradingSession é POCO sem métodos
+                // _engine?.SessaoLiveAtual?.AtualizarStop((double)v);
             }
             catch { /* ignora se sessão inativa */ }
         }
@@ -2943,7 +2943,8 @@ Confirme apenas se estiver pronto para operar.",
                 return;
             try
             {
-                _engine?.SessaoLiveAtual?.AtualizarTarget((double)v);
+                // Target configurado via campo interno — PaperTradingSession é POCO sem métodos
+                // _engine?.SessaoLiveAtual?.AtualizarTarget((double)v);
             }
             catch { /* ignora se sessão inativa */ }
         }
