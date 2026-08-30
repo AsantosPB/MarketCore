@@ -825,8 +825,6 @@ VALUES
 
     // ── Dispose ───────────────────────────────────────────────────────────
 
-    public void Dispose()
-    {
     /// <summary>Persiste uma sessão de paper trading no SQLite.</summary>
     public async Task SalvarPaperSessionAsync(PaperTradingSession session)
     {
@@ -903,7 +901,9 @@ VALUES
         return resultado;
     }
 
-    if (_disposed) return;
+    public void Dispose()
+    {
+        if (_disposed) return;
         _disposed = true;
         _duckDb?.Close();
         _duckDb?.Dispose();
