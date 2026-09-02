@@ -42,7 +42,7 @@ public class PatternEvaluator
         if (filtered.Count < 10)
             return new PatternStats { SampleCount = filtered.Count };
 
-        var returns = filtered.Select(r => r.Labels.FutureReturn1s).ToList();
+        var returns = filtered.Select(r => r.Labels.FutureReturn5s).ToList();
         var wins    = returns.Where(r => r > +5).ToList();
         var losses  = returns.Where(r => r < -5).ToList();
 
@@ -63,7 +63,7 @@ public class PatternEvaluator
             .GroupBy(r => r.Features.Regime ?? "Unknown")
             .ToDictionary(
                 g => g.Key,
-                g => g.Count(r => r.Labels.FutureReturn1s > +5) / (double)g.Count());
+                g => g.Count(r => r.Labels.FutureReturn5s > +5) / (double)g.Count());
 
         return new PatternStats
         {

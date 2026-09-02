@@ -71,8 +71,25 @@ public class PatternRegistry
     public List<DiscoveredPattern> PadroesAtivos()
         => _approved
             .Where(p => p.Status == PatternStatus.Approved
-                     || p.Status == PatternStatus.Live)
+                     || p.Status == PatternStatus.Live
+                     || p.Status == PatternStatus.Paper)   // [FASE 3] inclui intraday
             .ToList();
+
+    /// <summary>Remove padrões intraday (Paper) descobertos hoje — chamado antes de novo ciclo.</summary>
+    public void LimparPadroesIntraday()
+    {
+        _approved.RemoveAll(p =>
+            p.Status == PatternStatus.Paper
+            && p.CreatedAt.Date == DateTime.Today);
+    }
+
+    /// <summary>Adiciona padrão intraday com status Paper.</summary>
+    public void AdicionarIntraday(DiscoveredPattern pattern)
+    {
+        pattern.Status    = PatternStatus.Paper;
+        pattern.CreatedAt = DateTime.Now;
+        _approved.Add(pattern);
+    }
 
     /// <summary>
     /// Monitora decay: verifica se win rate recente caiu > 15pp em relação à descoberta.
@@ -82,6 +99,18 @@ public class PatternRegistry
     {
         foreach (var padrao in _approved.ToList())
         {
+            // Paper: remover por decay sem persistir no SQLite
+            if (padrao.Status == PatternStatus.Paper)
+            {
+                var statsPaper = _evaluator.AvaliarPadrao(padrao, dadosRecentes);
+                if (statsPaper.SampleCount >= 10 && statsPaper.WinRate < 0.35)
+                {
+                    _approved.Remove(padrao);
+                    Console.WriteLine($"[PatternRegistry] Paper #{padrao.PatternId} removido por decay (wr={statsPaper.WinRate:P1})");
+                }
+                continue;
+            }
+
             if (padrao.Status != PatternStatus.Approved
              && padrao.Status != PatternStatus.Live)
                 continue;

@@ -36,12 +36,12 @@
         </Style>
         <Style x:Key="SectionLabel" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="#6A7488"/>
+            <Setter Property="Foreground" Value="#A0A8B8"/>
             <Setter Property="FontWeight" Value="Bold"/>
         </Style>
         <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="#A0A8B8"/>
+            <Setter Property="Foreground" Value="#C8CDD8"/>
         </Style>
         <Style x:Key="ValueText" TargetType="TextBlock" BasedOn="{StaticResource MonoText}">
             <Setter Property="FontSize" Value="13"/>
@@ -235,6 +235,17 @@
                     <Button x:Name="BtnModoLive" Style="{StaticResource ModoBtnBase}"
                             Content="LIVE" ToolTip="Live trading — ordens reais"
                             Margin="2,0,0,0" Click="BtnModoLive_Click"/>
+                    <Button x:Name="BtnGravacao"
+                            Content="● REC"
+                            Foreground="#FF4466"
+                            Background="#1A1D24"
+                            BorderBrush="#252830"
+                            FontFamily="Consolas"
+                            FontSize="11"
+                            FontWeight="Bold"
+                            Padding="6,2"
+                            Margin="6,0,0,0"
+                            Click="BtnGravacao_Click"/>
                 </StackPanel>
 
                 <!-- Chip modo atual -->
@@ -273,7 +284,7 @@
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
                     <Border Background="#111318" BorderBrush="#1E2228" BorderThickness="1" CornerRadius="4" Padding="14,10" Margin="0,4,0,0">
                         <StackPanel MinWidth="300">
-                            <TextBlock Text="MONITOR DE SAÚDE DA DLL" FontSize="10" Foreground="#6A7488" Margin="0,0,0,8"/>
+                            <TextBlock Text="MONITOR DE SAÚDE DA DLL" FontSize="11" Foreground="#A0A8B8" Margin="0,0,0,8"/>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                 <TextBlock Text="Threads DLL: " FontSize="11" Foreground="#A0A8B8" Width="130"/>
                                 <TextBlock x:Name="HmDetailThreads" Text="--" FontSize="11" Foreground="#E8E8E8"/>
@@ -433,19 +444,19 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,4">
-                                <TextBlock Text="100ms" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="100ms" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbOfi100ms" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,4">
-                                <TextBlock Text="500ms" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="500ms" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbOfi500ms" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
-                                <TextBlock Text="1s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="1s" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbOfi1s" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="1">
-                                <TextBlock Text="5s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="5s" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbOfi5s" Text="--" Style="{StaticResource ValueText}" Foreground="#E8E8E8"/>
                             </StackPanel>
                         </Grid>
@@ -457,38 +468,22 @@
                     <StackPanel>
                         <TextBlock Text="AGRESSÃO" Style="{StaticResource SectionLabel}" Margin="0,0,0,6"/>
 
-                        <!-- Barra COMPRA -->
-                        <Grid Margin="0,0,0,3">
+                        <!-- Barra bidirecional Agressão — [FASE 16] -->
+                        <Grid x:Name="GridAgressaoBarra" Height="14" Margin="0,0,0,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="46"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="50*"/>
+                                <ColumnDefinition Width="50*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="COMPRA" FontSize="10" Foreground="#00D4AA" VerticalAlignment="Center"/>
-                            <ProgressBar Grid.Column="1" x:Name="PbCompra" Height="8" Minimum="0" Maximum="100" Value="50"
-                                         Foreground="#00D4AA" Background="#1E2228" Margin="4,0"/>
-                            <TextBlock Grid.Column="2" x:Name="TbAgCompraVal" Text="--" FontSize="11"
-                                       Foreground="#00D4AA" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            <!-- Coluna 0 — Venda (vermelho) -->
+                            <Border Grid.Column="0" Background="#FF4466" x:Name="BrdAgressaoVenda"/>
+                            <!-- Coluna 1 — Compra (verde) -->
+                            <Border Grid.Column="1" Background="#00D4AA" x:Name="BrdAgressaoCompra"/>
                         </Grid>
 
-                        <!-- Barra VENDA -->
-                        <Grid Margin="0,0,0,6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="46"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="40"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="VENDA" FontSize="10" Foreground="#FF4466" VerticalAlignment="Center"/>
-                            <ProgressBar Grid.Column="1" x:Name="PbVenda" Height="8" Minimum="0" Maximum="100" Value="50"
-                                         Foreground="#FF4466" Background="#1E2228" Margin="4,0"/>
-                            <TextBlock Grid.Column="2" x:Name="TbAgVendaVal" Text="--" FontSize="11"
-                                       Foreground="#FF4466" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                        </Grid>
-
-                        <!-- Delta acumulado grande -->
+                        <!-- Delta 1s grande + direção — [FASE 16] -->
                         <TextBlock x:Name="TbDeltaGrande" Text="+0" FontSize="16" FontWeight="Bold"
                                    Foreground="#00D4AA" HorizontalAlignment="Center" Margin="0,0,0,2"/>
-                        <TextBlock Text="compra/venda líquida na sessão" FontSize="10"
+                        <TextBlock x:Name="TbAgressaoDesc" Text="EQUILÍBRIO" FontSize="11"
                                    Foreground="#6A7488" HorizontalAlignment="Center" Margin="0,0,0,4"/>
 
                         <!-- Delta grid 2×2 -->
@@ -502,19 +497,19 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,3">
-                                <TextBlock Text="1s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="1s" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbDelta1s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,3">
-                                <TextBlock Text="5s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="5s" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbDelta5s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,4,0">
-                                <TextBlock Text="30s" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="30s" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbDelta30s" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="1">
-                                <TextBlock Text="5min" FontSize="10" Foreground="#6A7488"/>
+                                <TextBlock Text="5min" FontSize="11" Foreground="#C8CDD8"/>
                                 <TextBlock x:Name="TbDelta5min" Text="--" FontSize="11" FontWeight="Bold" Foreground="#E8E8E8"/>
                             </StackPanel>
                         </Grid>
@@ -582,7 +577,7 @@
                         <!-- Header gráfico -->
                         <StackPanel Grid.Row="0" Orientation="Horizontal" Background="#0A0C0F"
                                     VerticalAlignment="Center" Margin="8,0">
-                            <TextBlock Text="Gráfico " FontSize="11" Foreground="#6A7488" VerticalAlignment="Center"/>
+                            <TextBlock Text="Gráfico " FontSize="11" Foreground="#A0A8B8" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TbGraficoTicker" Text="WINFUT" FontSize="11" FontWeight="Bold"
                                        Foreground="#A0A8B8" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <Button x:Name="BtnTf1s"  Content="1S"  Style="{StaticResource DarkButton}" Height="18" Padding="5,0" Margin="0,0,2,0"/>
@@ -598,13 +593,13 @@
                         <!-- Footer gráfico -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Background="#0A0C0F"
                                     VerticalAlignment="Center" Margin="8,0">
-                            <TextBlock Text="Mín: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock Text="Mín: " FontSize="11" Foreground="#C8CDD8"/>
                             <TextBlock x:Name="TbGraficoMin" Text="--" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
-                            <TextBlock Text="Máx: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock Text="Máx: " FontSize="11" Foreground="#C8CDD8"/>
                             <TextBlock x:Name="TbGraficoMax" Text="--" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
-                            <TextBlock Text="Rate: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock Text="Rate: " FontSize="11" Foreground="#C8CDD8"/>
                             <TextBlock x:Name="TbGraficoRate" Text="-- tr/s" FontSize="10" Foreground="#A0A8B8" Margin="0,0,10,0"/>
-                            <TextBlock Text="Vol: " FontSize="10" Foreground="#6A7488"/>
+                            <TextBlock Text="Vol: " FontSize="11" Foreground="#C8CDD8"/>
                             <TextBlock x:Name="TbGraficoVol" Text="--" FontSize="10" Foreground="#A0A8B8"/>
                         </StackPanel>
                     </Grid>
@@ -632,10 +627,10 @@
                                 <ColumnDefinition Width="36"/>
                                 <ColumnDefinition Width="36"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Agente" FontSize="10" Foreground="#6A7488"/>
-                            <TextBlock Grid.Column="1" Text="Score" FontSize="10" Foreground="#6A7488" Margin="4,0,0,0"/>
-                            <TextBlock Grid.Column="2" Text="Pts" FontSize="10" Foreground="#6A7488" HorizontalAlignment="Center"/>
-                            <TextBlock Grid.Column="3" Text="Conf" FontSize="10" Foreground="#6A7488" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Agente" FontSize="11" Foreground="#C8CDD8"/>
+                            <TextBlock Grid.Column="1" Text="Score" FontSize="11" Foreground="#C8CDD8" Margin="4,0,0,0"/>
+                            <TextBlock Grid.Column="2" Text="Pts" FontSize="11" Foreground="#C8CDD8" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="Conf" FontSize="11" Foreground="#C8CDD8" HorizontalAlignment="Center"/>
                         </Grid>
 
                         <!-- Linhas de agentes -->
@@ -782,8 +777,37 @@
                         <Border Background="#0D0F11" BorderBrush="#1E2228" BorderThickness="1"
                                 CornerRadius="3" Padding="6,5" Margin="0,0,0,0">
                             <StackPanel>
-                                <TextBlock Text="Stop e target (pts)" FontSize="10"
-                                           Foreground="#6A7488" Margin="0,0,0,4"/>
+                                <TextBlock Text="Stop e target (pts)" FontSize="11"
+                                           Foreground="#A0A8B8" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0"
+                                               Text="Lote"
+                                               Foreground="#C8CDD8"
+                                               FontSize="11"
+                                               VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             x:Name="TxLote"
+                                             Text="1"
+                                             Foreground="#E8E8E8"
+                                             Background="#1A1D24"
+                                             BorderBrush="#252830"
+                                             FontSize="11"
+                                             FontFamily="Consolas"
+                                             TextAlignment="Right"
+                                             Padding="2"
+                                             TextChanged="TxLote_TextChanged"/>
+                                    <TextBlock Grid.Column="2"
+                                               Text=" contr."
+                                               Foreground="#6A7488"
+                                               FontSize="10"
+                                               VerticalAlignment="Center"
+                                               Margin="3,0,0,0"/>
+                                </Grid>
                                 <Grid Margin="0,0,0,3">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="42"/>
@@ -809,6 +833,22 @@
                                              Text="500" TextChanged="TxTarget_TextChanged"/>
                                     <TextBlock Grid.Column="2" Text="pts" FontSize="10"
                                                Foreground="#6A7488" VerticalAlignment="Center" Margin="3,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Varredura" Foreground="#C8CDD8"
+                                               FontSize="11" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" x:Name="TxVarredura" Text="3"
+                                             Foreground="#E8E8E8" Background="#1A1D24"
+                                             BorderBrush="#252830" FontSize="11" FontFamily="Consolas"
+                                             TextAlignment="Right" Padding="2"
+                                             TextChanged="TxVarredura_TextChanged"/>
+                                    <TextBlock Grid.Column="2" Text=" min" Foreground="#6A7488"
+                                               FontSize="10" VerticalAlignment="Center" Margin="3,0,0,0"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

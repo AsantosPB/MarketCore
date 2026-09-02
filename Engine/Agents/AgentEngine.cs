@@ -23,6 +23,20 @@ public class AgentEngine
     /// </summary>
     public event Action<List<AgentSignal>>? OnSignals;
 
+    /// <summary>Construtor lite — sem PatternAgent. Usado quando StorageManager não está disponível.</summary>
+    public AgentEngine()  // [FASE 16]
+    {
+        _agents = new List<IAgent>
+        {
+            new FlowAgent(),
+            new BookAgent(),
+            new AbsorptionAgent(),
+            new OFIAgent(),
+            new PatternAgent(),    // [FASE 16] lite — sem registry, retorna Neutral
+            new RegimeAgent()
+        };
+    }
+
     public AgentEngine(PatternRegistry patternRegistry)
     {
         _agents = new List<IAgent>

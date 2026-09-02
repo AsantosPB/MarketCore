@@ -12,7 +12,7 @@ namespace MarketCore.Engine.Features;
 public sealed class SnapshotTimer : IDisposable
 {
     private readonly FeatureEngine  _featureEngine;
-    private readonly StorageManager _storage;
+    private readonly StorageManager? _storage;  // [FASE 16] nullable — lite mode
 
     private Timer? _timer;
     private long   _snapshotCount;
@@ -20,10 +20,10 @@ public sealed class SnapshotTimer : IDisposable
 
     public long SnapshotCount => Interlocked.Read(ref _snapshotCount);
 
-    public SnapshotTimer(FeatureEngine featureEngine, StorageManager storage)
+    public SnapshotTimer(FeatureEngine featureEngine, StorageManager? storage = null)  // [FASE 16]
     {
         _featureEngine = featureEngine ?? throw new ArgumentNullException(nameof(featureEngine));
-        _storage       = storage       ?? throw new ArgumentNullException(nameof(storage));
+        _storage       = storage;
     }
 
     // ── Ciclo de vida ─────────────────────────────────────────────────────
@@ -56,17 +56,14 @@ public sealed class SnapshotTimer : IDisposable
             // 1. Calcula snapshot e dispara OnSnapshot no FeatureEngine.
             var snap = _featureEngine.TriggerSnapshot();
 
-            // 2. Grava no DuckDB de forma assíncrona (fire-and-forget).
-            //    O try/catch externo protege o timer; este interno protege a Task.
-            _ = _storage.GravarSnapshotAsync(snap.ToMarketSnapshot())
-                         .ContinueWith(t =>
-                         {
-                             if (t.IsFaulted)
+            // 2. Grava no DuckDB apenas se storage disponível (fire-and-forget). [FASE 16]
+            if (_storage != null)
+                _ = _storage.GravarSnapshotAsync(snap.ToMarketSnapshot())
+                             .ContinueWith(t =>
                              {
-                                 // Erro silencioso — não bloqueia o timer nem lança exceção
-                                 _ = t.Exception; // observa a exceção para evitar UnobservedTaskException
-                             }
-                         });
+                                 if (t.IsFaulted)
+                                     _ = t.Exception;
+                             });
 
             // 3. Contagem de snapshots gerados.
             Interlocked.Increment(ref _snapshotCount);

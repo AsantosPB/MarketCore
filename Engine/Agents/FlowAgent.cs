@@ -35,11 +35,11 @@ public class FlowAgent : IAgent
         else if (snap.Delta5s < -1000) score -= 20;
         else if (snap.Delta5s <  -500) score -= 10;
 
-        // ── OFI confirma o delta ────────────────────────────────────────
-        if      (snap.Ofi1s >  300) score += 15;
-        else if (snap.Ofi1s >  100) score +=  8;
-        else if (snap.Ofi1s < -300) score -= 15;
-        else if (snap.Ofi1s < -100) score -=  8;
+        // ── OFI confirma o delta — normalizado em [-1.0, +1.0] ─────────
+        if      (snap.Ofi1s >  0.60) score += 15;
+        else if (snap.Ofi1s >  0.30) score +=  8;
+        else if (snap.Ofi1s < -0.60) score -= 15;
+        else if (snap.Ofi1s < -0.30) score -=  8;
 
         // ── Aggression ratio ────────────────────────────────────────────
         if      (snap.AggressionRatio > 0.70) score += 15;
@@ -88,8 +88,8 @@ public class FlowAgent : IAgent
         if      (snap.Delta1s >  400) codes.Add("DELTA1S_HIGH");
         else if (snap.Delta1s < -400) codes.Add("DELTA1S_LOW");
 
-        if      (snap.Ofi1s >  200) codes.Add("OFI_CONFIRMA_BUY");
-        else if (snap.Ofi1s < -200) codes.Add("OFI_CONFIRMA_SELL");
+        if      (snap.Ofi1s >  0.40) codes.Add("OFI_CONFIRMA_BUY");
+        else if (snap.Ofi1s < -0.40) codes.Add("OFI_CONFIRMA_SELL");
 
         if      (snap.AggressionRatio > 0.65) codes.Add("AGG_BUY");
         else if (snap.AggressionRatio < 0.35) codes.Add("AGG_SELL");

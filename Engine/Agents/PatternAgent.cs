@@ -17,13 +17,13 @@ namespace MarketCore.Engine.Agents;
 /// </summary>
 public class PatternAgent : IAgent
 {
-    private readonly PatternRegistry  _registry;
+    private readonly PatternRegistry?  _registry;  // [FASE 16] nullable — lite mode
     private readonly PatternEvaluator _evaluator;
 
     public string AgentId   => "PATTERN";
     public string AgentName => "Pattern Agent";
 
-    public PatternAgent(PatternRegistry registry)
+    public PatternAgent(PatternRegistry? registry = null)  // [FASE 16]
     {
         _registry  = registry;
         _evaluator = new PatternEvaluator();
@@ -31,6 +31,7 @@ public class PatternAgent : IAgent
 
     public AgentSignal Evaluate(FeatureSnapshot snap, RegimeState regime)
     {
+        if (_registry == null) return NeutralSignal();  // [FASE 16] lite mode
         var padroesAtivos = _registry.PadroesAtivos();
         if (!padroesAtivos.Any())
             return NeutralSignal();

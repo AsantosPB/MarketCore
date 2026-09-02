@@ -22,22 +22,23 @@ public class OFIAgent : IAgent
         int score = 0;
 
         // ── OFI 100ms — curtíssimo prazo (mais ruidoso) ─────────────────
-        if      (snap.Ofi100ms >  200) score += 20;
-        else if (snap.Ofi100ms >  100) score += 10;
-        else if (snap.Ofi100ms < -200) score -= 20;
-        else if (snap.Ofi100ms < -100) score -= 10;
+        // Ofi normalizado em [-1.0, +1.0]
+        if      (snap.Ofi100ms >  0.70) score += 20;
+        else if (snap.Ofi100ms >  0.40) score += 10;
+        else if (snap.Ofi100ms < -0.70) score -= 20;
+        else if (snap.Ofi100ms < -0.40) score -= 10;
 
         // ── OFI 500ms — intermediário ───────────────────────────────────
-        if      (snap.Ofi500ms >  400) score += 25;
-        else if (snap.Ofi500ms >  200) score += 12;
-        else if (snap.Ofi500ms < -400) score -= 25;
-        else if (snap.Ofi500ms < -200) score -= 12;
+        if      (snap.Ofi500ms >  0.70) score += 25;
+        else if (snap.Ofi500ms >  0.40) score += 12;
+        else if (snap.Ofi500ms < -0.70) score -= 25;
+        else if (snap.Ofi500ms < -0.40) score -= 12;
 
         // ── OFI 1s — janela mais longa, peso maior ──────────────────────
-        if      (snap.Ofi1s >  600) score += 35;
-        else if (snap.Ofi1s >  300) score += 18;
-        else if (snap.Ofi1s < -600) score -= 35;
-        else if (snap.Ofi1s < -300) score -= 18;
+        if      (snap.Ofi1s >  0.70) score += 35;
+        else if (snap.Ofi1s >  0.40) score += 18;
+        else if (snap.Ofi1s < -0.70) score -= 35;
+        else if (snap.Ofi1s < -0.40) score -= 18;
 
         // ── Convergência de janelas amplifica o sinal ───────────────────
         bool convergindo =
@@ -66,13 +67,13 @@ public class OFIAgent : IAgent
 
         if (convergindo) codes.Add("OFI_CONVERGENTE");
 
-        if      (snap.Ofi1s >  400) codes.Add("OFI1S_STRONG_BUY");
-        else if (snap.Ofi1s > 200)  codes.Add("OFI1S_BUY");
-        else if (snap.Ofi1s < -400) codes.Add("OFI1S_STRONG_SELL");
-        else if (snap.Ofi1s < -200) codes.Add("OFI1S_SELL");
+        if      (snap.Ofi1s >  0.60) codes.Add("OFI1S_STRONG_BUY");
+        else if (snap.Ofi1s >  0.30) codes.Add("OFI1S_BUY");
+        else if (snap.Ofi1s < -0.60) codes.Add("OFI1S_STRONG_SELL");
+        else if (snap.Ofi1s < -0.30) codes.Add("OFI1S_SELL");
 
-        if      (snap.Ofi100ms >  150) codes.Add("OFI100MS_BUY");
-        else if (snap.Ofi100ms < -150) codes.Add("OFI100MS_SELL");
+        if      (snap.Ofi100ms >  0.50) codes.Add("OFI100MS_BUY");
+        else if (snap.Ofi100ms < -0.50) codes.Add("OFI100MS_SELL");
 
         return codes.Count > 0 ? codes.ToArray() : new[] { "OFI_NEUTRAL" };
     }

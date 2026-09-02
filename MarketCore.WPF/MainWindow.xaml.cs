@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using MarketCore.Engine;
+using MarketCore.Engine.Calendar;
 using MarketCore.Engine.Detectors;
 using MarketCore.Models;
 using MarketCore.Providers.Simulator;
@@ -527,6 +528,9 @@ namespace MarketCore.WPF
             // [MODO ANÁLISE] removido — sem book/tape/alertas na UI
             // _engine.OnBookSnapshot   += Engine_OnBookSnapshot;
             _engine.OnConnectionChanged += Engine_OnConnectionChanged;
+            _engine.OnMarketEventUi += ev =>   // [FASE 16] — feed do FeatureEngine p/ EventLog
+                Dispatcher.InvokeAsync(() =>
+                    AppendEventLog(ev.Type.ToString(), $"{ev.Detail} (mag={ev.Magnitude:F1})", "#A0A8B8"));
             // [MODO ANÁLISE] removido — sem book/tape/alertas na UI (handlers de Spoof/Iceberg/Renewable comentados)
             // _engine.Spoof.OnSpoofDetected           += (d) => HandleSpoof(d);
             // _engine.Iceberg.OnIcebergDetected       += (d) => HandleIceberg(d);
@@ -807,6 +811,7 @@ namespace MarketCore.WPF
             {
                 await _engine.ConnectAsync(credentials).ConfigureAwait(true);
                 App.AppendLifecycle("MainWindow.MarketConnectCompleted");
+                _ = _engine.CarregarCalendarioAsync(); // [FASE 16] força carga do calendário
             }
             catch (Exception ex)
             {
@@ -2685,6 +2690,218 @@ namespace MarketCore.WPF
                 TbModoAtualChip.Text   = modo;
                 TbMcieStatusModo.Text  = modo;
 
+                // ── Feature Snapshot — painéis MCIE ───────────────────────────
+                var snap = _engine?.UltimoSnapshot;
+                if (snap != null)
+                {
+                    // Pressão do Book — BookImbalance [-1..+1] → largura das barras
+                    var bi      = snap.BookImbalance;
+                    var buyPct  = (bi + 1.0) / 2.0;
+                    var sellPct = 1.0 - buyPct;
+                    ColVenda.Width  = new GridLength(sellPct, GridUnitType.Star);
+                    ColCompra.Width = new GridLength(buyPct,  GridUnitType.Star);
+                    TbPressaoVendaPct.Text  = $"{sellPct * 100:F0}%";
+                    TbPressaoCompraPct.Text = $"{buyPct  * 100:F0}%";
+                    TbPressaoScore.Text = bi.ToString("+0.00;-0.00;0.00");
+                    TbPressaoScore.Foreground = bi > 0.1
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : bi < -0.1
+                        ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                        : new SolidColorBrush(Color.FromRgb(245, 197, 24));
+                    TbPressaoDesc.Text = bi > 0.2 ? "COMPRA DOM."
+                                       : bi < -0.2 ? "VENDA DOM."
+                                       : "EQUILÍBRIO";
+
+                    // OFI
+                    TbOfi100ms.Text = snap.Ofi100ms.ToString("+0.##;-0.##;0.00");
+                    TbOfi500ms.Text = snap.Ofi500ms.ToString("+0.##;-0.##;0.00");
+                    TbOfi1s.Text    = snap.Ofi1s   .ToString("+0.##;-0.##;0.00");
+                    TbOfi5s.Text    = "--"; // sem Ofi5s no FeatureSnapshot
+
+                    // Agressão — barra bidirecional baseada em Delta1s [FASE 16]
+                    var d1       = snap.Delta1s;
+                    var agrcBuy  = d1 > 0 ? d1 : 0L;
+                    var agrcSell = d1 < 0 ? Math.Abs(d1) : 0L;
+                    var totalAgg = agrcBuy + agrcSell;
+                    buyPct   = totalAgg > 0 ? agrcBuy  / (double)totalAgg : 0.5;
+                    sellPct  = 1.0 - buyPct;
+                    GridAgressaoBarra.ColumnDefinitions[0].Width = new GridLength(sellPct, GridUnitType.Star);  // [0]=Venda
+                    GridAgressaoBarra.ColumnDefinitions[1].Width = new GridLength(buyPct,  GridUnitType.Star);  // [1]=Compra
+                    TbDeltaGrande.Text = d1.ToString("+#;-#;0");
+                    TbDeltaGrande.Foreground = d1 > 0
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : d1 < 0
+                        ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                        : new SolidColorBrush(Color.FromRgb(245, 197, 24));
+                    TbAgressaoDesc.Text = d1 > 100  ? "COMPRADORA"
+                                       : d1 < -100 ? "VENDEDORA"
+                                       : "EQUILÍBRIO";
+                    TbAgressaoDesc.Foreground = d1 > 100
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : d1 < -100
+                        ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                        : new SolidColorBrush(Color.FromRgb(106, 116, 136));
+
+                    // Delta por janela
+                    TbDelta1s.Text     = snap.Delta1s.ToString("+#;-#;0");
+                    TbDelta5s.Text     = snap.Delta5s.ToString("+#;-#;0");
+                    TbDelta30s.Text    = "--"; // sem Delta30s no FeatureSnapshot
+                    TbDelta5min.Text   = "--"; // sem Delta5min no FeatureSnapshot
+
+                    // Regime / Decisão
+                    var decisao = _engine?.UltimaDecisao.ToString() ?? "--";
+                    TbEstadoAtual.Text   = snap.Regime;
+                    TbAcaoSugerida.Text  = decisao;
+                    TbDecisaoRegime.Text = snap.Regime;
+                    TbDecisaoJanela.Text = string.IsNullOrEmpty(snap.TimeWindow) ? "--" : snap.TimeWindow;
+                    TbDecisaoConf.Text   = $"{snap.Confidence:F0}%";
+                    TbDecisaoPadrao.Text = "--";
+                    TbDecisaoExpira.Text = "--";
+                }
+
+                // ── Agentes — UltimosSignals ──────────────────────────────────
+                var signals = _engine?.UltimosSignals;
+                if (signals != null && signals.Count > 0)
+                {
+                    // Sincronizar lista: atualizar existentes, adicionar novos
+                    for (int i = 0; i < signals.Count; i++)
+                    {
+                        var sig = signals[i];
+                        var scorePct = (double)Math.Abs(sig.Score);
+                        var brush    = sig.Score > 0
+                            ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                            : sig.Score < 0
+                            ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                            : new SolidColorBrush(Color.FromRgb(74, 86, 104));
+                        var scoreStr = sig.Score.ToString("+#;-#;0");
+                        var cor      = sig.Score > 0 ? "#00D4AA"
+                                     : sig.Score < 0 ? "#FF4466" : "#4A5668";
+                        var confStr  = $"{sig.Confidence}%";
+                        if (i < McieAgentes.Count)
+                        {
+                            McieAgentes[i].Nome     = sig.AgentId;
+                            McieAgentes[i].ScorePct = scorePct;
+                            McieAgentes[i].CorBrush = brush;
+                            McieAgentes[i].ScoreStr = scoreStr;
+                            McieAgentes[i].Cor      = cor;
+                            McieAgentes[i].Conf     = confStr;
+                        }
+                        else
+                        {
+                            McieAgentes.Add(new AgentViewModel
+                            {
+                                Nome     = sig.AgentId,
+                                ScorePct = scorePct,
+                                CorBrush = brush,
+                                ScoreStr = scoreStr,
+                                Cor      = cor,
+                                Conf     = confStr
+                            });
+                        }
+                    }
+                    while (McieAgentes.Count > signals.Count)
+                        McieAgentes.RemoveAt(McieAgentes.Count - 1);
+                }
+
+                // ── Saúde do Sistema ──────────────────────────────────────────
+                if (_engine != null)
+                {
+                    // DLL / Conexão
+                    var st = _engine.Status;
+                    TbSaudeDLL.Text = st.ToString();
+                    TbSaudeDLL.Foreground = st == ConnectionStatus.Connected
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : new SolidColorBrush(Color.FromRgb(255, 68, 102));
+
+                    // Feed — tempo desde último evento de book
+                    var feedAge = (DateTime.UtcNow - _engine.UltimaAtualizacaoBook).TotalSeconds;
+                    TbSaudeFeed.Text = feedAge < 5   ? "OK"
+                                    : feedAge < 30  ? $"{feedAge:F0}s"
+                                    : "STALE";
+                    TbSaudeFeed.Foreground = feedAge < 5
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : new SolidColorBrush(Color.FromRgb(245, 197, 24));
+
+                    // Gravação + PatternRegistry
+                    var nPads = _engine.PadroesAtivosCount;              // [FASE 3]
+                    var padsStr = nPads == 0 ? "0 padrões" : $"{nPads} padrões";
+                    TbSaudeGrav.Text = _engine.GravacaoAtiva
+                        ? $"ATIVO | {padsStr}"
+                        : $"OFF | {padsStr}";
+                    TbSaudeGrav.Foreground = _engine.GravacaoAtiva
+                        ? new SolidColorBrush(Color.FromRgb(0, 212, 170))
+                        : new SolidColorBrush(Color.FromRgb(106, 116, 136));
+                    // Sincronizar botão REC e rodapé com estado real
+                    if (_engine.GravacaoAtiva)
+                    {
+                        BtnGravacao.Content         = "■ STOP REC";
+                        BtnGravacao.Foreground      = new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                        TbRecordingStatus.Text      = "ATIVO";
+                        TbRecordingStatus.Foreground = new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                        EllipseRecording.Fill       = new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                    }
+                    else
+                    {
+                        BtnGravacao.Content         = "● REC";
+                        BtnGravacao.Foreground      = new SolidColorBrush(Color.FromRgb(255, 68, 102));
+                        TbRecordingStatus.Text      = "OFF";
+                        TbRecordingStatus.Foreground = new SolidColorBrush(Color.FromRgb(106, 116, 136));
+                        EllipseRecording.Fill       = new SolidColorBrush(Color.FromRgb(51, 51, 51));
+                    }
+
+                    // Latência (usa TbDataLatency já existente para exibição inline)
+                    TbSaudeLatencia.Text = TbDataLatency.Text;
+
+                    // Risk / Kill Switch
+                    var risco = _engine.EstadoRisco;
+                    if (risco != null)
+                    {
+                        TbSaudeRisk.Text = risco.KillSwitchAtivo ? "KILL" : "OK";
+                        TbSaudeRisk.Foreground = risco.KillSwitchAtivo
+                            ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                            : new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                        TbSaudeKill.Text = risco.KillSwitchAtivo ? "ATIVO ⚠" : "INATIVO";
+                        TbSaudeKill.Foreground = risco.KillSwitchAtivo
+                            ? new SolidColorBrush(Color.FromRgb(255, 68, 102))
+                            : new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                    }
+                }
+
+                // ── Calendário Econômico ─────────────────────────────────────────
+                var cal = _engine?.CalendarioHoje;
+                if (McieCalendario.Count == 0 ||
+                    (cal != null && cal.Events.Count != McieCalendario.Count))
+                {
+                    McieCalendario.Clear();
+                    if (cal != null && cal.Events.Count > 0)
+                    {
+                        foreach (var ev in cal.Events.OrderBy(e => e.TimeBrasilia))
+                        {
+                            var impactoCor = ev.Impact switch
+                            {
+                                ImpactLevel.Critical => "#FF4466",
+                                ImpactLevel.High     => "#F5C518",
+                                _                    => "#A0A8B8"
+                            };
+                            McieCalendario.Add(new CalendarioEventViewModel
+                            {
+                                Hora       = ev.TimeBrasilia.ToString("HH:mm"),
+                                Titulo     = ev.Name,
+                                Impacto    = ev.Impact.ToString().ToUpper(),
+                                ImpactoCor = impactoCor
+                            });
+                        }
+                    }
+                    else
+                    {
+                        McieCalendario.Add(new CalendarioEventViewModel
+                        {
+                            Hora = "--", Titulo = "Sem eventos carregados",
+                            Impacto = "MÉDIO", ImpactoCor = "#6A7488"
+                        });
+                    }
+                }
+
                 // ── Posição / P&L (Paper ou Live) ─────────────────────────────
                 var sessaoLive  = _engine?.SessaoLiveAtual;
                 // sessaoLive pode ser PaperTradingSession ou LiveTradingSession
@@ -2829,6 +3046,29 @@ namespace MarketCore.WPF
             catch (Exception ex) { App.AppendCrashLog("BtnModoLive_Click", ex); }
         }
 
+        private void BtnGravacao_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_engine == null) return;
+                if (_engine.GravacaoAtiva)
+                {
+                    // Pausar — só desativa o flag, sem Dispose (evita crash nativo)
+                    _engine.PausarGravacao();
+                    BtnGravacao.Content    = "● REC";
+                    BtnGravacao.Foreground = new SolidColorBrush(Color.FromRgb(255, 68, 102));
+                }
+                else
+                {
+                    // Retomar — reativa o flag sem recriar o recorder
+                    _engine.RetomarGravacao();
+                    BtnGravacao.Content    = "■ STOP REC";
+                    BtnGravacao.Foreground = new SolidColorBrush(Color.FromRgb(0, 212, 170));
+                }
+            }
+            catch (Exception ex) { App.AppendCrashLog("BtnGravacao_Click", ex); }
+        }
+
         /// <summary>Modal de confirmação para modo LIVE. Retorna true se confirmado.</summary>
         private bool ConfirmarLiveModal()
         {
@@ -2925,6 +3165,15 @@ namespace MarketCore.WPF
         //  MCIE — Stop / Target em tempo real
         // ══════════════════════════════════════════════════════════════════════
 
+        private void TxLote_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (TxLote == null) return;
+            if (!int.TryParse(TxLote.Text, out int lote)) return;
+            if (lote < 1 || lote > 10) return;
+            if (_engine != null)
+                _engine.LoteConfigurado = lote;
+        }
+
         private void TxStop_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!decimal.TryParse(TxStop.Text, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal v))
@@ -2947,6 +3196,14 @@ namespace MarketCore.WPF
                 // _engine?.SessaoLiveAtual?.AtualizarTarget((double)v);
             }
             catch { /* ignora se sessão inativa */ }
+        }
+
+        private void TxVarredura_TextChanged(object sender, TextChangedEventArgs e)  // [FASE 3]
+        {
+            if (TxVarredura == null) return;
+            if (!int.TryParse(TxVarredura.Text, out int min)) return;
+            if (min < 1 || min > 30) return;
+            _engine?.AlterarIntervaloVarredura(min);
         }
 
         // ══════════════════════════════════════════════════════════════════════
@@ -3190,11 +3447,17 @@ namespace MarketCore.WPF
         private string _sinal = "--";
         private string _conf = "--";
         private string _cor = "#A0A8B8";
+        private double _scorePct = 0;
+        private SolidColorBrush _corBrush = new SolidColorBrush(Color.FromRgb(160, 168, 184));
+        private string _scoreStr = "--";
 
         public string Nome  { get => _nome;  set { _nome  = value; OnPropChanged(); } }
         public string Sinal { get => _sinal; set { _sinal = value; OnPropChanged(); } }
         public string Conf  { get => _conf;  set { _conf  = value; OnPropChanged(); } }
         public string Cor   { get => _cor;   set { _cor   = value; OnPropChanged(); } }
+        public double ScorePct { get => _scorePct; set { _scorePct = value; OnPropChanged(); } }
+        public SolidColorBrush CorBrush { get => _corBrush; set { _corBrush = value; OnPropChanged(); } }
+        public string ScoreStr { get => _scoreStr; set { _scoreStr = value; OnPropChanged(); } }
 
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropChanged([CallerMemberName] string? n = null)

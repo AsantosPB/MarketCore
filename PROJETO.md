@@ -1,11 +1,12 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
 - Versão: 1.0.0-alpha
-- Última atualização: 29/08/2026 (Fase 6)
-- Fase atual: Fase 16 concluída — iniciando Fase 17
+- Última atualização: 01/09/2026 (correção feat_diag / cache de snapshot — sobre 16e)
+- Fase atual: Fase 16e + correção de latência do Release. Fase 17 NÃO iniciada.
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
-- Branch: main — commit atual: 388a82f — tag: v-pre-mcie-20260829
+- Branch: main — HEAD: 8591b36 — working tree dirty (sem commit/tag/push desta correção)
+- Como rodar: C:\Users\Anderson\Downloads\MarketCore\MarketCore.WPF\bin\Release\net9.0-windows\MarketCore.WPF.exe (ou MarketCore.bat, agora apontando para Release)
 ---
 ## Decisões arquiteturais tomadas
 ### Interface
@@ -347,3 +348,250 @@ git push origin main --tags
   - Engine/MarketEngine.cs — campos _patternRegistry/_patternDiscovery; init em ConnectAsync; wiring OnDatasetPronto (discovery + decay automáticos); handler OnPatternEmDecay; propriedades PatternRegistry e PadroesAtivos()
   - PROJETO.md — fase 8 marcada concluída
 - Commit: fase-8 — tag: v0.8.0
+
+### 31/08/2026 — Fase 16 (UI MCIE — correção dos 4 problemas)
+- Arquivos modificados:
+  - Engine/Agents/AgentEngine.cs — construtor lite sem PatternAgent (AgentEngine()) adicionado antes do construtor com PatternRegistry; permite instanciar sem StorageManager
+  - Engine/Decision/DecisionCore.cs — StorageManager? tornado nullable com valor padrão null; guard `if (_storage != null)` na gravação; permite usar sem banco
+  - Engine/MarketEngine.cs — [FASE 16] AgentEngine lite + DecisionCore sem persistência criados ANTES do bloco `if (_recordingEnabled)`; _featureEngine.OnSnapshot movido para fora do bloco de gravação com null-guard em _riskManager; dentro do bloco de gravação: upgrade para AgentEngine(_patternRegistry) e DecisionCore(_storageManager); handler usa campos por referência — sem re-subscrição necessária; propriedades GravacaoAtiva e UltimaAtualizacaoBook já presentes
+  - MarketCore.WPF/MainWindow.xaml.cs:
+    - AgentViewModel: adicionados ScorePct (double), CorBrush (SolidColorBrush), ScoreStr (string) com INotifyPropertyChanged
+    - Pressão do Book: corrigido de AggressionRatio para BookImbalance [-1..+1]; ColVenda/ColCompra recebem GridLength proporcional; TbPressaoScore com formato +0.00 e Foreground dinâmico (verde/vermelho/amarelo)
+    - Agressão: corrigido de buyRatio/sellRatio para Delta1s (direção) + AggressionRatio (intensidade); PbCompra/PbVenda recebem values proporcionais; TbAgCompraVal/TbAgVendaVal com Foreground dinâmico
+    - Agents population: McieAgentes populado com ScorePct, CorBrush, ScoreStr, Conf corretamente
+- Problemas resolvidos: PROBLEMA 1 (barras Pressão), PROBLEMA 2 (cor Agressão), PROBLEMA 3 (AgentViewModel), PROBLEMA 4 (Decisão sempre Wait)
+
+### 31/08/2026 — Fase 16b (diagnóstico + 5 correções UI/Calendar)
+- Arquivos modificados:
+  - Engine/Agents/PatternAgent.cs — PatternRegistry tornado nullable (PatternRegistry? registry = null); guard `if (_registry == null) return NeutralSignal()` no início de Evaluate; permite PatternAgent() sem registry no modo lite
+  - Engine/Agents/AgentEngine.cs — construtor lite agora inclui PatternAgent() (Neutral em modo lite); 6 agentes: FlowAgent, BookAgent, AbsorptionAgent, OFIAgent, PatternAgent, RegimeAgent
+  - Engine/MarketEngine.cs — [FASE 16] CalendarLoader e CalendarTimer movidos para ANTES do bloco `if (_recordingEnabled)`, criados com null StorageManager (sem persistência SQLite em modo observação); removidos do bloco recording e do DesabilitarGravacao; método público CarregarCalendarioAsync() adicionado; CalendarLoader: `public CalendarLoader()` aceita null storage
+  - MarketCore.WPF/MainWindow.xaml.cs — using MarketCore.Engine.Calendar adicionado; Kill Switch: "OFF"→"INATIVO", "ATIVO"→"ATIVO ⚠" com cor verde/vermelho; log diagnóstico Console.WriteLine [MCIE-DEBUG] BookImb/Delta1s/Ofi1s/AbsScore; McieCalendario populado com ImpactLevel/CalendarioHoje no McieTimer_Tick; CarregarCalendarioAsync chamado após ConnectAsync
+- Diagnóstico pendente: verificar [MCIE-DEBUG] no console para confirmar se BookImbalance/Delta1s/Ofi1s chegam com valor 0 (determina se problema é no FeatureEngine ou nos thresholds dos agentes)
+
+### 31/08/2026 — Fase 16c (diagnóstico profundo + redesign Agressão)
+- Arquivos modificados:
+  - Engine/Features/FeatureEngine.cs — log diagnóstico temporário [DIAG-FASE16] adicionado no final de CalcularSnapshot(), antes de `return snap`; throttle: apenas quando Millisecond < 150 (~1 disparo por segundo); exibe: price, bid, ask, lastBook (OK/NULL), bidVol (BidDepth), askVol (AskDepth), bookImb, delta1s, ofi1s, aggRatio, absScore, regime
+  - MarketCore.WPF/MainWindow.xaml — painel Agressão redesenhado: ProgressBar dupla (PbCompra/PbVenda) substituída por barra bidirecional única com Grid + 2 ColumnDefinitions (ColAgressaoVenda=vermelho, ColAgressaoCompra=verde); subtítulo estático "compra/venda líquida na sessão" substituído por TbAgressaoDesc (dinâmico: COMPRADORA/VENDEDORA/EQUILÍBRIO com cor)
+  - MarketCore.WPF/MainWindow.xaml.cs — bloco Agressão reescrito: cálculo agrcBuy/agrcSell/totalAgg baseado exclusivamente em Delta1s; ColAgressaoVenda/ColAgressaoCompra recebem GridLength proporcional; TbDeltaGrande mostra Delta1s (era Delta5s) com cor dinâmica; TbAgressaoDesc com texto e cor dinâmicos; removidas referências a PbCompra, PbVenda, TbAgCompraVal, TbAgVendaVal
+- Diagnóstico: log [FEAT-DIAG] no FeatureEngine + [MCIE-DEBUG] na UI devem ser analisados no console após próximo build para identificar se bookImb/delta1s chegam zerados (problema em BidDepth/AskDepth=0 indica volumes não presentes nos BookLevels recebidos da DLL)
+- Build: dotnet build MarketCore.WPF\MarketCore.WPF.csproj --configuration Release (executar no Windows terminal)
+
+### 31/08/2026 — Fase 16d (diagnóstico crítico — correção dos logs de rastreamento)
+- Causa raiz identificada: caminho dos logs [DIAG-FASE16] gerado com `@"C:\\Users\\..."` (verbatim string + double-backslash) produzia path inválido em runtime; File.AppendAllText lançava DirectoryNotFoundException, capturada pelo outer try-catch de HandleTrade — impedindo que OnTrade e _featureEngine?.OnTrade() fossem chamados. SnapshotTimer sofria o mesmo: log jogava exceção → TriggerSnapshot() nunca executava.
+- Observação: FlowRenko na tela atualizava porque é visualização nativa da ProfitDLL, independente do nosso código.
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — [HANDLE-TRADE] path corrigido para Path.GetTempPath()+"feat_diag.txt"; write isolado em try{} catch{} próprio
+  - Engine/Features/FeatureEngine.cs — [FE-ONTRADE] e [DIAG-FASE16] (CalcularSnapshot) corrigidos para GetTempPath(); ambos isolados em try{} catch{} próprios
+  - Engine/Features/SnapshotTimer.cs — [TIMER-TICK] path corrigido para GetTempPath(); write isolado em try{} catch{} próprio
+- Próximo passo: build + rodar 30s; ler feat_diag.txt em %TEMP% (C:\Users\Anderson\AppData\Local\Temp\feat_diag.txt). Interpretar:
+  - Só [TIMER-TICK] → HandleTrade não chamado (provider não conectado)
+  - [HANDLE-TRADE] + [FE-ONTRADE] + [TIMER-TICK] → pipeline funciona; verificar se Price/Delta1s/BookImb têm valores não-zero
+  - [HANDLE-TRADE] mas sem [FE-ONTRADE] → _featureEngine null
+
+### 31/08/2026 — Fase 16e (diagnóstico ConnectAsync — 4 logs de rastreamento)
+- Causa do silêncio confirmada: ProfitDLLProvider.ConnectAsync tem 3 saídas silenciosas sem exceção (Status=Connected/reutiliza, IsDllInit=True→Reattach, timeout _readyToSubscribe) — em qualquer delas StartProcessingThread pode não ser chamado com os callbacks corretos
+- Arquivos modificados:
+  - Providers/Nelogica/ProfitDLLProvider.cs — [DLL-CONNECT-ENTRY] antes dos ifs de branch; [DLL-INIT-RESULT] após DLLInitializeMarketLogin
+  - MarketCore.WPF/MainWindow.xaml.cs — [ENGINE-CONNECTED] após ConnectAsync; [SUBSCRIBE] após _engine.Subscribe
+- Log em: %TEMP%\feat_diag.txt (C:\Users\Anderson\AppData\Local\Temp\feat_diag.txt)
+- Interpretação esperada:
+  - [DLL-CONNECT-ENTRY] Status=Connected → early return, callbacks stale
+  - [DLL-CONNECT-ENTRY] IsDllInit=True → Reattach (tradeCallback não re-enviado via DLLInitializeMarketLogin)
+  - [DLL-INIT-RESULT] result!=0 → DLL recusou login (sessão duplicada com Profit Chart?)
+  - [ENGINE-CONNECTED] Status=Error → conectou mas falhou
+  - [ENGINE-CONNECTED] Status=Connected + [SUBSCRIBE] OK mas sem [HANDLE-TRADE] → bug no Subscribe/ticker
+
+### 01/09/2026 — Correção de latência Release (feat_diag + cache snapshot)
+
+Não é Fase 17. Correção em cima da 16e.
+
+- Sintoma: Release 01/09 atrasava vs Debug 25/08 “na DLL”. Tape/dll_latency com tradeAge 300–500 ms (pico ~1 s). SnapshotTimer ~1 snapshot / 5 s (esperado ~10/s).
+- Diagnóstico: NÃO era ProfitDLL64.dll. SHA256 idêntico nos dois bins: 2A51E7BD… Debug 25/08 é binário antigo pré-MCIE, sem as escritas de diagnóstico. Causa = Fases 16c–16e: `File.AppendAllText` em `%TEMP%\feat_diag.txt` duas vezes por trade no worker ProfitDLL-Trades (`HandleTrade` + `OnTrade`). feat_diag chegou a ~11,8 MB / ~218 mil linhas na sessão da manhã; I/O síncrono no caminho crítico starved o SnapshotTimer e atrasou o tape.
+- Lembrete de arquitetura: caminho crítico ProfitDLL → RAM → Features → Agents → Decision → Risk → Order. Nenhuma operação de I/O, rede ou banco no caminho crítico. Persistência só assíncrona.
+- O que foi aplicado:
+  - Removidos todos os `File.AppendAllText` de feat_diag (HandleTrade, OnTrade, CalcularSnapshot, SnapshotTimer.HandleTimer, ConnectEngineSafelyAsync, EnsureBookSubscription, ProfitDLLProvider.Connect).
+  - Removido `Console.WriteLine` `[MCIE-DEBUG]` do `McieTimer_Tick`.
+  - `UltimoSnapshot` deixa de recomputar: FeatureEngine guarda o snapshot que o SnapshotTimer já calcula; getter devolve o cache (null antes do primeiro). `UltimosSignals` usa o cache — não chama `CalcularSnapshot` de novo.
+  - `MarketCore.bat` aponta para o exe Release.
+  - Rebuild Release (`dotnet build MarketCore.WPF\MarketCore.WPF.csproj --configuration Release`).
+- O que NÃO foi feito: ProfitDLL64.dll / enqueue de callbacks intocados (só saíram os writes feat_diag em Connect). MCIE mantido (FeatureEngine, agents, DecisionCore, Fase 1 BookProcessingLoop). Trabalho UI/agentes 16a–16e não revertido. Sem git commit, tag ou push.
+- Arquivos modificados:
+  - Engine/MarketEngine.cs — delete write feat_diag em HandleTrade; UltimoSnapshot retorna cache
+  - Engine/Features/FeatureEngine.cs — delete writes OnTrade/CalcularSnapshot; campo `_ultimoSnapshot`; CalcularSnapshot continua sendo o único cálculo
+  - Engine/Features/SnapshotTimer.cs — delete write throttled no HandleTimer
+  - MarketCore.WPF/MainWindow.xaml.cs — delete `[MCIE-DEBUG]` e writes feat_diag Connect/Subscribe
+  - Providers/Nelogica/ProfitDLLProvider.cs — delete writes feat_diag em Connect
+  - MarketCore.bat — Debug → Release
+  - PROJETO.md — este registro
+- Como rodar: `C:\Users\Anderson\Downloads\MarketCore\MarketCore.WPF\bin\Release\net9.0-windows\MarketCore.WPF.exe` (ou `MarketCore.bat` após a atualização do bat).
+- Próximo check (Anderson): fechar Debug, abrir Release, confirmar que o tape não atrasa; feat_diag não deve mais crescer.
+
+### 01/09/2026 — Correções pós-16e (REC, OFI thresholds, PatternRegistry)
+
+Não é Fase 17. Correções incrementais sobre a build Release de 01/09.
+
+#### O que foi corrigido
+
+**1. Botão REC na toolbar (crash → toggle seguro)**
+- Primeiro problema: `DesabilitarGravacao()` chamado na UI thread → `Dispose()` em objetos nativos → crash nativo não capturável.
+- Tentativa 1 (Task.Run): crash persistiu — Dispose de objetos COM/P/Invoke não é thread-safe de qualquer thread.
+- Solução final: adicionados `PausarGravacao()` e `RetomarGravacao()` no MarketEngine — só toggleam `_recordingEnabled`, jamais chamam Dispose. Crash eliminado.
+- `BtnGravacao_Click` usa `PausarGravacao`/`RetomarGravacao` exclusivamente.
+- `DesabilitarGravacao()` mantida mas reservada para encerramento de sessão.
+
+**2. Footer "Gravando: OFF" não atualizava**
+- `TbRecordingStatus` e `EllipseRecording` existiam no XAML mas nenhum código os atualizava.
+- Corrigido no bloco do `McieTimer_Tick`: sincroniza botão REC + `TbRecordingStatus` + `EllipseRecording` a cada 100ms.
+
+**3. OFIAgent — thresholds errados (raw vs normalizado)**
+- OFI é normalizado em [-1.0, +1.0], mas os thresholds usavam valores raw (100–600).
+- Corrigidos: OFI100ms >200/>100 → >0.70/>0.40 | OFI500ms >400/>200 → >0.70/>0.40 | OFI1s >600/>300 → >0.70/>0.40.
+- ReasonCodes: >400/>200 → >0.60/>0.30; >150 → >0.50.
+
+**4. FlowAgent — threshold Ofi1s errado**
+- Mesmo problema: Ofi1s >300/>100 → >0.60/>0.30 | ReasonCode >200 → >0.40.
+- Delta1s e Delta5s mantidos (valores reais de volume, ex: -264 — corretos como estavam).
+
+**5. PatternRegistry — inicialização desacoplada da gravação**
+- Bug crítico: StorageManager + PatternRegistry + AgentEngine(patternRegistry) estavam dentro do bloco `if (_recordingEnabled && _recorder != null)`.
+- Se `HabilitarGravacao` lançasse exceção (path inválido, drive ausente), o bloco era pulado → `_agentEngine` ficava em modo lite → PatternAgent sempre 0.
+- Correção: bloco movido para FORA do guard de gravação, com try/catch próprio. Se falhar, loga e mantém modo lite.
+- Dentro do bloco de gravação: só DatasetBuilder, DatasetTimer, DecisionCore com persistência, PatternDiscovery e IniciarPregaoAsync.
+- Bug de sintaxe no fix: `.Length` em `List<>` → corrigido para `.Count`.
+
+**6. Diagnóstico de padrões no painel Saúde**
+- Adicionado `NumeroPadroesAtivos` (int, -1 = não inicializado) ao MarketEngine.
+- `TbSaudeGrav` no McieTimer_Tick passa a exibir `ATIVO | X padrões` ou `OFF | sem registry`.
+- Permite confirmar visualmente se PatternRegistry inicializou e quantos padrões estão carregados.
+
+#### Estado atual do PatternAgent
+
+- Build compilando com 0 erros (confirmado pelo usuário).
+- PatternAgent mostra 0 / 0% na UI → esperado: banco SQLite vazio (primeira sessão).
+- PatternDiscovery roda automaticamente quando DatasetTimer disparar (precisa de dados acumulados).
+- **Em monitoramento**: aguardando sessão completa de pregão para confirmar que DatasetTimer dispara, PatternDiscovery encontra padrões e PatternRegistry salva no banco.
+- Na próxima sessão: `TbSaudeGrav` deve exibir `ATIVO | N padrões` com N > 0.
+
+#### Arquivos modificados
+
+- `Engine/MarketEngine.cs` — PausarGravacao/RetomarGravacao; StorageManager+PatternRegistry init fora do guard; NumeroPadroesAtivos property; .Count fix
+- `Engine/Agents/OFIAgent.cs` — thresholds OFI normalizados [-1, +1]
+- `Engine/Agents/FlowAgent.cs` — threshold Ofi1s normalizado [-1, +1]
+- `MarketCore.WPF/MainWindow.xaml` — BtnGravacao adicionado na toolbar; TbRecordingStatus e EllipseRecording no footer
+- `MarketCore.WPF/MainWindow.xaml.cs` — BtnGravacao_Click (toggle seguro); McieTimer_Tick: sync REC + footer + diagnóstico padrões
+
+Sem git commit. Working tree dirty.
+
+### 01/09/2026 — Correção _dbPath: banco SQLite movido para AppData (análise do manual)
+
+#### Diagnóstico via especificação
+
+- Análise do arquivo `MarketCore_Especificacao_Completa.docx` revelou que a estrutura de pastas definida no manual é:
+  ```
+  /data
+    /raw/{ano}/{mes}/{dia}/  ← binários brutos
+    /db/
+      patterns.sqlite
+      decisions.sqlite
+      trades.sqlite
+      config.sqlite
+  ```
+- No `AppData\Roaming\MarketCore\` as pastas `data/db`, `data/raw`, etc. **nunca foram criadas** — confirmando que o StorageManager nunca inicializou corretamente.
+- Causa raiz: `_dbPath = Path.Combine(diretorioBase, "..", "data", "db")` com `diretorioBase = "D:\Gravações_MarketCore"` resolvia para `D:\data\db` — drive D: provavelmente inexistente ou sem acesso.
+- O `..` na expressão sobe um nível acima de `D:\Gravações_MarketCore` chegando em `D:\`, não dentro da pasta de gravações.
+
+#### O que foi corrigido
+
+**`Engine/MarketEngine.cs` — 3 pontos alterados:**
+
+1. `HabilitarGravacao`: `_dbPath` agora usa AppData fixo, independente do drive de gravações:
+   ```csharp
+   // ANTES (errado):
+   _dbPath = System.IO.Path.Combine(diretorioBase, "..", "data", "db");
+
+   // DEPOIS (correto):
+   _dbPath = System.IO.Path.Combine(
+       Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+       "MarketCore", "data", "db");
+   ```
+
+2. `ConnectAsync` linha ~513: fallback quando `_dbPath` é null também corrigido para AppData.
+
+3. `ConnectAsync` linha ~553: idem para o segundo fallback dentro do bloco de gravação.
+
+4. Log adicional em `HabilitarGravacao`: `[RECORDER] Banco SQLite/DuckDB em: {_dbPath}` — permite confirmar visualmente o path resolvido no console.
+
+#### Caminho resultante
+
+- Binários brutos (trades.bin, book.bin): `{RecordingsPath}\{yyyy-MM-dd}\` (inalterado — gerenciado pelo MarketRecorder)
+- Banco SQLite: `C:\Users\Anderson\AppData\Roaming\MarketCore\data\db\` (novo — fixo, independente do drive configurado)
+
+#### Como confirmar após build
+
+1. Compilar: `dotnet build MarketCore.WPF\MarketCore.WPF.csproj --configuration Release`
+2. Ao iniciar, o log deve exibir:
+   ```
+   [RECORDER] Gravação de TRADES + BOOK habilitada em: D:\Gravações_MarketCore
+   [RECORDER] Banco SQLite/DuckDB em: C:\Users\Anderson\AppData\Roaming\MarketCore\data\db
+   [PATTERNS] PatternRegistry pronto — 0 padrões ativos carregados
+   ```
+3. `TbSaudeGrav` na UI: `ATIVO | 0 padrões` (primeira sessão com banco novo)
+4. Após 18:04–18:06: DatasetTimer dispara, PatternDiscovery roda sobre dados do dia
+
+#### Estado atual
+
+- Em monitoramento: banco SQLite será criado automaticamente pelo StorageManager na primeira sessão após o build.
+- Próxima sessão: verificar se `AppData\Roaming\MarketCore\data\db\` foi criado com arquivos `.sqlite`.
+
+#### Arquivos modificados
+
+- `Engine/MarketEngine.cs` — `_dbPath` corrigido em 3 pontos; log de confirmação adicionado
+
+Sem git commit. Working tree dirty.
+
+---
+
+## [FASE 3] LivePatternDiscovery — Varredura de Padrões em Tempo Real
+
+**Data:** 2026-09-02
+
+### Objetivo
+
+Descoberta de padrões intraday em tempo real, operando sobre snapshots acumulados durante a sessão, com intervalo de varredura configurável pela UI (campo "Varredura min" no painel de Stop/Target).
+
+### Arquivos criados/modificados
+
+| Arquivo | Tipo | Mudança |
+|---|---|---|
+| `Engine/Patterns/LivePatternDiscovery.cs` | **NOVO** | Classe principal — timer, warmup 30min, ciclo de descoberta |
+| `Engine/Patterns/PatternRegistry.cs` | modificado | `LimparPadroesIntraday()`, `AdicionarIntraday()`, `PadroesAtivos()` inclui `Paper` |
+| `Engine/Features/FeatureEngine.cs` | modificado | `_snapshotsHoje`, `SnapshotsHoje`, acumula em `TriggerSnapshot`, limpa em `ResetarSessao` |
+| `Engine/MarketEngine.cs` | modificado | Campo `_liveDiscovery`, init em `ConnectAsync`, `Dispose`, props `PadroesAtivosCount` e `AlterarIntervaloVarredura` |
+| `MarketCore.WPF/MainWindow.xaml` | modificado | Grid "Varredura min" após Target |
+| `MarketCore.WPF/MainWindow.xaml.cs` | modificado | Handler `TxVarredura_TextChanged`, `McieTimer_Tick` usa `PadroesAtivosCount` |
+
+### Comportamento
+
+- **Warmup:** 30 min após `ConnectAsync` (aguarda acúmulo de snapshots)
+- **Mínimo para executar:** 1.000 snapshots totais, 500 elegíveis (horizonte > 10s), 500 labels gerados
+- **Critérios de qualidade:** `MinSamples=50`, `MinExpectancy=1.5`, `MinProfitFactor=1.3`, `MinWinRate=0.52`
+- **Padrões intraday:** status `Paper`, limpos a cada ciclo (apenas do dia atual)
+- **PatternAgent vê padrões Paper:** `PadroesAtivos()` agora inclui `Approved | Live | Paper`
+- **Thread safety:** `_snapshotsHoje` protegido por `_snapshotsLock`; `SnapshotsHoje` retorna cópia
+
+### UI — campo Varredura
+
+Campo `TxVarredura` (TextBox, 1–30 min) inserido abaixo do Target no painel de controle.
+Chama `_engine.AlterarIntervaloVarredura(min)` → `_liveDiscovery.AlterarIntervalo(min)` que reprograma o timer imediatamente.
+
+### Logs esperados
+
+```
+[LIVE-PATTERN] Iniciado — warmup 30min, intervalo 3min
+[LIVE-PATTERN] Ciclo ignorado — 423 snapshots (min 1000)   ← ainda no warmup
+[LIVE-PATTERN] Ciclo concluído — 7 novos intraday, 7 padrões ativos (10:32)
+[LIVE-PATTERN] Intervalo alterado para 5min                ← usuário alterou na UI
+```
+
+Sem git commit. Working tree dirty.

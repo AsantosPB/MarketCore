@@ -13,7 +13,7 @@ namespace MarketCore.Engine.Decision;
 /// </summary>
 public class DecisionCore
 {
-    private readonly StorageManager _storage;
+    private readonly StorageManager? _storage;  // [FASE 16] nullable — modo sem gravação
 
     // Modo confirmado: guardar estado pendente até 600ms de consistência
     private DecisionState _estadoPendente    = DecisionState.Wait;
@@ -25,7 +25,7 @@ public class DecisionCore
 
     public event Action<DecisionState>? OnDecision;
 
-    public DecisionCore(StorageManager storage)
+    public DecisionCore(StorageManager? storage = null)  // [FASE 16]
     {
         _storage = storage;
     }
@@ -56,7 +56,7 @@ public class DecisionCore
             EntryTaken    = false,
             BlockReason   = string.Empty
         };
-        await _storage.GravarDecisionAsync(record);
+        if (_storage != null) await _storage.GravarDecisionAsync(record);  // [FASE 16]
     }
 
     // ── privados ────────────────────────────────────────────────────────────

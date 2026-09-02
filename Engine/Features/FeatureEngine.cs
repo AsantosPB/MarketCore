@@ -21,6 +21,18 @@ public class FeatureEngine
     // ── Regime atual ─────────────────────────────────────────────────────
     public RegimeState? RegimeAtual => _regimeDetector?.Estado;  // [FASE 6]
 
+    /// <summary>Último snapshot já calculado pelo SnapshotTimer. Leitura barata — nunca recomputa.</summary>
+    public FeatureSnapshot? UltimoSnapshot => _ultimoSnapshot;
+    private volatile FeatureSnapshot? _ultimoSnapshot;
+
+    // [FASE 3] Acumulador intraday para LivePatternDiscovery
+    private readonly List<FeatureSnapshot> _snapshotsHoje = new();
+    private readonly object _snapshotsLock = new();
+    public List<FeatureSnapshot> SnapshotsHoje
+    {
+        get { lock (_snapshotsLock) return new List<FeatureSnapshot>(_snapshotsHoje); }
+    }
+
     // ── Ring buffers ─────────────────────────────────────────────────────
     // Capacidade: ~60 s de dados em cenário de alta frequência do WINFUT.
     private RingBuffer<TradeEvent>    _trades    = null!;  // 60 s de trades
@@ -84,6 +96,7 @@ public class FeatureEngine
             _cumulativeVwapNum = 0;
             _cumulativeVolume  = 0;
         }
+        lock (_snapshotsLock) _snapshotsHoje.Clear();          // [FASE 3] nova sessão
     }
 
     // ── Ingestão de eventos ───────────────────────────────────────────────
@@ -148,13 +161,18 @@ public class FeatureEngine
             aggSell     = _aggSellTotal;
         }
 
-        if (price == 0) return new FeatureSnapshot
+        if (price == 0)
         {
-            Timestamp   = DateTime.Now.Ticks,
-            SessionDate = DateTime.Today.ToString("yyyy-MM-dd"),
-            TimeWindow  = CalcularTimeWindow(),
-            Regime      = "INDEFINIDO",
-        };
+            var empty = new FeatureSnapshot
+            {
+                Timestamp   = DateTime.Now.Ticks,
+                SessionDate = DateTime.Today.ToString("yyyy-MM-dd"),
+                TimeWindow  = CalcularTimeWindow(),
+                Regime      = "INDEFINIDO",
+            };
+            _ultimoSnapshot = empty;
+            return empty;
+        }
 
         var lastBook = _bookSnaps.GetLast(1).FirstOrDefault();
 
@@ -236,6 +254,7 @@ public class FeatureEngine
                 OnMarketEvent?.Invoke(ev);
         }
 
+        _ultimoSnapshot = snap;
         return snap;
     }
 
@@ -243,6 +262,12 @@ public class FeatureEngine
     internal FeatureSnapshot TriggerSnapshot()
     {
         var snap = CalcularSnapshot();
+        lock (_snapshotsLock)                                  // [FASE 3] acumular intraday
+        {
+            _snapshotsHoje.Add(snap);
+            if (_snapshotsHoje.Count > 400_000)
+                _snapshotsHoje.RemoveRange(0, 50_000);
+        }
         OnSnapshot?.Invoke(snap);
         return snap;
     }
@@ -300,8 +325,9 @@ public class FeatureEngine
     /// <summary>Agressão líquida (compra - venda) nos últimos X milissegundos.</summary>
     private long CalcularDelta(int milliseconds)
     {
-        var cutoff = DateTime.Now.AddMilliseconds(-milliseconds);
-        var trades = _trades.GetAll().Where(t => t.Time >= cutoff).ToArray();
+        // [FIX-DELTA] usar ReceivedUtc em ticks para evitar mismatch com horário de bolsa atrasado
+        var cutoffTicks = DateTime.UtcNow.AddMilliseconds(-milliseconds).Ticks;
+        var trades = _trades.GetAll().Where(t => (t.ReceivedUtc ?? t.Time.ToUniversalTime()).Ticks >= cutoffTicks).ToArray();
         long buy  = trades.Where(t => t.Aggressor == TradeAggressor.Buy).Sum(t => (long)t.Volume);
         long sell = trades.Where(t => t.Aggressor == TradeAggressor.Sell).Sum(t => (long)t.Volume);
         return buy - sell;
@@ -310,8 +336,9 @@ public class FeatureEngine
     /// <summary>Order Flow Imbalance normalizado → -1 a +1 (0 = equilíbrio).</summary>
     private double CalcularOfi(int milliseconds)
     {
-        var cutoff = DateTime.Now.AddMilliseconds(-milliseconds);
-        var trades = _trades.GetAll().Where(t => t.Time >= cutoff).ToArray();
+        // [FIX-OFI] usar ReceivedUtc em ticks
+        var cutoffTicks = DateTime.UtcNow.AddMilliseconds(-milliseconds).Ticks;
+        var trades = _trades.GetAll().Where(t => (t.ReceivedUtc ?? t.Time.ToUniversalTime()).Ticks >= cutoffTicks).ToArray();
         if (trades.Length == 0) return 0;
         long buy   = trades.Where(t => t.Aggressor == TradeAggressor.Buy).Sum(t => (long)t.Volume);
         long sell  = trades.Where(t => t.Aggressor == TradeAggressor.Sell).Sum(t => (long)t.Volume);
@@ -322,15 +349,17 @@ public class FeatureEngine
     /// <summary>Negócios por segundo nos últimos 1 s.</summary>
     private double CalcularTradeRate()
     {
-        var cutoff = DateTime.Now.AddSeconds(-1);
-        return _trades.GetAll().Count(t => t.Time >= cutoff);
+        // [FIX-TRADERATE] usar ReceivedUtc em ticks
+        var cutoffTicks = DateTime.UtcNow.AddSeconds(-1).Ticks;
+        return _trades.GetAll().Count(t => (t.ReceivedUtc ?? t.Time.ToUniversalTime()).Ticks >= cutoffTicks);
     }
 
     /// <summary>Contratos por segundo nos últimos 1 s.</summary>
     private double CalcularVolumeRate()
     {
-        var cutoff = DateTime.Now.AddSeconds(-1);
-        return _trades.GetAll().Where(t => t.Time >= cutoff).Sum(t => (long)t.Volume);
+        // [FIX-VOLUMERATE] usar ReceivedUtc em ticks
+        var cutoffTicks = DateTime.UtcNow.AddSeconds(-1).Ticks;
+        return _trades.GetAll().Where(t => (t.ReceivedUtc ?? t.Time.ToUniversalTime()).Ticks >= cutoffTicks).Sum(t => (long)t.Volume);
     }
 
     // ── Cálculos internos — Aceleração ────────────────────────────────────

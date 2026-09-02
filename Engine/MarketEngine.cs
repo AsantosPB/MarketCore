@@ -44,6 +44,7 @@ public sealed class MarketEngine : IDisposable
     public event Action<BookSnapshot>?           OnBookSnapshot;
     public event Action<QuoteEvent>?             OnQuote;
     public event Action<ConnectionChangedEvent>? OnConnectionChanged;
+    public event Action<MarketEvent>?            OnMarketEventUi;         // [FASE 16]
 
     private readonly ConcurrentDictionary<string, BookState> _books = new();
     private readonly ConcurrentQueue<BookSnapshot> _uiQueue = new();
@@ -95,6 +96,7 @@ public sealed class MarketEngine : IDisposable
     private DatasetTimer?    _datasetTimer;    // [FASE 7]
     private PatternRegistry?  _patternRegistry;  // [FASE 8]
     private PatternDiscovery? _patternDiscovery; // [FASE 8]
+    private LivePatternDiscovery? _liveDiscovery;   // [FASE 3]
     private string?           _diretorioBase;    // [FASE 9]
     private ReplayEngine?     _replayEngine;     // [FASE 9]
     private BacktestEngine?   _backtestEngine;   // [FASE 10]
@@ -103,6 +105,7 @@ public sealed class MarketEngine : IDisposable
     private RiskManager?      _riskManager;      // [FASE 13]
     private RiskConfig        _riskConfig = new();
     private DateTime          _ultimaAtualizacaoBook;
+    private DateTime          _lastBookFeatureUpdate = DateTime.MinValue; // [THROTTLE-BOOK]
     private double            _pnlDiario;
     private bool              _temPosicaoAberta;
     private int               _tradesDoDia;
@@ -119,6 +122,8 @@ public sealed class MarketEngine : IDisposable
 
     public string ProviderName => _provider.ProviderName;
     public ConnectionStatus Status => _provider.Status;
+    public bool     GravacaoAtiva          => _recordingEnabled;           // [FASE 16]
+    public DateTime UltimaAtualizacaoBook   => _ultimaAtualizacaoBook;      // [FASE 16]
 
     // ── Calendário econômico ──────────────────────────────────────────────
     /// <summary>Indica se o engine está em bloqueio por evento econômico no momento.</summary>
@@ -136,8 +141,15 @@ public sealed class MarketEngine : IDisposable
     public int MinutosAteProximoBloqueio
         => _calendarLoader?.MinutosAteProximoBloqueio(DateTime.Now) ?? int.MaxValue;
 
+    /// <summary>Força recarregamento do calendário econômico do dia.</summary>
+    public async Task CarregarCalendarioAsync()  // [FASE 16]
+    {
+        if (_calendarLoader != null)
+            await _calendarLoader.CarregarAsync(DateTime.Today);
+    }
+
     /// <summary>Último snapshot de features calculado (null antes do primeiro pregão).</summary>
-    public FeatureSnapshot? UltimoSnapshot => _featureEngine?.CalcularSnapshot();
+    public FeatureSnapshot? UltimoSnapshot => _featureEngine?.UltimoSnapshot;
 
     /// <summary>Regime atual do mercado (null antes do primeiro snapshot).</summary>
     public RegimeState? RegimeAtual => _featureEngine?.RegimeAtual;  // [FASE 6]
@@ -155,6 +167,16 @@ public sealed class MarketEngine : IDisposable
     /// <summary>Lista de padrões com status Approved ou Live.</summary>
     public List<DiscoveredPattern> PadroesAtivos()  // [FASE 8]
         => _patternRegistry?.PadroesAtivos() ?? new List<DiscoveredPattern>();
+
+    /// <summary>Quantidade de padrões ativos no registry. -1 = PatternRegistry não inicializado.</summary>
+    public int NumeroPadroesAtivos  // [FASE 8]
+        => _patternRegistry != null ? _patternRegistry.PadroesAtivos().Count : -1;
+
+    public int PadroesAtivosCount                                      // [FASE 3]
+        => _patternRegistry?.PadroesAtivos().Count ?? 0;
+
+    public void AlterarIntervaloVarredura(int minutos)                 // [FASE 3]
+        => _liveDiscovery?.AlterarIntervalo(minutos);
 
     // ── Agent Engine — Fase 11 ─────────────────────────────────────────────────
 
@@ -235,7 +257,10 @@ public sealed class MarketEngine : IDisposable
 
     // ── Live Trading — Fase 15 ───────────────────────────────────────────────
 
-    /// <summary>Modo atual de operação: OBSERVAR, PAPER ou LIVE.</summary>
+    /// <summary>Lote configurado pelo operador (1–10). Consumido pelos engines de execução.</summary>
+    public int LoteConfigurado { get; set; } = 1;  // [FASE 16]
+
+        /// <summary>Modo atual de operação: OBSERVAR, PAPER ou LIVE.</summary>
     public string ModoAtual =>  // [FASE 15]
         _liveModeAtivo  ? "LIVE"     :
         _paperModeAtivo ? "PAPER"    : "OBSERVAR";
@@ -360,7 +385,9 @@ public sealed class MarketEngine : IDisposable
             diretorioBase = System.IO.Path.Combine(diretorioBase, "_SIM");
 
         _recorder = new MarketRecorder(diretorioBase);
-        _dbPath        = System.IO.Path.Combine(diretorioBase, "..", "data", "db"); // [FASE 3]
+        _dbPath        = System.IO.Path.Combine(                                           // [FASE 3] corrigido: AppData independente do drive de gravações
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "MarketCore", "data", "db");
         _diretorioBase = diretorioBase; // [FASE 9]
 
         _recorder.ErroGravacao += (s, e) =>
@@ -379,6 +406,7 @@ public sealed class MarketEngine : IDisposable
 
         _recordingEnabled = true;
         Console.WriteLine($"[RECORDER] Gravação de TRADES + BOOK habilitada em: {diretorioBase}");
+        Console.WriteLine($"[RECORDER] Banco SQLite/DuckDB em: {_dbPath}");
     }
 
     public void DesabilitarGravacao()
@@ -386,11 +414,31 @@ public sealed class MarketEngine : IDisposable
         _recordingEnabled = false;
         _recorder?.Dispose();
         _storageManager?.Dispose(); // [FASE 3]
-        _calendarTimer?.Dispose();  // [FASE 4]
-        _calendarLoader = null;
-        _calendarTimer  = null;
         _recorder = null;
         Console.WriteLine("[RECORDER] Gravação desabilitada");
+    }
+
+    /// <summary>
+    /// Pausa a gravação sem destruir o recorder — seguro para toggle de UI.
+    /// Use DesabilitarGravacao() apenas ao encerrar a sessão.
+    /// </summary>
+    public void PausarGravacao()
+    {
+        _recordingEnabled = false;
+        Console.WriteLine("[RECORDER] Gravação pausada (recorder mantido)");
+    }
+
+    /// <summary>
+    /// Retoma a gravação pausada por PausarGravacao().
+    /// Só funciona se HabilitarGravacao() já tiver sido chamado antes.
+    /// </summary>
+    public void RetomarGravacao()
+    {
+        if (_recorder != null)
+        {
+            _recordingEnabled = true;
+            Console.WriteLine("[RECORDER] Gravação retomada");
+        }
     }
 
     public void GravarFlowScore(double preco, double scoreTotal,
@@ -407,115 +455,165 @@ public sealed class MarketEngine : IDisposable
         // Trade fanout eliminado — HandleTrade invoca subscribers diretamente (zero queue hop).
         // StartUiDispatch();
         // StartTradeFanout();
-        // StartBookSnapshotPublishing();
+        // StartBookSnapshotPublishing(); // revertido — causa latência 250 s na DLL (lock contention no BookProcessingLoop)
         // StartDetectorDrain();
+
+        // [FASE 5] — Feature Engine inicializado independente da gravação
+        _featureEngine = new FeatureEngine();
+        _featureEngine.Inicializar();
+        _featureEngine.OnMarketEvent  += OnMarketEventDetectado;  // [FASE 6]
+        _featureEngine.OnRegimeChange += OnRegimeAlterado;        // [FASE 6]
+
+        // [FASE 16] — AgentEngine e DecisionCore: defaults lite (substituídos logo abaixo)
+        _agentEngine  = new AgentEngine();   // lite — substituído por AgentEngine(_patternRegistry) abaixo
+        _decisionCore = new DecisionCore();  // sem persistência — substituído se gravação ativa
+
+        _featureEngine.OnSnapshot += async snap =>
+        {
+            _ultimaAtualizacaoBook = DateTime.UtcNow;
+            if (_agentEngine == null || _decisionCore == null) return;
+            var regime  = _featureEngine.RegimeAtual;
+            var signals = _agentEngine.Avaliar(snap, regime);
+            await _decisionCore.AvaliarAsync(snap, regime, signals);
+            var estado  = _decisionCore.UltimoEstado;
+            if (estado == DecisionState.Buy      ||
+                estado == DecisionState.StrongBuy ||
+                estado == DecisionState.Sell      ||
+                estado == DecisionState.StrongSell ||
+                estado == DecisionState.Exit)
+            {
+                if (_riskManager == null) return;
+                var risco = _riskManager.Verificar(
+                    estado, snap, _temPosicaoAberta, _pnlDiario, _tradesDoDia,
+                    feedConectado: true, _latenciaMs, _ultimaAtualizacaoBook);
+                if (risco.Result == RiskCheckResult.Approved)
+                {
+                    if (_liveModeAtivo && _liveEngine != null)
+                        await _liveEngine.ProcessarDecisaoAsync(estado, snap);
+                    else if (_paperModeAtivo && _paperEngine != null)
+                        await _paperEngine.ProcessarDecisaoAsync(estado, snap);
+                    else
+                        Console.WriteLine($"[RISK] APROVADO — {estado} | regime={regime.Regime}");
+                }
+            }
+        };
+
+        // [FASE 16] — CalendarLoader: inicializado independente da gravação
+        _calendarLoader = new CalendarLoader(); // sem StorageManager — sem persistência SQLite
+        _calendarLoader.OnCalendarLoaded   += dia  => _calendarioHoje = dia;
+        _calendarLoader.OnBlockApproaching += (ev, min) =>
+            Console.WriteLine($"[CALENDAR] ⚠ {ev.Name} em {min} min — bloqueio iminente");
+        _calendarLoader.OnBlockStart += ev =>
+            Console.WriteLine($"[CALENDAR] 🔴 BLOQUEIO iniciado — {ev.Name} ({ev.Country}, {ev.Impact})");
+        _calendarLoader.OnBlockEnd += ev =>
+            Console.WriteLine($"[CALENDAR] 🟢 BLOQUEIO encerrado — {ev.Name}");
+        _calendarTimer = new CalendarTimer(_calendarLoader);
+        _calendarTimer.Iniciar();
+        _ = _calendarLoader.CarregarAsync(DateTime.Today); // carga inicial sem bloquear
+
+        // [FASE 3/8] — StorageManager + PatternRegistry: SEMPRE inicializados
+        // PatternAgent fica disponível independente do estado da gravação.
+        // Se o banco não existir ainda, InicializarAsync cria o diretório.
+        try
+        {
+            var sm = new StorageManager();
+            await sm.InicializarAsync(
+                _dbPath ?? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MarketCore", "data", "db"));
+            _storageManager = sm; // só atribui após inicialização completa
+
+            // [FASE 8] — Pattern Engine: carrega padrões aprovados do banco
+            _patternRegistry = new PatternRegistry(_storageManager);
+            await _patternRegistry.InicializarAsync();
+            _patternRegistry.OnPatternDecay += OnPatternEmDecay;
+
+            // [FASE 11] — AgentEngine com PatternAgent ativo (substitui lite acima)
+            _agentEngine = new AgentEngine(_patternRegistry);
+            _agentEngine.OnSignals += OnAgentSignals;
+
+            Console.WriteLine(
+                $"[PATTERNS] PatternRegistry pronto — " +
+                $"{_patternRegistry.PadroesAtivos().Count} padrões ativos carregados");
+
+            // [FASE 3] — LivePatternDiscovery intraday
+            _liveDiscovery = new LivePatternDiscovery(_featureEngine, _patternRegistry);
+            _liveDiscovery.Iniciar();
+        }
+        catch (Exception exPat)
+        {
+            _storageManager  = null;
+            _patternRegistry = null;
+            Console.WriteLine(
+                $"[PATTERNS] Falha ao inicializar PatternRegistry: {exPat.Message} " +
+                $"— AgentEngine em modo lite (sem PatternAgent)");
+        }
+
+        // [FASE 16] SnapshotTimer com _storageManager real (null se init acima falhou)
+        _snapshotTimer = new SnapshotTimer(_featureEngine, _storageManager);
+        _snapshotTimer.Iniciar();
 
         if (_recordingEnabled && _recorder != null)
         {
             var hoje = DateOnly.FromDateTime(DateTime.Now);
-            _storageManager = new StorageManager(); // [FASE 3]
-            await _storageManager.InicializarAsync(_dbPath ?? System.IO.Path.Combine("data", "db"));
 
-            _calendarLoader = new CalendarLoader(_storageManager); // [FASE 4]
-            _calendarLoader.OnCalendarLoaded   += dia  => _calendarioHoje = dia;
-            _calendarLoader.OnBlockApproaching += (ev, min) =>
-                Console.WriteLine($"[CALENDAR] ⚠ {ev.Name} em {min} min — bloqueio iminente");
-            _calendarLoader.OnBlockStart += ev =>
-                Console.WriteLine($"[CALENDAR] 🔴 BLOQUEIO iniciado — {ev.Name} ({ev.Country}, {ev.Impact})");
-            _calendarLoader.OnBlockEnd += ev =>
-                Console.WriteLine($"[CALENDAR] 🟢 BLOQUEIO encerrado — {ev.Name}");
+            // Se StorageManager não pôde ser inicializado no bloco acima, tenta novamente
+            if (_storageManager == null)
+            {
+                try
+                {
+                    var sm = new StorageManager();
+                    await sm.InicializarAsync(
+                        _dbPath ?? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MarketCore", "data", "db"));
+                    _storageManager = sm;
+                }
+                catch (Exception exSm)
+                {
+                    Console.WriteLine(
+                        $"[RECORDER] StorageManager indisponível: {exSm.Message} " +
+                        $"— Dataset e PatternDiscovery desabilitados");
+                }
+            }
 
-            _calendarTimer = new CalendarTimer(_calendarLoader); // [FASE 4]
-            _calendarTimer.Iniciar();
-            _ = _calendarLoader.CarregarAsync(DateTime.Today); // carga inicial sem bloquear ConnectAsync
+            if (_storageManager != null)
+            {
+                // [FASE 7] — DatasetBuilder + DatasetTimer
+                _datasetBuilder = new DatasetBuilder(_storageManager);
+                _datasetTimer   = new DatasetTimer(_datasetBuilder);
+                _datasetTimer.OnDatasetPronto += OnDatasetPronto;
+                _datasetTimer.Iniciar();
 
-            _featureEngine = new FeatureEngine(); // [FASE 5]
-            _featureEngine.Inicializar();
-            _snapshotTimer = new SnapshotTimer(_featureEngine, _storageManager);
-            _snapshotTimer.Iniciar();
-            _featureEngine.OnMarketEvent  += OnMarketEventDetectado;  // [FASE 6]
-            _featureEngine.OnRegimeChange += OnRegimeAlterado;        // [FASE 6]
+                // [FASE 12] — Decision Core com persistência no banco
+                _decisionCore = new DecisionCore(_storageManager);
+                _decisionCore.OnDecision += OnDecisaoTomada;
 
-            _datasetBuilder = new DatasetBuilder(_storageManager!);  // [FASE 7]
-            _datasetTimer   = new DatasetTimer(_datasetBuilder);
-            _datasetTimer.OnDatasetPronto += OnDatasetPronto;
-            _datasetTimer.Iniciar();
+                // [FASE 8] — PatternDiscovery: descobre novos padrões após cada DatasetTimer
+                if (_patternRegistry != null)
+                {
+                    _patternDiscovery = new PatternDiscovery();
+                    _patternDiscovery.OnPatternFound += async p =>
+                        await _patternRegistry.AdicionarAsync(p);
 
-            // [FASE 8] — Pattern Engine
-            _patternRegistry  = new PatternRegistry(_storageManager!);
-            await _patternRegistry.InicializarAsync();
-            _patternRegistry.OnPatternDecay += OnPatternEmDecay;
+                    // Após dataset pronto: discovery + monitorar decay
+                    _datasetTimer.OnDatasetPronto += async _ =>
+                    {
+                        var dataset = await _storageManager!.ConsultarDatasetComLabelsAsync(
+                            DateTime.Today, DateTime.Today);
+                        if (_patternDiscovery != null)
+                            await _patternDiscovery.DescubrirAsync(dataset);
+                        if (_patternRegistry != null)
+                            await _patternRegistry.MonitorarDecayAsync(dataset);
+                    };
+                }
+            }
 
-            // [FASE 11] — Agent Engine
-            _agentEngine = new AgentEngine(_patternRegistry);
-            _agentEngine.OnSignals += OnAgentSignals;
-
-            // [FASE 12] — Decision Core
-            _decisionCore = new DecisionCore(_storageManager);
-            _decisionCore.OnDecision += OnDecisaoTomada;
-
-            // [FASE 13] — Risk Manager
+            // [FASE 13] — Risk Manager (independente do StorageManager)
             _riskManager = new RiskManager(_riskConfig);
             _riskManager.OnKillSwitch += OnKillSwitchAtivado;
             _riskManager.OnBlocked    += OnOrdemBloqueada;
 
-            _featureEngine.OnSnapshot += async snap =>
-            {
-                _ultimaAtualizacaoBook = DateTime.UtcNow;
-                var regime  = _featureEngine.RegimeAtual;
-                var signals = _agentEngine.Avaliar(snap, regime);
-                await _decisionCore.AvaliarAsync(snap, regime, signals);
-                var estado  = _decisionCore.UltimoEstado;
-
-                // Só verificar risco se há sinal de entrada/saída
-                if (estado == DecisionState.Buy      ||
-                    estado == DecisionState.StrongBuy ||
-                    estado == DecisionState.Sell      ||
-                    estado == DecisionState.StrongSell ||
-                    estado == DecisionState.Exit)
-                {
-                    var risco = _riskManager.Verificar(
-                        estado,
-                        snap,
-                        _temPosicaoAberta,
-                        _pnlDiario,
-                        _tradesDoDia,
-                        feedConectado: true,
-                        _latenciaMs,
-                        _ultimaAtualizacaoBook);
-
-                    if (risco.Result == RiskCheckResult.Approved)
-                    {
-                        if (_liveModeAtivo && _liveEngine != null)
-                            await _liveEngine.ProcessarDecisaoAsync(estado, snap);    // [FASE 15]
-                        else if (_paperModeAtivo && _paperEngine != null)
-                            await _paperEngine.ProcessarDecisaoAsync(estado, snap);
-                        else
-                            Console.WriteLine(
-                                $"[RISK] APROVADO — {estado} | "
-                              + $"regime={regime.Regime}");
-                    }
-                }
-            };
-            _patternDiscovery = new PatternDiscovery();
-            _patternDiscovery.OnPatternFound += async p =>
-                await _patternRegistry.AdicionarAsync(p);
-
-            // Após dataset pronto, rodar discovery e monitorar decay
-            _datasetTimer.OnDatasetPronto += async stats =>
-            {
-                var dataset = await _storageManager!.ConsultarDatasetComLabelsAsync(
-                    DateTime.Today, DateTime.Today);
-                if (_patternDiscovery != null)
-                    await _patternDiscovery.DescubrirAsync(dataset);
-                if (_patternRegistry != null)
-                    await _patternRegistry.MonitorarDecayAsync(dataset);
-            };
-
             var iniciou = await _recorder.IniciarPregaoAsync(hoje);
             if (!iniciou)
             {
-                Console.WriteLine("[RECORDER] Falha ao iniciar pregão - gravação desabilitada");
+                Console.WriteLine("[RECORDER] Falha ao iniciar pregão — gravação desabilitada");
                 _recordingEnabled = false;
             }
             _riskManager?.ResetDiario();  // [FASE 13] reset diário
@@ -533,6 +631,8 @@ public sealed class MarketEngine : IDisposable
 
         _snapshotTimer?.Parar();        // [FASE 5] para timer antes de fechar
         _featureEngine?.ResetarSessao();
+        _liveDiscovery?.Parar();                        // [FASE 3] para varredura intraday
+        _patternRegistry?.LimparPadroesIntraday();      // limpa Paper patterns do pregão
 
         if (_recordingEnabled && _recorder != null)
         {
@@ -707,6 +807,8 @@ public sealed class MarketEngine : IDisposable
     {
         Console.WriteLine(
             $"[{DateTime.Now:HH:mm:ss.fff}] {ev.Type} magnitude={ev.Magnitude:F1} — {ev.Detail}");
+        try { OnMarketEventUi?.Invoke(ev); }
+        catch { /* não bloquear thread do engine */ }
     }
 
     private void OnRegimeAlterado(RegimeState rs)
@@ -804,6 +906,25 @@ public sealed class MarketEngine : IDisposable
                 }
 
                 _detectorLevelQueue.Enqueue(level);
+            }
+
+            // [THROTTLE-BOOK] Limita FeatureEngine a 10 snapshots/s (1 a cada 100ms).
+            // WIN gera dezenas de milhares de eventos/s — sem throttle satura o pipeline.
+            // TryFlushSnapshotIfDirty só reconstrói quando estado mudou; throttle descarta
+            // intermediários irrelevantes. Task.Run libera HandleBook() imediatamente.
+            if (_featureEngine != null && state.TryFlushSnapshotIfDirty(out var snap))
+            {
+                var agora = DateTime.UtcNow;
+                if ((agora - _lastBookFeatureUpdate).TotalMilliseconds >= 100)
+                {
+                    _lastBookFeatureUpdate = agora;
+                    var snapCopy = snap; // capturar para closure
+                    _ = Task.Run(() =>
+                    {
+                        try { _featureEngine?.OnBook(snapCopy); }
+                        catch { }
+                    });
+                }
             }
         }
         catch (Exception ex)
@@ -1089,6 +1210,7 @@ public sealed class MarketEngine : IDisposable
         _calendarTimer?.Dispose();  // [FASE 4]
         _snapshotTimer?.Dispose();  // [FASE 5]
         _datasetTimer?.Dispose();   // [FASE 7]
+        _liveDiscovery?.Dispose();   // [FASE 3]
         _replayEngine?.Dispose();   // [FASE 9]
         _riskManager?.AtivarKillSwitch("Sistema encerrando");  // [FASE 13]
         if (_paperModeAtivo) _ = DesativarPaperTradingAsync();  // [FASE 14]
