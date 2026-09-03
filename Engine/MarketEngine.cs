@@ -524,6 +524,7 @@ public sealed class MarketEngine : IDisposable
             // [FASE 8] — Pattern Engine: carrega padrões aprovados do banco
             _patternRegistry = new PatternRegistry(_storageManager);
             await _patternRegistry.InicializarAsync();
+            await _patternRegistry.LimparPadroesAntigosAsync();   // [FASE 3] remove Paper > 2 dias
             _patternRegistry.OnPatternDecay += OnPatternEmDecay;
 
             // [FASE 11] — AgentEngine com PatternAgent ativo (substitui lite acima)

@@ -265,8 +265,13 @@ public class FeatureEngine
         lock (_snapshotsLock)                                  // [FASE 3] acumular intraday
         {
             _snapshotsHoje.Add(snap);
-            if (_snapshotsHoje.Count > 400_000)
-                _snapshotsHoje.RemoveRange(0, 50_000);
+            if (_snapshotsHoje.Count % 1000 == 0)            // [FASE 3] janela deslizante 30min
+            {
+                var cutoff    = DateTime.Now.AddMinutes(-30).Ticks;
+                var removeAte = _snapshotsHoje.FindIndex(s => s.Timestamp >= cutoff);
+                if (removeAte > 0)
+                    _snapshotsHoje.RemoveRange(0, removeAte);
+            }
         }
         OnSnapshot?.Invoke(snap);
         return snap;

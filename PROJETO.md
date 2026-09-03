@@ -1,8 +1,8 @@
 # MarketCore Intelligence Engine — Memória do Projeto
 ## Estado atual
-- Versão: 1.0.0-alpha
-- Última atualização: 01/09/2026 (correção feat_diag / cache de snapshot — sobre 16e)
-- Fase atual: Fase 16e + correção de latência do Release. Fase 17 NÃO iniciada.
+- Versão: 1.0.0-beta
+- Última atualização: 02/09/2026 (Fase 16 concluída — LivePatternDiscovery validado em pregão real)
+- Fase atual: Fase 16 concluída — iniciando Fase 17 (Preço Justo)
 - Ambiente: C:\Users\Anderson\Downloads\MarketCore
 - Repositório: github.com/AsantosPB/MarketCore
 - Branch: main — HEAD: 8591b36 — working tree dirty (sem commit/tag/push desta correção)
@@ -90,7 +90,7 @@ Identificado na auditoria de 29/08/2026:
 - [x] Fase 13 — Risk Manager + Kill Switch
 - [x] Fase 14 — Paper Trading (2 semanas mínimo)
 - [x] Fase 15 — Live Execution
-- [x] Fase 16 — Janela MCIE Principal (WPF)
+- [x] Fase 16 — Janela MCIE Principal (WPF) — Concluída — ver histórico 02/09/2026 para detalhes
 - [ ] Fase 17 — Janela Preço Justo (WPF)
 ---
 ## Horários e contexto de mercado
@@ -595,3 +595,112 @@ Chama `_engine.AlterarIntervaloVarredura(min)` → `_liveDiscovery.AlterarInterv
 ```
 
 Sem git commit. Working tree dirty.
+
+### 02/09/2026 — Fase 16 correções e LivePatternDiscovery
+
+BUGS CORRIGIDOS:
+
+1. Latência 157s na DLL
+   Causa: File.AppendAllText dentro do HandleTrade
+   e SnapshotTimer — I/O síncrono no caminho crítico
+   Solução: removidos todos os logs de diagnóstico
+   (feat_diag.txt) do pipeline de trading
+
+2. Book não chegava ao FeatureEngine
+   Causa: BookProcessingLoop desativada por comentário
+   de performance. StartBookSnapshotPublishing()
+   causava saturação quando reativada
+   Solução: OnBook() chamado diretamente no HandleBook()
+   com throttle de 100ms via Task.Run
+
+3. DateTime UTC vs Local
+   Causa: LivePatternDiscovery usava DateTime.UtcNow
+   para comparar com timestamps em DateTime.Now.Ticks
+   Em Brasília (UTC-3) causava elegiveis sempre vazio
+   Solução: padronizado para DateTime.Now em todo
+   o LivePatternDiscovery
+
+4. Cálculo de ticks nos labels
+   Causa: FindClosest usava T0 + 1000ms em vez de
+   T0 + 1000 * 10000L (ticks por milissegundo)
+   Resultado: FutureReturn max=187660 (impossível)
+   Solução: const long ticksPerMs = 10000L aplicado
+   em todos os horizontes (1s, 2s, 5s, 10s)
+
+5. OFI Agent thresholds incorretos
+   Causa: thresholds em valores brutos (100-600)
+   mas OFI normalizado entre -1.0 e +1.0
+   Solução: thresholds ajustados para escala -1 a +1
+   (0.40, 0.70 etc)
+
+6. Padrões intraday sendo apagados a cada ciclo
+   Causa: LimparPadroesIntraday() chamado no início
+   de cada ExecutarCiclo()
+   Solução: substituído por acumulação com dedup
+   por condições. Padrões acumulam durante o dia
+   e são limpos apenas no encerramento do pregão
+
+7. feat_diag.txt commitado no repositório
+   Solução: removido com git rm e adicionado
+   ao .gitignore
+
+FUNCIONALIDADES ADICIONADAS:
+
+1. LivePatternDiscovery (Engine/Patterns/LivePatternDiscovery.cs)
+   - Descoberta de padrões em tempo real durante o pregão
+   - Warm-up configurável (padrão: 30 minutos produção,
+     2 minutos para teste)
+   - Intervalo configurável na UI (campo Varredura)
+   - Critérios intraday reduzidos:
+     MinSamples=20, MinExpectancy=0.2,
+     MinProfitFactor=1.02, MinWinRate=0.40
+   - Labels calculados em memória:
+     FutureReturn 1s / 2s / 5s
+   - Acumulação de padrões sem apagar anteriores
+   - Dedup por condições para evitar padrões duplicados
+   - Monitoramento de decay (remove padrões com
+     WinRate < 35% com 10+ amostras)
+   - Log em Desktop/mcie_patterns.log para diagnóstico
+   - Padrões encerrados ao desconectar do pregão
+
+2. Campo Varredura na UI
+   - Arquivo: MarketCore.WPF/MainWindow.xaml
+   - Campo numérico no painel de Decisão
+   - Permite alterar intervalo do LivePatternDiscovery
+     em tempo real sem recompilar
+   - Padrão: 3 minutos
+
+3. Botão STOP REC na toolbar
+   - Ativa/desativa gravação manualmente
+   - Verde quando gravando, vermelho quando parado
+   - Sincronizado com _engine.GravacaoAtiva
+
+4. SnapshotTimer nullable
+   - Aceita StorageManager null
+   - Roda sem gravação ativa (lite mode)
+
+5. FeatureEngine histórico intraday
+   - Campo _snapshotsHoje acumula snapshots do dia
+   - Propriedade SnapshotsHoje exposta para o
+     LivePatternDiscovery
+   - Limitado a 400.000 snapshots (~11 horas)
+   - Resetado em ResetarSessao()
+
+6. PatternRegistry métodos intraday
+   - AdicionarIntraday() — status Paper
+   - LimparPadroesIntraday() — chamado só no
+     encerramento do pregão
+   - MonitorarDecayAsync() adaptado para Paper patterns
+
+RESULTADO VALIDADO EM PREGÃO REAL (02/09/2026):
+   - DLL: 0ms de atraso durante todo o pregão
+   - Gravação: ATIVO durante todo o pregão
+   - 32 padrões intraday descobertos e acumulados
+   - Decisão: PrepareBuy (saiu do Wait)
+   - FLOW: +8, BOOK: +55 funcionando com dados reais
+   - Pressão do book: variando dinamicamente
+   - BookImbalance chegando corretamente (0-1)
+
+COMMITS DO DIA:
+   - ea4a5ce: fase-16 LivePatternDiscovery funcionando
+   - 3de5866: remove feat_diag.txt do repositorio

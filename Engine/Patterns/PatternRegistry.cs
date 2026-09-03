@@ -33,11 +33,12 @@ public class PatternRegistry
     public async Task InicializarAsync()
     {
         var todos = await _storage.CarregarPadroesAsync(null);
+        var limiteIntraday = DateTime.Today.AddDays(-2);  // [FASE 3] Paper só últimos 2 dias
         _approved = todos
             .Where(p => p.Status == PatternStatus.Approved
                      || p.Status == PatternStatus.Live
-                     || p.Status == PatternStatus.Paper
-                     || p.Status == PatternStatus.Monitoring)
+                     || p.Status == PatternStatus.Monitoring
+                     || (p.Status == PatternStatus.Paper && p.CreatedAt >= limiteIntraday))
             .ToList();
 
         Console.WriteLine(
@@ -83,12 +84,43 @@ public class PatternRegistry
             && p.CreatedAt.Date == DateTime.Today);
     }
 
-    /// <summary>Adiciona padrão intraday com status Paper.</summary>
+    /// <summary>Adiciona padrão intraday com status Paper (somente memória).</summary>
     public void AdicionarIntraday(DiscoveredPattern pattern)
     {
         pattern.Status    = PatternStatus.Paper;
         pattern.CreatedAt = DateTime.Now;
         _approved.Add(pattern);
+    }
+
+    /// <summary>Adiciona padrão intraday com status Paper e persiste no SQLite. [FASE 3]</summary>
+    public async Task AdicionarIntradayAsync(DiscoveredPattern pattern)
+    {
+        pattern.Status    = PatternStatus.Paper;
+        pattern.CreatedAt = DateTime.Now;
+        await _storage.SalvarPadraoAsync(pattern);
+        _approved.Add(pattern);
+        Console.WriteLine(
+            $"[PatternRegistry] Paper #{pattern.PatternId} salvo. " +
+            $"WinRate={pattern.TrainingStats.WinRate:P1} Expectancy={pattern.TrainingStats.Expectancy:F2}");
+    }
+
+    /// <summary>Remove Paper patterns com mais de 2 dias do SQLite e da memória. [FASE 3]</summary>
+    public async Task LimparPadroesAntigosAsync()
+    {
+        var limite  = DateTime.Today.AddDays(-2);
+        var antigos = _approved
+            .Where(p => p.Status == PatternStatus.Paper && p.CreatedAt < limite)
+            .ToList();
+
+        foreach (var p in antigos)
+        {
+            _approved.Remove(p);
+            await _storage.AtualizarStatusPadraoAsync(p.PatternId, PatternStatus.Deprecated);
+        }
+
+        if (antigos.Count > 0)
+            Console.WriteLine(
+                $"[PatternRegistry] {antigos.Count} Paper pattern(s) > 2 dias marcados como Deprecated.");
     }
 
     /// <summary>

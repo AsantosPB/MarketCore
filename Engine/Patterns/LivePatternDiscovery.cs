@@ -18,6 +18,9 @@ public class LivePatternDiscovery : IDisposable
     private static readonly string _logPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
         "mcie_patterns.log");
+    private int  _logCount  = 0;                  // [FASE 3] controle de tamanho do log
+    private const long MaxLogBytes = 1 * 1024 * 1024;  // 1 MB
+    private const int  MaxLogLines = 500;
 
     public int IntervalMinutos   { get; set; } = 1;  // [TEMP-TEST] era 3
     public int WarmupMinutos     { get; set; } = 2;  // [TEMP-TEST] era 30
@@ -35,7 +38,21 @@ public class LivePatternDiscovery : IDisposable
     {
         var linha = $"{DateTime.Now:HH:mm:ss} {msg}";
         Console.WriteLine(linha);
-        try { File.AppendAllText(_logPath, linha + Environment.NewLine); }
+        try
+        {
+            _logCount++;
+            if (_logCount % 100 == 0)                   // [FASE 3] verificar tamanho a cada 100 linhas
+            {
+                var fi = new FileInfo(_logPath);
+                if (fi.Exists && fi.Length > MaxLogBytes)
+                {
+                    var linhas = File.ReadAllLines(_logPath);
+                    var manter = linhas.Skip(Math.Max(0, linhas.Length - MaxLogLines)).ToArray();
+                    File.WriteAllLines(_logPath, manter);
+                }
+            }
+            File.AppendAllText(_logPath, linha + Environment.NewLine);
+        }
         catch { }
     }
 
@@ -175,7 +192,7 @@ public class LivePatternDiscovery : IDisposable
                                 Math.Abs(nc.Threshold - c.Threshold) < 0.001)));
                 if (!jaExiste)
                 {
-                    _registry.AdicionarIntraday(p);
+                    _registry.AdicionarIntradayAsync(p).GetAwaiter().GetResult(); // [FASE 3] persiste no SQLite
                     adicionados++;
                 }
             }
@@ -205,17 +222,33 @@ public class LivePatternDiscovery : IDisposable
 
             var t0 = snap.Timestamp;
 
-            var after1s  = FindClosest(snapshots, i, t0 + 1000  * ticksPerMs);  // +1s
-            var after2s  = FindClosest(snapshots, i, t0 + 2000  * ticksPerMs);  // +2s
-            var after5s  = FindClosest(snapshots, i, t0 + 5000  * ticksPerMs);  // +5s
-            var after10s = FindClosest(snapshots, i, t0 + 10000 * ticksPerMs);  // +10s
+            // [FASE 3] O(log n) binary search — era O(n) linear scan (O(n²) total)
+            int idx1s  = FindClosestIndex(snapshots, t0 + 1000  * ticksPerMs);
+            int idx2s  = FindClosestIndex(snapshots, t0 + 2000  * ticksPerMs);
+            int idx5s  = FindClosestIndex(snapshots, t0 + 5000  * ticksPerMs);
+            int idx10s = FindClosestIndex(snapshots, t0 + 10000 * ticksPerMs);
+
+            var after1s  = idx1s  >= 0 ? snapshots[idx1s]  : null;
+            var after2s  = idx2s  >= 0 ? snapshots[idx2s]  : null;
+            var after5s  = idx5s  >= 0 ? snapshots[idx5s]  : null;
+            var after10s = idx10s >= 0 ? snapshots[idx10s] : null;
 
             if (after1s == null || after2s == null) continue;
             if (after1s.Price <= 0 || after2s.Price <= 0) continue;  // [FIX] preço futuro inválido
 
-            var between = snapshots
-                .Where(s => s.Timestamp > t0 && s.Timestamp <= t0 + 5000 * ticksPerMs)
-                .ToList();
+            // [FASE 3] Mfe/Mae: janela (t0, t0+5s] — O(log n) bounds + scan linear limitado a 5s
+            int bStart = FindClosestIndex(snapshots, t0 + 1);
+            int bEnd   = FindClosestIndex(snapshots, t0 + 5000 * ticksPerMs + 1);
+            if (bStart < 0) bStart = snapshots.Count;
+            if (bEnd   < 0) bEnd   = snapshots.Count;
+
+            double mfe = 0, mae = 0;
+            for (int j = bStart; j < bEnd; j++)
+            {
+                var diff = snapshots[j].Price - snap.Price;
+                if (diff > mfe) mfe = diff;
+                if (diff < mae) mae = diff;
+            }
 
             dataset.Add(new DatasetRecord
             {
@@ -227,21 +260,30 @@ public class LivePatternDiscovery : IDisposable
                     FutureReturn2s  = after2s.Price  - snap.Price,
                     FutureReturn5s  = after5s  != null ? after5s.Price  - snap.Price : 0,
                     FutureReturn10s = after10s != null ? after10s.Price - snap.Price : 0,
-                    Mfe5s = between.Any() ? between.Max(s => s.Price) - snap.Price : 0,
-                    Mae5s = between.Any() ? between.Min(s => s.Price) - snap.Price : 0,
+                    Mfe5s           = mfe,
+                    Mae5s           = mae,
                 }
             });
         }
         return dataset;
     }
 
-    private static FeatureSnapshot? FindClosest(
-        List<FeatureSnapshot> list, int startIndex, long targetTimestamp)
+    /// <summary>
+    /// Busca binária: retorna o índice do primeiro elemento com Timestamp >= targetTimestamp.
+    /// Retorna -1 se nenhum elemento satisfizer a condição. O(log n).
+    /// </summary>
+    private static int FindClosestIndex(List<FeatureSnapshot> list, long targetTimestamp)
     {
-        for (int i = startIndex + 1; i < list.Count; i++)
-            if (list[i].Timestamp >= targetTimestamp)
-                return list[i];
-        return null;
+        int lo = 0, hi = list.Count - 1;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            if (list[mid].Timestamp < targetTimestamp)
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+        return (lo < list.Count && list[lo].Timestamp >= targetTimestamp) ? lo : -1;
     }
 
     public void Dispose()
